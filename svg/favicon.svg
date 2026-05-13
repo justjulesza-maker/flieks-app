@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="4flieks">
+  <defs>
+    
+  </defs>
+  <rect width="64" height="64" rx="10" ry="10" fill="#1C1512"></rect>
+  
+  <text x="32" y="49" font-family="&#39;Archivo Black&#39;, Impact, sans-serif" font-size="46" letter-spacing="-2" text-anchor="middle">
+    <tspan fill="#D85A2C">4</tspan><tspan fill="#F2EADA">F</tspan>
+  </text>
+</svg>

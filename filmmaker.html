@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1C1512">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/brand/png/apple-touch-icon.png">
+<title>4flieks — Filmmaker Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;
+  --border:#222;--border2:#2A2A2A;
+  --amber:#F5A623;--red:#E8462A;--green:#4CAF50;
+  --text:#F0EDE8;--muted:#888;--dim:#555;
+  --fn:'DM Sans',system-ui,sans-serif;
+  --fb:'Archivo Black',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+body{max-width:480px;margin:0 auto;position:relative}
+.view{display:none;min-height:100vh;padding-bottom:84px;animation:fadeIn .2s ease}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.topbar{position:sticky;top:0;z-index:50;background:var(--bg);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:68px;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:50}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;cursor:pointer;border:none;background:none;color:inherit}
+.bnav-btn svg{width:22px;height:22px;stroke:var(--dim);fill:none;stroke-width:1.8;transition:stroke .2s}
+.bnav-btn span{font-size:10px;color:var(--dim);letter-spacing:.5px;transition:color .2s}
+.bnav-btn.on svg{stroke:var(--amber)}
+.bnav-btn.on span{color:var(--amber)}
+.bbn{font-family:var(--fn);letter-spacing:1px}
+.section-label{font-size:10px;letter-spacing:0.04em;color:var(--muted);margin-bottom:10pxcolor:var(--muted);font-weight:500;margin-bottom:4px}
+.divider{height:1px;background:var(--border);margin:8px 20px}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.tag-amber{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);color:var(--amber)}
+.tag-red{background:rgba(232,70,42,.12);border:1px solid rgba(232,70,42,.3);color:var(--red)}
+.tag-green{background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.3);color:var(--green)}
+.tag-gray{background:var(--card);border:1px solid var(--border);color:var(--muted)}
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:12px;font-family:var(--fn);font-size:18px;letter-spacing:2px;cursor:pointer;text-align:center;transition:opacity .15s}
+.btn:active{opacity:.85}
+.btn-amber{background:var(--amber);color:#0A0A0A}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--fb);font-size:14px;font-weight:500;letter-spacing:0}
+.btn-sm{padding:8px 16px;width:auto;font-size:14px;border-radius:8px;display:inline-block}
+.input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s}
+.input:focus{border-color:var(--amber)}
+.input::placeholder{color:var(--dim)}
+textarea.input{resize:vertical;min-height:90px;line-height:1.5}
+.input-group{margin-bottom:14px}
+.input-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
+select.input option{background:#1A1A1A;color:var(--text)}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+.info-box{border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.info-box svg{width:18px;height:18px;fill:none;stroke-width:2;flex-shrink:0;margin-top:1px}
+.info-box.green{background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.3)}
+.info-box.green svg{stroke:var(--green)}
+.info-box.amber{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25)}
+.info-box.amber svg{stroke:var(--amber)}
+.info-box p{font-size:12px;color:var(--muted);line-height:1.5}
+.film-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:opacity .15s}
+.film-row:active{opacity:.85}
+.mini-poster{width:44px;height:56px;border-radius:6px;display:flex;align-items:flex-end;padding:4px;flex-shrink:0}
+.mini-poster span{font-family:var(--fn);font-size:10px;color:var(--text);line-height:1.1}
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--amber)}
+.upload-zone svg{width:36px;height:36px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:12px}
+.progress-upload{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+.progress-upload-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .3s;width:0%}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+#snackbar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#222;border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
+#snackbar.show{opacity:1}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+.auth-tab{flex:1;padding:12px;text-align:center;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.auth-tab.on{color:var(--amber);border-bottom-color:var(--amber)}
+.earnings-bar{height:6px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
+.earnings-bar-fill{height:100%;background:var(--amber);border-radius:3px}
+</style>
+</head>
+<body>
+
+<nav class="bnav" id="bnav">
+  <button class="bnav-btn on" data-view="dashboard" onclick="nav('dashboard')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>DASHBOARD</span>
+  </button>
+  <button class="bnav-btn" data-view="films" onclick="nav('films')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+    <span>MY FILMS</span>
+  </button>
+  <button class="bnav-btn" data-view="upload" onclick="nav('upload')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    <span>UPLOAD</span>
+  </button>
+  <button class="bnav-btn" data-view="payouts" onclick="nav('payouts')">
+    <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+    <span>PAYOUTS</span>
+  </button>
+</nav>
+
+<div id="snackbar"></div>
+
+<!-- ================================================================
+     VIEW: AUTH GATE
+================================================================ -->
+<div id="view-auth" class="view active" style="padding-bottom:40px">
+  <div style="padding:40px 20px 0;text-align:center;margin-bottom:32px">
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:70px;width:auto;display:block;margin:0 auto">
+    <p style="color:var(--muted);font-size:14px;margin-top:4px;letter-spacing:1px">FILMMAKER PORTAL</p>
+  </div>
+  <div style="padding:0 20px">
+    <div class="auth-tabs">
+      <div class="auth-tab on" id="tab-si" onclick="switchTab('si')">Sign In</div>
+      <div class="auth-tab" id="tab-reg" onclick="switchTab('reg')">Register</div>
+    </div>
+    <div id="pane-si">
+      <div class="input-group"><label class="input-label">Email</label><input class="input" id="si-email" type="email" placeholder="you@email.com"></div>
+      <div class="input-group"><label class="input-label">Password</label><input class="input" id="si-pass" type="password" placeholder="Password"></div>
+      <button class="btn btn-amber" onclick="doSignIn()">SIGN IN</button>
+    </div>
+    <div id="pane-reg" style="display:none">
+      <div class="info-box amber" style="margin-bottom:16px">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>Filmmaker accounts are reviewed by our team. After registering, you'll be notified within 48 hours.</p>
+      </div>
+      <div class="input-group"><label class="input-label">Full Name</label><input class="input" id="reg-name" type="text" placeholder="Your name"></div>
+      <div class="input-group"><label class="input-label">Email</label><input class="input" id="reg-email" type="email" placeholder="you@email.com"></div>
+      <div class="input-group"><label class="input-label">Password</label><input class="input" id="reg-pass" type="password" placeholder="Min 6 characters"></div>
+      <div class="input-group"><label class="input-label">City / Province</label><input class="input" id="reg-location" type="text" placeholder="e.g. Soweto, Gauteng"></div>
+      <div class="input-group"><label class="input-label">Bio (tell us about yourself)</label><textarea class="input" id="reg-bio" placeholder="Short filmmaker bio…"></textarea></div>
+      <button class="btn btn-amber" onclick="doRegister()">APPLY TO JOIN</button>
+    </div>
+    <p style="text-align:center;margin-top:16px;font-size:14px;color:var(--muted)">
+      <a href='/' style='color:var(--amber)'>← Back to FLIEKS</a>
+    </p>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: DASHBOARD
+================================================================ -->
+<div id="view-dashboard" class="view">
+  <div class="topbar">
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <span style="font-size:14px;color:var(--muted)"><span style="font-family:var(--fn);font-size:14px;font-weight:400;color:var(--muted)">Filmmaker</span></span>
+  </div>
+  <div style="padding:14px 20px 0">
+    <p class="section-label">OVERVIEW</p>
+    <div id="maker-greeting" style="margin-bottom:16px">
+      <p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">WELCOME BACK</p>
+    </div>
+    <!-- Stats grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px" id="stats-grid">
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Earned</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--amber)">R0</p><p style="font-size:10px;color:var(--green);margin-top:2px">—</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Views</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">0</p><p style="font-size:10px;color:var(--muted);margin-top:2px">—</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Films Owned</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">0</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Across all films</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Live Films</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">0</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Published</p></div>
+    </div>
+    <div class="info-box green" style="margin-bottom:16px">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <p>You earn <strong style="color:var(--green)">70%</strong> of every rental and purchase. Platform takes 30% for hosting, payment processing, and distribution.</p>
+    </div>
+    <div class="divider" style="margin:0 0 16px"></div>
+    <p class="section-label">RECENT FILMS</p>
+    <div id="dashboard-films"></div>
+    <button class="btn btn-amber" onclick="nav('upload')" style="margin-top:12px">+ UPLOAD NEW FILM</button>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: MY FILMS
+================================================================ -->
+<div id="view-films" class="view">
+  <div class="topbar">
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <button class="btn btn-amber btn-sm" onclick="nav('upload')">+ Upload</button>
+  </div>
+  <div style="padding:14px 20px" id="my-films-list">
+    <div style="text-align:center;padding:40px 0"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: UPLOAD
+================================================================ -->
+<div id="view-upload" class="view">
+  <div class="topbar">
+    <button onclick="nav('films')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <div style="width:40px"></div>
+  </div>
+  <div style="padding:14px 20px">
+    <div class="input-group">
+      <label class="input-label">Film Title *</label>
+      <input class="input" id="up-title" type="text" placeholder="e.g. UMOYA" style="text-transform:uppercase">
+    </div>
+    <div class="input-group">
+      <label class="input-label">Synopsis *</label>
+      <textarea class="input" id="up-synopsis" placeholder="What is your film about? (2-3 sentences)"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Duration (minutes) *</label>
+        <input class="input" id="up-duration" type="number" min="1" max="20" placeholder="12">
+      </div>
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Language *</label>
+        <select class="input" id="up-language">
+          <option value="">Select…</option>
+          <option>Zulu</option><option>Xhosa</option><option>Sotho</option>
+          <option>Tswana</option><option>Venda</option><option>Tsonga</option>
+          <option>Afrikaans</option><option>English</option><option>Ndebele</option><option>Swati</option>
+        </select>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Genre *</label>
+      <select class="input" id="up-genre">
+        <option value="">Select…</option>
+        <option>Drama</option><option>Comedy</option><option>Thriller</option>
+        <option>Documentary</option><option>Romance</option><option>Horror</option>
+        <option>Action</option><option>Animation</option><option>Music</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Subtitles Available</label>
+      <select class="input" id="up-subs">
+        <option value="none">None</option>
+        <option value="English">English</option>
+        <option value="Zulu">Zulu</option>
+        <option value="Afrikaans">Afrikaans</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Rent Price (ZAR)</label>
+        <input class="input" id="up-rent" type="number" value="25" min="0">
+      </div>
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Own Price (ZAR)</label>
+        <input class="input" id="up-own" type="number" value="49" min="0">
+      </div>
+    </div>
+    <div class="input-group" style="margin-bottom:4px">
+      <label class="input-label">Free Film?</label>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+        <input type="checkbox" id="up-free" style="width:18px;height:18px;accent-color:var(--amber)">
+        <label for="up-free" style="font-size:14px;color:var(--muted);cursor:pointer">Make this film free to watch (great for building an audience)</label>
+      </div>
+    </div>
+    <div class="divider" style="margin:16px 0"></div>
+    <!-- Film file upload -->
+    <p class="section-label">FILM FILE</p>
+    <div class="upload-zone" id="film-drop" onclick="document.getElementById('film-file').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleFileDrop(event,'film')">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <p style="color:var(--muted);font-size:14px">Tap to upload film<br><span style="font-size:12px;color:var(--dim)">MP4, MOV — max 2GB</span></p>
+      <div id="film-file-name" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
+      <div class="progress-upload" id="film-upload-progress" style="display:none"><div class="progress-upload-fill" id="film-prog-fill"></div></div>
+    </div>
+    <input type="file" id="film-file" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="handleFileSelect(event,'film')">
+    <div style="margin-top:12px"></div>
+    <!-- Trailer upload -->
+    <p class="section-label" style="margin-top:16px">FREE TRAILER <span style="color:var(--dim);font-weight:400;letter-spacing:0;font-size:10px;text-transform:none">(optional — shown free to all viewers)</span></p>
+    <div class="upload-zone" id="trailer-drop" onclick="document.getElementById('trailer-file').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleFileDrop(event,'trailer')">
+      <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      <p style="color:var(--muted);font-size:14px">Tap to upload trailer<br><span style="font-size:12px;color:var(--dim)">MP4, MOV — max 200MB · 2–3 min recommended</span></p>
+      <div id="trailer-file-name" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
+      <div class="progress-upload" id="trailer-upload-progress" style="display:none"><div class="progress-upload-fill" id="trailer-prog-fill"></div></div>
+    </div>
+    <input type="file" id="trailer-file" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="handleFileSelect(event,'trailer')">
+    <div style="margin-top:12px"></div>
+    <!-- Poster upload -->
+    <p class="section-label" style="margin-top:16px">POSTER / THUMBNAIL</p>
+    <div class="upload-zone" id="poster-drop" onclick="document.getElementById('poster-file').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleFileDrop(event,'poster')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p style="color:var(--muted);font-size:14px">Tap to upload poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
+      <div id="poster-file-name" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
+    </div>
+    <input type="file" id="poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleFileSelect(event,'poster')">
+    <div class="divider" style="margin:16px 0"></div>
+    <div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p>Films are reviewed by our team before going live. Review takes 1–2 business days. We check for quality, originality, and community guidelines compliance.</p>
+    </div>
+    <button class="btn btn-amber" onclick="submitFilm()" style="margin-bottom:10px" id="submit-btn">SUBMIT FOR REVIEW</button>
+    <p style="text-align:center;color:var(--dim);font-size:12px">By submitting you confirm this is your original work and you own all rights</p>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: FILM DETAIL (edit)
+================================================================ -->
+<div id="view-film-detail" class="view">
+  <div class="topbar">
+    <button onclick="nav('films')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      My Films
+    </button>
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <div style="width:40px"></div>
+  </div>
+  <div id="film-detail-fm" style="padding:14px 20px"></div>
+</div>
+
+<!-- ================================================================
+     VIEW: PAYOUTS
+================================================================ -->
+<div id="view-payouts" class="view">
+  <div class="topbar">
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+  </div>
+  <div id="payouts-content" style="padding:14px 20px"></div>
+</div>
+
+<!-- ================================================================
+     FIREBASE + LOGIC
+================================================================ -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+<script>
+/* ============================================================
+   CONFIG — same project as viewer app (change for prod)
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+const DB_PREFIX = "flieks_";
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+const storage = firebase.storage();
+
+let currentUser = null;
+let myFilms = [];
+let filmFile = null;
+let posterFile = null;
+let trailerFile = null;
+
+/* ============================================================
+   AUTH GATE
+   ============================================================ */
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    // Check if filmmaker role
+    const snap = await db.ref(`${DB_PREFIX}users/${user.uid}`).once('value');
+    const profile = snap.val() || {};
+    if (profile.role !== 'filmmaker' && profile.role !== 'admin') {
+      showSnack('Your filmmaker application is under review. We\'ll notify you by email.');
+      // Allow access but show pending state
+    }
+    currentUser = user;
+    document.getElementById('view-auth').classList.remove('active');
+    document.getElementById('view-dashboard').classList.add('active');
+    document.getElementById('bnav').style.display = 'flex';
+    loadDashboard();
+  } else {
+    currentUser = null;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-auth').classList.add('active');
+    document.getElementById('bnav').style.display = 'none';
+  }
+});
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function nav(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + viewId).classList.add('active');
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('on', b.dataset.view === viewId));
+  window.scrollTo(0, 0);
+  if (viewId === 'films') loadMyFilms();
+  if (viewId === 'payouts') loadPayouts();
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+async function loadDashboard() {
+  if (!currentUser) return;
+  const name = currentUser.displayName || 'Filmmaker';
+  document.getElementById('maker-greeting').innerHTML = `<p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">WELCOME BACK,<br><span style="color:var(--amber)">${name.toUpperCase()}</span></p>`;
+  // Load filmmaker's films
+  const snap = await db.ref(DB_PREFIX + 'films').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
+  myFilms = [];
+  let totalEarned = 0, totalViews = 0, totalOwned = 0, liveCount = 0;
+  snap.forEach(child => {
+    const f = { id: child.key, ...child.val() };
+    myFilms.push(f);
+    totalViews += f.view_count || 0;
+    totalOwned += f.own_count || 0;
+    if (f.status === 'live') liveCount++;
+  });
+  // Load earnings
+  const txSnap = await db.ref(DB_PREFIX + 'transactions').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
+  txSnap.forEach(tx => {
+    const t = tx.val();
+    if (t.status === 'complete') totalEarned += t.filmmaker_share || 0;
+  });
+  // Update stats
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = `
+    <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Earned</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--amber)">R${totalEarned.toFixed(2)}</p><p style="font-size:10px;color:var(--green);margin-top:2px">70% revenue share</p></div>
+    <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Views</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">${totalViews >= 1000 ? (totalViews/1000).toFixed(1)+'k' : totalViews}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Across all films</p></div>
+    <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Films Owned</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">${totalOwned}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">By viewers</p></div>
+    <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Live Films</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">${liveCount}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Published</p></div>
+  `;
+  // Recent films
+  const dfEl = document.getElementById('dashboard-films');
+  if (myFilms.length === 0) {
+    dfEl.innerHTML = `<p style="color:var(--muted);font-size:14px">No films yet. Upload your first film above!</p>`;
+  } else {
+    dfEl.innerHTML = myFilms.slice(0, 3).map(filmRowHTML).join('');
+  }
+}
+
+/* ============================================================
+   MY FILMS LIST
+   ============================================================ */
+async function loadMyFilms() {
+  if (!currentUser) return;
+  const el = document.getElementById('my-films-list');
+  if (myFilms.length === 0) {
+    const snap = await db.ref(DB_PREFIX + 'films').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
+    myFilms = [];
+    snap.forEach(c => myFilms.push({ id: c.key, ...c.val() }));
+  }
+  if (myFilms.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:40px 0">
+      <p style="color:var(--muted);margin-bottom:20px">No films yet.</p>
+      <button class="btn btn-amber" onclick="nav('upload')">+ UPLOAD YOUR FIRST FILM</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = myFilms.map(filmRowHTML).join('');
+}
+
+function filmRowHTML(f) {
+  const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : (f.view_count || 0);
+  const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red' }[f.status] || 'tag-gray';
+  const statusLabel = { live: 'LIVE', review: 'REVIEW', draft: 'DRAFT', rejected: 'REJECTED' }[f.status] || f.status;
+  const earned = ((f.own_count || 0) * (f.price_own || 0) * 0.7 + (f.rent_count || 0) * (f.price_rent || 0) * 0.7).toFixed(0);
+  return `<div class="film-row" onclick="openFilmDetail('${f.id}')">
+    <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'}"><span>${f.title}</span></div>
+    <div style="flex:1">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <p style="font-size:14px;font-weight:600;color:var(--text)">${f.title}</p>
+        <span class="tag ${statusTag}">${statusLabel}</span>
+      </div>
+      <div style="display:flex;gap:12px">
+        <span style="font-size:12px;color:var(--muted)">${views} views</span>
+        <span style="font-size:12px;color:var(--amber);font-weight:600">R${earned} earned</span>
+      </div>
+    </div>
+    <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--dim);fill:none;stroke-width:2;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>`;
+}
+
+function openFilmDetail(filmId) {
+  currentFilmId = filmId;
+  const f = myFilms.find(x => x.id === filmId);
+  if (!f) return;
+  const views = f.view_count || 0;
+  const ownCount = f.own_count || 0;
+  const rentCount = f.rent_count || 0;
+  const totalEarned = (ownCount * (f.price_own||0) * 0.7 + rentCount * (f.price_rent||0) * 0.7).toFixed(2);
+  const earnPct = Math.min(100, Math.round((parseFloat(totalEarned) / 1000) * 100));
+  const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red' }[f.status] || 'tag-gray';
+  document.getElementById('film-detail-fm').innerHTML = `
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px">
+      <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'};width:60px;height:76px;border-radius:10px"><span>${f.title}</span></div>
+      <div>
+        <p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${f.title}</p>
+        <p style="font-size:12px;color:var(--muted)">${f.duration_mins} min · ${f.language||''} · ${(f.genre||[]).join(', ')}</p>
+        <span class="tag ${statusTag}" style="margin-top:6px;display:inline-block">${f.status?.toUpperCase()}</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Earned</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--amber)">R${totalEarned}</p>
+        <div class="earnings-bar"><div class="earnings-bar-fill" style="width:${earnPct}%"></div></div>
+      </div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Views</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${views >= 1000 ? (views/1000).toFixed(1)+'k' : views}</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Owned</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${ownCount}</p><p style="font-size:10px;color:var(--muted)">× R${(f.price_own||0) * 0.7} share</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Rented</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${rentCount}</p><p style="font-size:10px;color:var(--muted)">× R${(f.price_rent||0) * 0.7} share</p></div>
+    </div>
+    <p class="section-label">SYNOPSIS</p>
+    <p style="color:#999;font-size:14px;line-height:1.65;margin-bottom:16px">${f.synopsis||''}</p>
+    ${f.status === 'review' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>This film is under review. We'll notify you by email once it goes live (1–2 business days).</p></div>` : ''}
+    ${f.status === 'rejected' ? `<div class="info-box" style="background:rgba(232,70,42,.08);border:1px solid rgba(232,70,42,.3)"><svg viewBox="0 0 24 24" style="stroke:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p>This film was not approved. ${f.rejection_reason || 'Please contact support for details.'}</p></div>` : ''}
+    ${f.status === 'live' ? `
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <a href="index.html" class="btn btn-outline btn-sm" style="text-align:center">View on 4flieks</a>
+         <button class="btn btn-amber btn-sm" onclick="openEditFilm(currentFilmId)">Edit Details</button>
+      </div>
+    ` : ''}
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:4px">
+      <p class="section-label" style="margin-bottom:10px">REPLACE FILM FILE</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Uploaded the wrong file? Replace it here. ${f.status === 'live' ? 'The film will be taken offline for re-review.' : 'Your submission will be requeued for review.'}</p>
+      <div class="upload-zone" id="replace-drop-${f.id}" onclick="document.getElementById('replace-file-${f.id}').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleReplaceDrop(event,'${f.id}')">
+        <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p style="color:var(--muted);font-size:14px">Tap to select replacement film<br><span style="font-size:12px;color:var(--dim)">MP4 or MOV — max 2GB</span></p>
+        <div id="replace-name-${f.id}" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
+        <div class="progress-upload" id="replace-progress-${f.id}" style="display:none"><div class="progress-upload-fill" id="replace-fill-${f.id}"></div></div>
+      </div>
+      <input type="file" id="replace-file-${f.id}" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="handleReplaceSelect(event,'${f.id}')">
+      <button class="btn btn-amber" id="replace-btn-${f.id}" onclick="uploadReplacement('${f.id}')" style="margin-top:12px" disabled>UPLOAD REPLACEMENT</button>
+    </div>
+  `;
+  nav('film-detail');
+}
+
+let replacementFile = null;
+
+function handleReplaceSelect(event, filmId) {
+  const file = event.target.files[0];
+  if (!file) return;
+  replacementFile = file;
+  document.getElementById(`replace-name-${filmId}`).textContent = file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
+  document.getElementById(`replace-btn-${filmId}`).disabled = false;
+}
+
+function handleReplaceDrop(event, filmId) {
+  event.preventDefault();
+  document.getElementById(`replace-drop-${filmId}`).classList.remove('drag');
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  replacementFile = file;
+  document.getElementById(`replace-name-${filmId}`).textContent = file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
+  document.getElementById(`replace-btn-${filmId}`).disabled = false;
+}
+
+async function uploadReplacement(filmId) {
+  if (!replacementFile || !currentUser) return;
+  const btn = document.getElementById(`replace-btn-${filmId}`);
+  btn.disabled = true;
+  btn.textContent = 'UPLOADING…';
+  try {
+    const videoRef = storage.ref(`flieks_films/${filmId}/film.mp4`);
+    const task = videoRef.put(replacementFile);
+    task.on('state_changed', snap => {
+      const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+      document.getElementById(`replace-progress-${filmId}`).style.display = 'block';
+      document.getElementById(`replace-fill-${filmId}`).style.width = pct.toFixed(0) + '%';
+      btn.textContent = `UPLOADING ${pct.toFixed(0)}%…`;
+    });
+    await task;
+    const newUrl = await videoRef.getDownloadURL();
+    // Update DB — reset to review status, update video_url
+    await db.ref(`${DB_PREFIX}films/${filmId}`).update({
+      video_url: newUrl,
+      status: 'review',
+      submitted_at: Date.now(),
+      published_at: null
+    });
+    // Re-add to admin queue
+    await db.ref(`${DB_PREFIX}admin_queue`).push({
+      film_id: filmId,
+      title: myFilms.find(f => f.id === filmId)?.title || filmId,
+      filmmaker: currentUser.displayName,
+      filmmaker_uid: currentUser.uid,
+      submitted_at: Date.now(),
+      status: 'pending_review',
+      note: 'Filmmaker uploaded replacement file'
+    });
+    replacementFile = null;
+    showSnack('Replacement uploaded! Back in review queue.');
+    btn.textContent = 'UPLOADED ✓';
+    // Refresh myFilms
+    myFilms = myFilms.map(f => f.id === filmId ? { ...f, status: 'review', video_url: newUrl } : f);
+  } catch(e) {
+    console.error(e);
+    showSnack('Upload failed. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'UPLOAD REPLACEMENT';
+  }
+}
+
+/* ============================================================
+   UPLOAD FILM
+   ============================================================ */
+function handleFileSelect(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (type === 'film') {
+    filmFile = file;
+    document.getElementById('film-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+  } else if (type === 'trailer') {
+    trailerFile = file;
+    document.getElementById('trailer-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+  } else {
+    posterFile = file;
+    document.getElementById('poster-file-name').textContent = file.name;
+  }
+}
+
+function handleFileDrop(event, type) {
+  event.preventDefault();
+  const zoneId = type === 'film' ? 'film-drop' : type === 'trailer' ? 'trailer-drop' : 'poster-drop';
+  document.getElementById(zoneId).classList.remove('drag');
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  if (type === 'film') {
+    filmFile = file;
+    document.getElementById('film-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+  } else if (type === 'trailer') {
+    trailerFile = file;
+    document.getElementById('trailer-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+  } else {
+    posterFile = file;
+    document.getElementById('poster-file-name').textContent = file.name;
+  }
+}
+
+async function submitFilm() {
+  if (!currentUser) return;
+  const title = document.getElementById('up-title').value.trim().toUpperCase();
+  const synopsis = document.getElementById('up-synopsis').value.trim();
+  const duration = parseInt(document.getElementById('up-duration').value);
+  const language = document.getElementById('up-language').value;
+  const genre = document.getElementById('up-genre').value;
+  const subs = document.getElementById('up-subs').value;
+  const priceRent = parseFloat(document.getElementById('up-rent').value) || 0;
+  const priceOwn = parseFloat(document.getElementById('up-own').value) || 0;
+  const isFree = document.getElementById('up-free').checked;
+
+  if (!title || !synopsis || !duration || !language || !genre) {
+    return showSnack('Please fill in all required fields');
+  }
+  if (!filmFile) return showSnack('Please select your film file');
+
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'UPLOADING…';
+  btn.disabled = true;
+
+  try {
+    // Generate film ID
+    const filmId = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
+
+    // Upload video to Firebase Storage
+    let videoUrl = '';
+    const videoRef = storage.ref(`flieks_films/${filmId}/film.mp4`);
+    const uploadTask = videoRef.put(filmFile);
+    uploadTask.on('state_changed', snap => {
+      const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+      document.getElementById('film-upload-progress').style.display = 'block';
+      document.getElementById('film-prog-fill').style.width = pct.toFixed(0) + '%';
+      btn.textContent = `UPLOADING ${pct.toFixed(0)}%…`;
+    });
+    await uploadTask;
+    videoUrl = await videoRef.getDownloadURL();
+
+    // Upload poster if provided
+    let posterUrl = '';
+    if (posterFile) {
+      const posterRef = storage.ref(`flieks_films/${filmId}/poster.jpg`);
+      await posterRef.put(posterFile);
+      posterUrl = await posterRef.getDownloadURL();
+    }
+
+    // Upload trailer if provided
+    let trailerUrl = '';
+    if (trailerFile) {
+      btn.textContent = 'UPLOADING TRAILER…';
+      const trailerRef = storage.ref(`flieks_films/${filmId}/trailer.mp4`);
+      const trailerTask = trailerRef.put(trailerFile);
+      trailerTask.on('state_changed', snap => {
+        const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+        document.getElementById('trailer-upload-progress').style.display = 'block';
+        document.getElementById('trailer-prog-fill').style.width = pct.toFixed(0) + '%';
+        btn.textContent = `UPLOADING TRAILER ${pct.toFixed(0)}%…`;
+      });
+      await trailerTask;
+      trailerUrl = await trailerRef.getDownloadURL();
+    }
+
+    // Save to database
+    await db.ref(`${DB_PREFIX}films/${filmId}`).set({
+      title,
+      synopsis,
+      duration_mins: duration,
+      language,
+      genre: [genre],
+      subtitles: subs,
+      price_rent: isFree ? 0 : priceRent,
+      price_own: isFree ? 0 : priceOwn,
+      free: isFree,
+      filmmaker: currentUser.displayName || '',
+      filmmaker_uid: currentUser.uid,
+      filmmaker_email: currentUser.email,
+      video_url: videoUrl,
+      trailer_url: trailerUrl,
+      poster_url: posterUrl,
+      poster_bg: '#1A1A1A',
+      status: 'review',
+      featured: false,
+      view_count: 0,
+      own_count: 0,
+      rent_count: 0,
+      submitted_at: Date.now(),
+      published_at: null
+    });
+
+    // Notify admin
+    await db.ref(`${DB_PREFIX}admin_queue`).push({
+      film_id: filmId,
+      title,
+      filmmaker: currentUser.displayName,
+      filmmaker_uid: currentUser.uid,
+      submitted_at: Date.now(),
+      status: 'pending_review'
+    });
+
+    showSnack('Film submitted! You\'ll hear from us in 1–2 days.');
+    btn.textContent = 'SUBMITTED ✓';
+    // Reset form
+    setTimeout(() => {
+      filmFile = null; posterFile = null; trailerFile = null;
+      ['up-title','up-synopsis','up-duration','up-language','up-genre','up-subs','up-rent','up-own'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el.tagName === 'SELECT') el.value = ''; else el.value = '';
+      });
+      document.getElementById('up-rent').value = '25';
+      document.getElementById('up-own').value = '49';
+      document.getElementById('film-file-name').textContent = '';
+      document.getElementById('trailer-file-name').textContent = '';
+      document.getElementById('poster-file-name').textContent = '';
+      document.getElementById('film-upload-progress').style.display = 'none';
+      document.getElementById('trailer-upload-progress').style.display = 'none';
+      btn.disabled = false;
+      btn.textContent = 'SUBMIT FOR REVIEW';
+      nav('films');
+    }, 2000);
+  } catch(e) {
+    console.error(e);
+    showSnack('Upload failed. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'SUBMIT FOR REVIEW';
+  }
+}
+
+/* ============================================================
+   PAYOUTS
+   ============================================================ */
+async function loadPayouts() {
+  if (!currentUser) return;
+  const el = document.getElementById('payouts-content');
+  // Load transactions
+  const snap = await db.ref(DB_PREFIX + 'transactions').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
+  let available = 0, pending = 0;
+  const txList = [];
+  snap.forEach(tx => {
+    const t = { id: tx.key, ...tx.val() };
+    txList.push(t);
+    if (t.status === 'complete' && !t.paid_out) available += t.filmmaker_share || 0;
+    if (t.status === 'pending') pending += t.filmmaker_share || 0;
+  });
+
+  // Load payout requests
+  const poSnap = await db.ref(`${DB_PREFIX}payouts/${currentUser.uid}`).once('value');
+  const payouts = [];
+  poSnap.forEach(p => payouts.push({ id: p.key, ...p.val() }));
+  const totalPaidOut = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount||0), 0);
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Available</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--green)">R${available.toFixed(2)}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Ready to withdraw</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">All-Time</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">R${(available + totalPaidOut).toFixed(2)}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Total earned</p></div>
+    </div>
+    ${available >= 50 ? `
+      <button class="btn btn-amber" onclick="requestPayout(${available.toFixed(2)})" style="margin-bottom:16px">WITHDRAW R${available.toFixed(2)}</button>
+    ` : `
+      <div class="info-box amber" style="margin-bottom:16px">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>Minimum payout is R50. You currently have R${available.toFixed(2)} available.</p>
+      </div>
+    `}
+    <div class="divider" style="margin:0 0 16px"></div>
+    <p class="section-label">RECENT TRANSACTIONS</p>
+    ${txList.length === 0 ? `<p style="color:var(--muted);font-size:14px">No transactions yet.</p>` :
+      txList.slice(-10).reverse().map(t => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <p style="font-size:14px;color:var(--text)">${t.film_title || 'Film'}</p>
+            <p style="font-size:12px;color:var(--muted);margin-top:2px">${t.type === 'own' ? 'Purchase' : 'Rental'} · ${t.status}</p>
+          </div>
+          <p style="font-size:14px;font-weight:600;color:${t.status==='complete'?'var(--green)':'var(--muted)'}">R${(t.filmmaker_share||0).toFixed(2)}</p>
+        </div>
+      `).join('')
+    }
+    <div class="divider" style="margin:16px 0"></div>
+    <p class="section-label">PAYOUT HISTORY</p>
+    ${payouts.length === 0 ? `<p style="color:var(--muted);font-size:14px">No payouts yet.</p>` :
+      payouts.map(p => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <div><p style="font-size:14px;color:var(--text)">R${(p.amount||0).toFixed(2)}</p><p style="font-size:12px;color:var(--muted);margin-top:2px">${new Date(p.requested_at).toLocaleDateString('en-ZA')}</p></div>
+          <span class="tag ${p.status==='paid'?'tag-green':'tag-amber'}">${p.status.toUpperCase()}</span>
+        </div>
+      `).join('')
+    }
+    <div class="info-box green" style="margin-top:16px">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      <p>Payouts are processed via EFT within 3–5 business days. Make sure your banking details are up to date in your profile settings.</p>
+    </div>
+  `;
+}
+
+async function requestPayout(amount) {
+  if (!currentUser) return;
+  await db.ref(`${DB_PREFIX}payouts/${currentUser.uid}`).push({
+    amount,
+    filmmaker_uid: currentUser.uid,
+    filmmaker_name: currentUser.displayName,
+    filmmaker_email: currentUser.email,
+    status: 'pending',
+    requested_at: Date.now()
+  });
+  showSnack(`Payout of R${amount} requested! Allow 3–5 business days.`);
+  loadPayouts();
+}
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+function switchTab(tab) {
+  document.getElementById('pane-si').style.display = tab === 'si' ? 'block' : 'none';
+  document.getElementById('pane-reg').style.display = tab === 'reg' ? 'block' : 'none';
+  document.getElementById('tab-si').classList.toggle('on', tab === 'si');
+  document.getElementById('tab-reg').classList.toggle('on', tab === 'reg');
+}
+
+async function doSignIn() {
+  const email = document.getElementById('si-email').value.trim();
+  const pass = document.getElementById('si-pass').value;
+  if (!email || !pass) return showSnack('Enter email and password');
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) { showSnack('Sign in failed. ' + (e.message || '')); }
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const location = document.getElementById('reg-location').value.trim();
+  const bio = document.getElementById('reg-bio').value.trim();
+  if (!name || !email || !pass) return showSnack('Fill in all required fields');
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+    await db.ref(`${DB_PREFIX}users/${cred.user.uid}`).set({
+      name, email, location, bio,
+      role: 'filmmaker_pending',
+      created_at: Date.now()
+    });
+    // Notify admin
+    await db.ref(`${DB_PREFIX}filmmaker_applications`).push({
+      uid: cred.user.uid, name, email, location, bio, applied_at: Date.now(), status: 'pending'
+    });
+    showSnack('Application submitted! We\'ll review within 48 hours.');
+  } catch(e) {
+    showSnack(e.code === 'auth/email-already-in-use' ? 'Email already in use' : 'Registration failed.');
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+let snackTimer;
+function showSnack(msg) {
+  const el = document.getElementById('snackbar');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('bnav').style.display = 'none';
+});
+</script>
+
+<!-- EDIT FILM VIEW -->
+<div id="view-edit-film" class="view">
+  <div class="topbar">
+    <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Film Stats
+    </button>
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <div style="width:40px"></div>
+  </div>
+  <div style="padding:14px;max-width:480px;margin:0 auto">
+    <p class="section-label">SYNOPSIS</p>
+    <textarea id="edit-synopsis" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;resize:vertical;font-family:inherit"></textarea>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div>
+        <p class="section-label">LANGUAGE</p>
+        <select id="edit-language" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+          <option value="English">English</option>
+          <option value="Zulu">Zulu</option>
+          <option value="Xhosa">Xhosa</option>
+          <option value="Afrikaans">Afrikaans</option>
+          <option value="Sotho">Sotho</option>
+          <option value="Tswana">Tswana</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <p class="section-label">SUBTITLES</p>
+        <select id="edit-subtitles" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+          <option value="none">None</option>
+          <option value="English">English</option>
+          <option value="Zulu">Zulu</option>
+          <option value="Afrikaans">Afrikaans</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="section-label" style="margin-top:14px">GENRE</p>
+    <select id="edit-genre" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+      <option value="Drama">Drama</option>
+      <option value="Comedy">Comedy</option>
+      <option value="Thriller">Thriller</option>
+      <option value="Documentary">Documentary</option>
+      <option value="Romance">Romance</option>
+      <option value="Horror">Horror</option>
+      <option value="Action">Action</option>
+      <option value="Music">Music</option>
+      <option value="Sci-Fi">Sci-Fi</option>
+      <option value="Animation">Animation</option>
+    </select>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div>
+        <p class="section-label">RENT PRICE (R)</p>
+        <input id="edit-rent" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+      </div>
+      <div>
+        <p class="section-label">OWN PRICE (R)</p>
+        <input id="edit-own" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+      </div>
+    </div>
+
+    <p class="section-label" style="margin-top:14px">REPLACE POSTER</p>
+    <div class="upload-zone" id="edit-poster-drop" onclick="document.getElementById('edit-poster-file').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleEditDrop(event)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p style="color:var(--muted);font-size:14px">Tap to replace poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
+      <div id="edit-poster-name" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
+      <img id="edit-poster-preview" style="display:none;margin-top:8px;max-height:120px;border-radius:6px;object-fit:cover">
+    </div>
+    <input type="file" id="edit-poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleEditPosterSelect(event)">
+
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button class="btn btn-amber" id="edit-save-btn" onclick="saveFilmEdit()" style="flex:1">SAVE CHANGES</button>
+      <button class="btn btn-ghost" onclick="nav('film-detail')" style="flex:1">CANCEL</button>
+    </div>
+    <div id="edit-progress" style="display:none;margin-top:10px">
+      <div class="progress-upload"><div class="progress-upload-fill" id="edit-prog-fill"></div></div>
+    </div>
+  </div>
+</div>
+<script>
+var editPosterFile = null;
+var currentFilmId = null;
+var editingFilmId = null;
+
+function openEditFilm(filmId) {
+  editingFilmId = filmId;
+  editPosterFile = null;
+  db.ref(DB_PREFIX + 'films/' + filmId).once('value').then(snap => {
+    const f = snap.val();
+    if (!f) return;
+    document.getElementById('edit-synopsis').value = f.synopsis || '';
+    document.getElementById('edit-language').value = f.language || 'English';
+    document.getElementById('edit-subtitles').value = f.subtitles || 'none';
+    document.getElementById('edit-genre').value = (f.genre && f.genre[0]) ? f.genre[0] : 'Drama';
+    document.getElementById('edit-rent').value = f.price_rent || 25;
+    document.getElementById('edit-own').value = f.price_own || 49;
+    document.getElementById('edit-poster-name').textContent = '';
+    document.getElementById('edit-poster-preview').style.display = 'none';
+    document.getElementById('edit-save-btn').textContent = 'SAVE CHANGES';
+    document.getElementById('edit-save-btn').disabled = false;
+    document.getElementById('edit-progress').style.display = 'none';
+    nav('edit-film');
+  });
+}
+
+function handleEditPosterSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  editPosterFile = file;
+  document.getElementById('edit-poster-name').textContent = file.name;
+  const preview = document.getElementById('edit-poster-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+}
+
+function handleEditDrop(event) {
+  event.preventDefault();
+  document.getElementById('edit-poster-drop').classList.remove('drag');
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  editPosterFile = file;
+  document.getElementById('edit-poster-name').textContent = file.name;
+  const preview = document.getElementById('edit-poster-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+}
+
+async function saveFilmEdit() {
+  if (!editingFilmId) return;
+  const btn = document.getElementById('edit-save-btn');
+  btn.textContent = 'SAVING…';
+  btn.disabled = true;
+
+  try {
+    const updates = {
+      synopsis: document.getElementById('edit-synopsis').value.trim(),
+      language: document.getElementById('edit-language').value,
+      subtitles: document.getElementById('edit-subtitles').value,
+      genre: [document.getElementById('edit-genre').value],
+      price_rent: parseFloat(document.getElementById('edit-rent').value) || 0,
+      price_own: parseFloat(document.getElementById('edit-own').value) || 0
+    };
+
+    if (editPosterFile) {
+      btn.textContent = 'UPLOADING POSTER…';
+      document.getElementById('edit-progress').style.display = 'block';
+      const posterRef = storage.ref('flieks_films/' + editingFilmId + '/poster.jpg');
+      const task = posterRef.put(editPosterFile);
+      task.on('state_changed', snap => {
+        const pct = (snap.bytesTransferred / snap.totalBytes * 100).toFixed(0);
+        document.getElementById('edit-prog-fill').style.width = pct + '%';
+        btn.textContent = 'UPLOADING ' + pct + '%…';
+      });
+      await task;
+      updates.poster_url = await posterRef.getDownloadURL();
+      document.getElementById('edit-progress').style.display = 'none';
+    }
+
+    await db.ref(DB_PREFIX + 'films/' + editingFilmId).update(updates);
+    btn.textContent = 'SAVED ✓';
+    setTimeout(() => { nav('film-detail'); }, 1200);
+  } catch(e) {
+    console.error(e);
+    showSnack('Save failed: ' + e.message);
+    btn.textContent = 'SAVE CHANGES';
+    btn.disabled = false;
+  }
+}
+</script>
+<div id="view-edit-film" class="view">
+  <div class="topbar">
+    <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>Back
+    </button>
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <div style="width:40px"></div>
+  </div>
+  <div style="padding:14px">
+    <p class="section-label">SYNOPSIS</p>
+    <textarea id="edit-synopsis" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div>
+        <p class="section-label">LANGUAGE</p>
+        <select id="edit-language" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+          <option>English</option><option>Zulu</option><option>Xhosa</option><option>Afrikaans</option><option>Sotho</option><option>Tswana</option><option>Other</option>
+        </select>
+      </div>
+      <div>
+        <p class="section-label">SUBTITLES</p>
+        <select id="edit-subtitles" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+          <option value="none">None</option><option>English</option><option>Zulu</option><option>Afrikaans</option>
+        </select>
+      </div>
+    </div>
+    <p class="section-label" style="margin-top:14px">GENRE</p>
+    <select id="edit-genre" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+      <option>Drama</option><option>Comedy</option><option>Thriller</option><option>Documentary</option><option>Romance</option><option>Horror</option><option>Action</option><option>Music</option><option>Sci-Fi</option><option>Animation</option>
+    </select>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div>
+        <p class="section-label">RENT (R)</p>
+        <input id="edit-rent" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+      <div>
+        <p class="section-label">OWN (R)</p>
+        <input id="edit-own" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+    </div>
+    <p class="section-label" style="margin-top:14px">REPLACE POSTER</p>
+    <div class="upload-zone" onclick="document.getElementById('edit-poster-file').click()">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p style="color:var(--muted);font-size:14px">Tap to replace poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
+      <div id="edit-poster-name" style="font-size:12px;color:var(--amber);margin-top:6px"></div>
+      <img id="edit-poster-preview" style="display:none;max-height:120px;border-radius:6px;margin-top:8px;object-fit:cover">
+    </div>
+    <input type="file" id="edit-poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleEditPosterSelect(event)">
+    <div id="edit-progress" style="display:none;margin-top:8px"><div class="progress-upload"><div class="progress-upload-fill" id="edit-prog-fill"></div></div></div>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button class="btn btn-amber" id="edit-save-btn" onclick="saveFilmEdit()" style="flex:1">SAVE CHANGES</button>
+      <button class="btn btn-ghost" onclick="nav('film-detail')" style="flex:1">CANCEL</button>
+    </div>
+  </div>
+</div><script>
+var editPosterFile=null;
+function openEditFilm(filmId){
+  if(!filmId){showSnack('No film selected');return;}
+  editPosterFile=null;
+  db.ref(DB_PREFIX+'films/'+filmId).once('value').then(function(snap){
+    var f=snap.val();if(!f)return;
+    document.getElementById('edit-synopsis').value=f.synopsis||'';
+    document.getElementById('edit-language').value=f.language||'English';
+    document.getElementById('edit-subtitles').value=f.subtitles||'none';
+    document.getElementById('edit-genre').value=(f.genre&&f.genre[0])||'Drama';
+    document.getElementById('edit-rent').value=f.price_rent||25;
+    document.getElementById('edit-own').value=f.price_own||49;
+    document.getElementById('edit-poster-name').textContent='';
+    document.getElementById('edit-poster-preview').style.display='none';
+    document.getElementById('edit-save-btn').textContent='SAVE CHANGES';
+    document.getElementById('edit-save-btn').disabled=false;
+    document.getElementById('edit-progress').style.display='none';
+    nav('edit-film');
+  });
+}
+function handleEditPosterSelect(e){
+  var f=e.target.files[0];if(!f)return;
+  editPosterFile=f;
+  document.getElementById('edit-poster-name').textContent=f.name;
+  var pr=document.getElementById('edit-poster-preview');
+  pr.src=URL.createObjectURL(f);pr.style.display='block';
+}
+async function saveFilmEdit(){
+  if(!currentFilmId)return;
+  var btn=document.getElementById('edit-save-btn');
+  btn.textContent='SAVING…';btn.disabled=true;
+  try{
+    var updates={
+      synopsis:document.getElementById('edit-synopsis').value.trim(),
+      language:document.getElementById('edit-language').value,
+      subtitles:document.getElementById('edit-subtitles').value,
+      genre:[document.getElementById('edit-genre').value],
+      price_rent:parseFloat(document.getElementById('edit-rent').value)||0,
+      price_own:parseFloat(document.getElementById('edit-own').value)||0
+    };
+    if(editPosterFile){
+      btn.textContent='UPLOADING…';
+      document.getElementById('edit-progress').style.display='block';
+      var ref=storage.ref('flieks_films/'+currentFilmId+'/poster.jpg');
+      var task=ref.put(editPosterFile);
+      task.on('state_changed',function(s){
+        var p=(s.bytesTransferred/s.totalBytes*100).toFixed(0);
+        document.getElementById('edit-prog-fill').style.width=p+'%';
+        btn.textContent='UPLOADING '+p+'%…';
+      });
+      await task;
+      updates.poster_url=await ref.getDownloadURL();
+    }
+    await db.ref(DB_PREFIX+'films/'+currentFilmId).update(updates);
+    showSnack('Saved!');
+    btn.textContent='SAVED ✓';
+    setTimeout(function(){nav('film-detail');},1000);
+  }catch(e){
+    showSnack('Error: '+e.message);
+    btn.textContent='SAVE CHANGES';btn.disabled=false;
+  }
+}
+</script>
+<div id="view-edit-film" class="view">
+  <div class="topbar">
+    <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>Back
+    </button>
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <div style="width:40px"></div>
+  </div>
+  <div style="padding:14px">
+    <p class="section-label">SYNOPSIS</p>
+    <textarea id="edit-synopsis" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div>
+        <p class="section-label">LANGUAGE</p>
+        <select id="edit-language" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+          <option>English</option><option>Zulu</option><option>Xhosa</option><option>Afrikaans</option><option>Sotho</option><option>Tswana</option><option>Other</option>
+        </select>
+      </div>
+      <div>
+        <p class="section-label">SUBTITLES</p>
+        <select id="edit-subtitles" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+          <option value="none">None</option><option>English</option><option>Zulu</option><option>Afrikaans</option>
+        </select>
+      </div>
+    </div>
+    <p class="section-label" style="margin-top:14px">GENRE</p>
+    <select id="edit-genre" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
+      <option>Drama</option><option>Comedy</option><option>Thriller</option><option>Documentary</option><option>Romance</option><option>Horror</option><option>Action</option><option>Music</option><option>Sci-Fi</option><option>Animation</option>
+    </select>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <div>
+        <p class="section-label">RENT (R)</p>
+        <input id="edit-rent" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+      <div>
+        <p class="section-label">OWN (R)</p>
+        <input id="edit-own" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+    </div>
+    <p class="section-label" style="margin-top:14px">REPLACE POSTER</p>
+    <div class="upload-zone" onclick="document.getElementById('edit-poster-file').click()" style="cursor:pointer">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p style="color:var(--muted);font-size:14px">Tap to replace poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
+      <div id="edit-poster-name" style="font-size:12px;color:var(--amber);margin-top:6px"></div>
+      <img id="edit-poster-preview" style="display:none;max-height:120px;border-radius:6px;margin-top:8px;object-fit:cover">
+    </div>
+    <input type="file" id="edit-poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleEditPosterSelect(event)">
+    <div id="edit-progress" style="display:none;margin-top:8px"><div class="progress-upload"><div class="progress-upload-fill" id="edit-prog-fill"></div></div></div>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button class="btn btn-amber" id="edit-save-btn" onclick="saveFilmEdit()" style="flex:1">SAVE CHANGES</button>
+      <button class="btn btn-ghost" onclick="nav('film-detail')" style="flex:1">CANCEL</button>
+    </div>
+  </div>
+</div><script>
+var editPosterFile = null;
+function openEditFilm(filmId) {
+  if (!filmId) { showSnack('No film selected'); return; }
+  editPosterFile = null;
+  db.ref(DB_PREFIX + 'films/' + filmId).once('value').then(function(snap) {
+    var f = snap.val(); if (!f) return;
+    document.getElementById('edit-synopsis').value = f.synopsis || '';
+    document.getElementById('edit-language').value = f.language || 'English';
+    document.getElementById('edit-subtitles').value = f.subtitles || 'none';
+    document.getElementById('edit-genre').value = (f.genre && f.genre[0]) || 'Drama';
+    document.getElementById('edit-rent').value = f.price_rent || 25;
+    document.getElementById('edit-own').value = f.price_own || 49;
+    document.getElementById('edit-poster-name').textContent = '';
+    document.getElementById('edit-poster-preview').style.display = 'none';
+    document.getElementById('edit-save-btn').textContent = 'SAVE CHANGES';
+    document.getElementById('edit-save-btn').disabled = false;
+    document.getElementById('edit-progress').style.display = 'none';
+    nav('edit-film');
+  });
+}
+function handleEditPosterSelect(e) {
+  var f = e.target.files[0]; if (!f) return;
+  editPosterFile = f;
+  document.getElementById('edit-poster-name').textContent = f.name;
+  var pr = document.getElementById('edit-poster-preview');
+  pr.src = URL.createObjectURL(f); pr.style.display = 'block';
+}
+async function saveFilmEdit() {
+  if (!currentFilmId) return;
+  var btn = document.getElementById('edit-save-btn');
+  btn.textContent = 'SAVING…'; btn.disabled = true;
+  try {
+    var updates = {
+      synopsis: document.getElementById('edit-synopsis').value.trim(),
+      language: document.getElementById('edit-language').value,
+      subtitles: document.getElementById('edit-subtitles').value,
+      genre: [document.getElementById('edit-genre').value],
+      price_rent: parseFloat(document.getElementById('edit-rent').value) || 0,
+      price_own: parseFloat(document.getElementById('edit-own').value) || 0
+    };
+    if (editPosterFile) {
+      btn.textContent = 'UPLOADING…';
+      document.getElementById('edit-progress').style.display = 'block';
+      var ref = storage.ref('flieks_films/' + currentFilmId + '/poster.jpg');
+      var task = ref.put(editPosterFile);
+      task.on('state_changed', function(s) {
+        var p = (s.bytesTransferred / s.totalBytes * 100).toFixed(0);
+        document.getElementById('edit-prog-fill').style.width = p + '%';
+        btn.textContent = 'UPLOADING ' + p + '%…';
+      });
+      await task;
+      updates.poster_url = await ref.getDownloadURL();
+    }
+    await db.ref(DB_PREFIX + 'films/' + currentFilmId).update(updates);
+    showSnack('Saved!');
+    btn.textContent = 'SAVED ✓';
+    setTimeout(function() { nav('film-detail'); }, 1000);
+  } catch(e) {
+    showSnack('Error: ' + e.message);
+    btn.textContent = 'SAVE CHANGES'; btn.disabled = false;
+  }
+}
+</script></body>
+</html>

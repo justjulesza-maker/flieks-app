@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1C1512">
+<meta name="description" content="4flieks — South African short films. Watch and own stories from the next generation of SA filmmakers.">
+<title>4flieks — SA Short Films</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
+<link rel="icon" href="/brand/png/favicon-16.png" sizes="16x16">
+<link rel="apple-touch-icon" href="/brand/png/apple-touch-icon.png">
+<meta property="og:title" content="4flieks — South African Short Films">
+<meta property="og:description" content="Watch and own stories from the next generation of SA filmmakers.">
+<meta property="og:image" content="https://4flieks.com/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://4flieks.com">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://4flieks.com/brand/og-image.png">
+
+
+<style>
+/* ===================== BASE ===================== */
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;
+  --border:#222;--border2:#2A2A2A;
+  --amber:#F5A623;--red:#E8462A;--green:#4CAF50;
+  --text:#F0EDE8;--muted:#888;--dim:#555;
+  --fn:'DM Sans',system-ui,sans-serif;
+  --fb:'Archivo Black',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+body{max-width:480px;margin:0 auto;position:relative}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--fb);cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:var(--fb)}
+
+/* ===================== VIEWS ===================== */
+.view{display:none;min-height:100dvh;padding-bottom:84px;animation:fadeIn 0.2s ease}
+.view.active{display:block}
+#view-player{display:none;flex-direction:column;min-height:100dvh;padding-bottom:0;background:#000}
+#view-player.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===================== TOPBAR ===================== */
+.topbar{position:sticky;top:0;z-index:50;background:var(--bg);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.topbar-logo{display:flex;align-items:center;height:40px}.topbar-logo img{height:40px;width:auto}
+.topbar-right{display:flex;gap:14px;align-items:center}
+.topbar-right svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8;cursor:pointer}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0A0A0A;cursor:pointer;flex-shrink:0}
+
+/* ===================== BOTTOM NAV ===================== */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:68px;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:50}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 16px;cursor:pointer}
+.bnav-btn svg{width:22px;height:22px;stroke:var(--dim);fill:none;stroke-width:1.8;transition:stroke .2s}
+.bnav-btn span{font-size:10px;color:var(--dim);letter-spacing:.5px;transition:color .2s}
+.bnav-btn.on svg{stroke:var(--amber)}
+.bnav-btn.on span{color:var(--amber)}
+
+/* ===================== TYPOGRAPHY HELPERS ===================== */
+.bbn{font-family:var(--fn);letter-spacing:1px}
+.section-label{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px}
+.divider{height:1px;background:var(--border);margin:4px 20px}
+
+/* ===================== TAGS ===================== */
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.tag-amber{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);color:var(--amber)}
+.tag-red{background:var(--red);color:#fff}
+.tag-green{background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.3);color:var(--green)}
+.tag-gray{background:var(--card);border:1px solid var(--border);color:var(--muted)}
+.tag-orange{background:rgba(232,70,42,.12);border:1px solid rgba(232,70,42,.3);color:var(--red)}
+
+/* ===================== BUTTONS ===================== */
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:12px;font-family:var(--fn);font-size:18px;letter-spacing:2px;cursor:pointer;text-align:center;transition:opacity .15s,transform .1s}
+.btn:active{opacity:.85;transform:scale(.99)}
+.btn-amber{background:var(--amber);color:#0A0A0A}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--fb);font-size:14px;font-weight:500;letter-spacing:0}
+.btn-red{background:var(--red);color:#fff}
+.btn-sm{padding:9px 18px;width:auto;font-size:18px;border-radius:8px;display:inline-block}
+
+/* ===================== INPUTS ===================== */
+.input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s}
+.input:focus{border-color:var(--amber)}
+.input::placeholder{color:var(--dim)}
+.input-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
+.input-group{margin-bottom:14px}
+
+/* ===================== HERO CARD ===================== */
+.hero-card{margin:14px 20px;background:var(--card);border-radius:16px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:opacity .15s}
+.hero-card:active{opacity:.9}
+.hero-poster{height:210px;position:relative;display:flex;align-items:flex-end;padding:16px}
+.hero-poster .grain{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0px,transparent 1px,transparent 4px);opacity:.5}
+.hero-poster .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7) 0%,transparent 50%)}
+.hero-meta{padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+.pill-row{display:flex;gap:5px;flex-wrap:wrap}
+.price-row{display:flex;gap:10px;align-items:center}
+
+/* ===================== FILM GRID ===================== */
+.film-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px}
+.film-card{cursor:pointer;transition:opacity .15s}
+.film-card:active{opacity:.85}
+.film-thumb{height:155px;border-radius:10px;border:1px solid var(--border);display:flex;align-items:flex-end;padding:10px;position:relative;overflow:hidden}
+.film-thumb .f-title{font-family:var(--fn);font-size:18px;color:var(--text);line-height:1.1;position:relative;z-index:1}
+.film-thumb .dur{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.8);padding:2px 7px;border-radius:3px;font-size:10px;color:#AAA}
+.film-thumb .f-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 60%)}
+.film-card .fmaker{font-size:10px;color:var(--muted);margin:6px 0 2px}
+.film-card .fprice{font-size:12px;font-weight:700;color:var(--amber)}
+.film-card .fprice.free{color:var(--green)}
+
+/* ===================== CATEGORIES ===================== */
+.cats{display:flex;gap:7px;overflow-x:auto;padding:0 20px 4px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:var(--card);transition:all .2s}
+.cat.on{background:var(--amber);border-color:var(--amber);color:#0A0A0A;font-weight:700}
+
+/* ===================== FILM DETAIL ===================== */
+.film-poster-lg{height:240px;position:relative;display:flex;align-items:flex-end;padding:20px;border-radius:16px;overflow:hidden;border:1px solid var(--border);margin:0 20px 16px}
+.buy-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.buy-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;text-align:center;position:relative;overflow:hidden;transition:border-color .2s}
+.buy-card.featured{background:rgba(245,166,35,.04);border-color:rgba(245,166,35,.3)}
+.buy-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--amber)}
+.buy-card:active{opacity:.9}
+.filmmaker-row{display:flex;align-items:center;gap:10px}
+.filmmaker-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.stats-row{display:flex;gap:16px}
+.stat{text-align:center}
+.stat p:first-child{font-size:14px;font-weight:700;margin:0}
+.stat p:last-child{font-size:10px;color:var(--muted);margin:0}
+
+/* ===================== CHECKOUT ===================== */
+.summary-box{background:#111;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+.summary-row{display:flex;justify-content:space-between;margin-bottom:8px}
+.pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.pay-opt{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:border-color .2s}
+.pay-opt.on{border-color:var(--amber)}
+.pay-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s}
+.pay-opt.on .pay-dot{background:var(--amber)}
+
+/* ===================== PLAYER ===================== */
+.video-wrap{background:#000;position:relative;flex-shrink:0}
+.video-wrap video{width:100%;display:block;max-height:56vw;object-fit:contain}
+.player-controls{background:#0D0D0D;padding:16px 20px 12px;flex:1}
+.prog-bar{height:3px;background:var(--border);position:relative;cursor:pointer;border-radius:2px;margin-bottom:10px}
+.prog-fill{height:100%;background:var(--amber);border-radius:2px;position:relative;pointer-events:none}
+.prog-thumb{position:absolute;right:-6px;top:-5px;width:13px;height:13px;background:var(--amber);border-radius:50%}
+.ctrl-row{display:flex;justify-content:center;align-items:center;gap:32px;margin-bottom:16px}
+.play-btn{width:56px;height:56px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0}
+.play-btn svg{width:22px;height:22px;fill:#0A0A0A;stroke:none}
+.ctrl-btn{background:none;border:none;cursor:pointer}
+.ctrl-btn svg{width:22px;height:22px;stroke:var(--dim);fill:none;stroke-width:1.8}
+
+/* ===================== LIBRARY ===================== */
+.lib-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:opacity .15s}
+.lib-card:active{opacity:.85}
+.lib-thumb{width:52px;height:64px;border-radius:8px;display:flex;align-items:flex-end;padding:5px;flex-shrink:0}
+.lib-thumb span{font-family:var(--fn);font-size:12px;color:var(--text);line-height:1.1}
+
+/* ===================== AUTH ===================== */
+.auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+.auth-tab{flex:1;padding:12px;text-align:center;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.auth-tab.on{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* ===================== SNACKBAR ===================== */
+#snackbar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#222;border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
+#snackbar.show{opacity:1}
+
+/* ===================== SPINNER ===================== */
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin:40px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-wrap{padding:40px;text-align:center}
+
+/* ===================== EMPTY STATE ===================== */
+.empty{text-align:center;padding:60px 40px}
+.empty svg{width:48px;height:48px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:16px}
+.empty p{color:var(--muted);font-size:14px}
+
+/* ===================== INFO BOX ===================== */
+.info-box{border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.info-box svg{width:18px;height:18px;fill:none;stroke-width:2;flex-shrink:0}
+.info-box.green{background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.3)}
+.info-box.green svg{stroke:var(--green)}
+.info-box.amber{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25)}
+.info-box.amber svg{stroke:var(--amber)}
+.info-box p{font-size:12px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     BOTTOM NAV
+================================================================ -->
+<nav class="bnav" id="bnav">
+  <button class="bnav-btn on" data-view="home" onclick="nav('home')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>
+    <span>DISCOVER</span>
+  </button>
+  <button class="bnav-btn" data-view="search" onclick="nav('search')">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <span>SEARCH</span>
+  </button>
+  <button class="bnav-btn" data-view="library" onclick="nav('library')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <span>LIBRARY</span>
+  </button>
+  <button class="bnav-btn" data-view="profile" onclick="nav('profile')">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>PROFILE</span>
+  </button>
+</nav>
+
+<div id="snackbar"></div>
+
+<!-- ================================================================
+     VIEW: HOME / DISCOVER
+================================================================ -->
+<div id="view-home" class="view active">
+  <div class="topbar">
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+    <div class="topbar-right">
+      <svg viewBox="0 0 24 24" onclick="nav('search')"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <div class="avatar" id="home-avatar" onclick="nav('profile')">?</div>
+    </div>
+  </div>
+
+  <!-- Hero featured film -->
+  <div id="hero-section">
+    <div class="loading-wrap"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Categories -->
+  <div style="margin:16px 0 10px">
+    <div class="cats" id="cats">
+      <div class="cat on" onclick="filterCat(this,'all')">All</div>
+      <div class="cat" onclick="filterCat(this,'Drama')">Drama</div>
+      <div class="cat" onclick="filterCat(this,'Comedy')">Comedy</div>
+      <div class="cat" onclick="filterCat(this,'Thriller')">Thriller</div>
+      <div class="cat" onclick="filterCat(this,'Documentary')">Documentary</div>
+      <div class="cat" onclick="filterCat(this,'Romance')">Romance</div>
+      <div class="cat" onclick="filterCat(this,'Horror')">Horror</div>
+      <div class="cat" onclick="filterCat(this,'Action')">Action</div>
+    </div>
+  </div>
+
+  <div style="padding:0 20px;margin-bottom:12px">
+    <p class="section-label">LATEST FILMS</p>
+  </div>
+  <div class="film-grid" id="film-grid">
+    <div style="grid-column:span 2;text-align:center;padding:40px 0"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: SEARCH
+================================================================ -->
+<div id="view-search" class="view">
+  <div class="topbar">
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+  </div>
+  <div style="padding:16px 20px">
+    <input class="input" id="search-input" placeholder="Search films, filmmakers…" oninput="doSearch(this.value)" autocomplete="off">
+  </div>
+  <div style="padding:0 20px;margin-bottom:12px">
+    <p class="section-label" id="search-label">BROWSE ALL</p>
+  </div>
+  <div class="film-grid" id="search-grid"></div>
+</div>
+
+<!-- ================================================================
+     VIEW: FILM DETAIL
+================================================================ -->
+<div id="view-film" class="view">
+  <div class="topbar">
+    <button onclick="navBack()" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <div id="film-fav-btn" style="cursor:pointer">
+      <svg id="film-fav-icon" viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </div>
+  </div>
+  <div id="film-detail-content">
+    <div class="loading-wrap"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: CHECKOUT
+================================================================ -->
+<div id="view-checkout" class="view">
+  <div class="topbar">
+    <button onclick="navBack()" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <span style="font-size:18px;color:var(--muted)">Checkout</span>
+    <div style="width:40px"></div>
+  </div>
+  <div id="checkout-content" style="padding:0 20px"></div>
+</div>
+
+<!-- ================================================================
+     VIEW: PLAYER
+================================================================ -->
+<div id="view-player" class="view">
+  <div class="video-wrap">
+    <video id="flieks-video" playsinline controls
+           poster=""
+           onerror="videoError()"
+           ontimeupdate="updateProgress()"
+           onended="videoEnded()">
+    </video>
+  </div>
+  <div class="player-controls">
+    <!-- Progress bar -->
+    <div class="prog-bar" id="prog-bar" onclick="seekVideo(event)">
+      <div class="prog-fill" id="prog-fill" style="width:0%">
+        <div class="prog-thumb"></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+      <span id="time-cur" style="font-size:12px;color:var(--muted);font-family:monospace">0:00</span>
+      <span id="time-dur" style="font-size:12px;color:var(--dim);font-family:monospace">0:00</span>
+    </div>
+    <!-- Controls -->
+    <div class="ctrl-row">
+      <button class="ctrl-btn" onclick="skipVid(-15)">
+        <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/><text x="9" y="15" style="font-size:10px;fill:var(--dim);stroke:none">15</text></svg>
+      </button>
+      <button class="play-btn" id="play-btn" onclick="togglePlay()">
+        <svg id="play-icon" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+      </button>
+      <button class="ctrl-btn" onclick="skipVid(15)">
+        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.89"/><text x="9" y="15" style="font-size:10px;fill:var(--dim);stroke:none">15</text></svg>
+      </button>
+    </div>
+    <!-- Film info in player -->
+    <div style="padding:0 0 8px;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <p id="player-title" class="bbn" style="font-size:24px;color:var(--text)"></p>
+        <p id="player-maker" style="font-size:12px;color:var(--muted);margin-top:2px"></p>
+      </div>
+      <button onclick="nav('home')" style="padding:8px;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="own-badge" style="display:none" class="info-box green">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      <p>You own this film — tap the download button below to save it</p>
+    </div>
+    <div style="display:flex;gap:20px;padding-top:4px">
+      <button style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px" onclick="rateFilm()">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span style="font-size:10px;color:var(--muted)">RATE</span>
+      </button>
+      <button id="dl-btn" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;display:none" onclick="downloadFilm()">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span style="font-size:10px;color:var(--amber)">OWN</span>
+      </button>
+      <button style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px" onclick="shareFilm()">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span style="font-size:10px;color:var(--muted)">SHARE</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: LIBRARY
+================================================================ -->
+<div id="view-library" class="view">
+  <div class="topbar">
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+    <span style="font-size:14px;color:var(--muted)">My Library</span>
+  </div>
+  <div style="padding:16px 20px">
+    <p class="section-label">OWNED FILMS</p>
+    <div id="owned-films"></div>
+  </div>
+  <div class="divider" style="margin:8px 20px 16px"></div>
+  <div style="padding:0 20px">
+    <p class="section-label">RENTED (ACTIVE)</p>
+    <div id="rented-films"></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW: PROFILE
+================================================================ -->
+<div id="view-profile" class="view">
+  <div class="topbar">
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+  </div>
+  <div id="profile-content" style="padding:20px"></div>
+</div>
+
+<!-- ================================================================
+     VIEW: AUTH
+================================================================ -->
+<div id="view-auth" class="view" style="padding-bottom:40px">
+  <div class="topbar">
+    <button onclick="navBack()" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+  </div>
+  <div style="padding:20px 20px 0;text-align:center;margin-bottom:24px">
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:64px;width:auto;display:block;margin:0 auto">
+    <p style="color:var(--muted);font-size:14px;margin-top:4px">SA Short Films</p>
+  </div>
+  <div style="padding:0 20px">
+    <div class="auth-tabs">
+      <div class="auth-tab on" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</div>
+      <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</div>
+    </div>
+    <!-- Sign In -->
+    <div id="auth-signin">
+      <div class="input-group"><label class="input-label">Email</label><input class="input" id="si-email" type="email" placeholder="you@email.com" autocomplete="email"></div>
+      <div class="input-group"><label class="input-label">Password</label><input class="input" id="si-pass" type="password" placeholder="Password" autocomplete="current-password"></div>
+      <button class="btn btn-amber" onclick="signIn()" style="margin-bottom:12px">SIGN IN</button>
+      <button class="btn btn-outline" onclick="forgotPassword()">Forgot Password</button>
+    </div>
+    <!-- Register -->
+    <div id="auth-register" style="display:none">
+      <div class="input-group"><label class="input-label">Full Name</label><input class="input" id="reg-name" type="text" placeholder="Your name" autocomplete="name"></div>
+      <div class="input-group"><label class="input-label">Email</label><input class="input" id="reg-email" type="email" placeholder="you@email.com" autocomplete="email"></div>
+      <div class="input-group"><label class="input-label">Password</label><input class="input" id="reg-pass" type="password" placeholder="Min 6 characters" autocomplete="new-password"></div>
+      <div class="info-box amber" style="margin-bottom:14px">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>Are you a filmmaker? Register here as a viewer — you can apply to become a filmmaker from your profile after signing up.</p>
+      </div>
+      <button class="btn btn-amber" onclick="register()">CREATE ACCOUNT</button>
+    </div>
+    <p style="text-align:center;color:var(--dim);font-size:12px;margin-top:16px">By continuing you agree to our <a href="#" style="color:var(--amber)">Terms</a> and <a href="#" style="color:var(--amber)">Privacy Policy</a></p>
+  </div>
+</div>
+
+<!-- ================================================================
+     FIREBASE + APP LOGIC
+================================================================ -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script>
+/* ============================================================
+   CONFIG — swap to your dedicated FLIEKS Firebase project
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+
+/* PayFast config — replace with your merchant details */
+const PF_CONFIG = {
+  merchant_id: "10000100",         // Sandbox ID
+  merchant_key: "46f0cd694581a",   // Sandbox key
+  return_url: window.location.origin + "/?payment=success",
+  cancel_url: window.location.origin + "/?payment=cancel",
+  notify_url: window.location.origin + "/.netlify/functions/payfast-itn",
+  sandbox: true                    // set false for production
+};
+
+const DB_PREFIX = "flieks_";
+
+/* ============================================================
+   INIT
+   ============================================================ */
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+
+let currentUser = null;
+let currentFilm = null;
+let checkoutFilm = null;
+let checkoutType = null;
+let allFilms = [];
+let userPurchases = {};
+let navHistory = ['home'];
+
+/* ============================================================
+   AUTH STATE
+   ============================================================ */
+auth.onAuthStateChanged(async user => {
+  currentUser = user;
+  updateAvatars();
+  if (user) {
+    await loadUserPurchases();
+  }
+  // Handle return from PayFast
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('payment') === 'success') {
+    showSnack('Payment successful! Your film is in your Library.');
+    window.history.replaceState({}, '', '/');
+    nav('library');
+  } else if (urlParams.get('payment') === 'cancel') {
+    showSnack('Payment cancelled.');
+    window.history.replaceState({}, '', '/');
+  }
+});
+
+function updateAvatars() {
+  const a = document.getElementById('home-avatar');
+  if (currentUser) {
+    const name = currentUser.displayName || currentUser.email || '';
+    a.textContent = name.charAt(0).toUpperCase() || '?';
+  } else {
+    a.textContent = '?';
+  }
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function nav(viewId, pushHistory = true) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + viewId).classList.add('active');
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('on', b.dataset.view === viewId));
+  document.getElementById('bnav').style.display = viewId === 'player' ? 'none' : 'flex';
+  if (pushHistory) navHistory.push(viewId);
+  window.scrollTo(0, 0);
+  // Load view content
+  if (viewId === 'library') loadLibrary();
+  if (viewId === 'profile') loadProfile();
+  if (viewId === 'search') initSearch();
+}
+
+function navBack() {
+  if (navHistory.length > 1) {
+    navHistory.pop();
+    nav(navHistory[navHistory.length - 1], false);
+  } else {
+    nav('home');
+  }
+}
+
+/* ============================================================
+   LOAD FILMS
+   ============================================================ */
+async function loadFilms() {
+  try {
+    const snap = await db.ref(DB_PREFIX + 'films').orderByChild('status').equalTo('live').once('value');
+    allFilms = [];
+    snap.forEach(child => {
+      allFilms.push({ id: child.key, ...child.val() });
+    });
+    allFilms.sort((a, b) => (b.published_at || 0) - (a.published_at || 0));
+    renderHome();
+  } catch (e) {
+    console.error(e);
+    // Use sample data if Firebase not yet populated
+    allFilms = getSampleFilms();
+    renderHome();
+  }
+}
+
+function getSampleFilms() {
+  return [
+    { id: 'umoya', title: 'UMOYA', filmmaker: 'Sipho Dlamini', filmmaker_location: 'Soweto', synopsis: 'A young woman returns to her childhood home in Soweto to scatter her grandmother\'s ashes, only to discover a letter that challenges everything she thought she knew about her family.', duration_mins: 12, genre: ['Drama'], language: 'Zulu', price_rent: 25, price_own: 49, poster_bg: '#1C1A10', status: 'live', featured: true, rating_avg: 4.8, view_count: 2412, own_count: 87, published_at: Date.now() - 86400000 * 2, free: false, trailer_url: '', video_url: '' },
+    { id: 'nkosi-yami', title: 'NKOSI YAMI', filmmaker: 'Aisha Ndlovu', filmmaker_location: 'Durban', synopsis: 'A teenager navigates faith, identity and family expectations during Ramadan in a KZN coastal community.', duration_mins: 14, genre: ['Drama','Romance'], language: 'Zulu', price_rent: 25, price_own: 49, poster_bg: '#1A1514', status: 'live', featured: false, rating_avg: 4.5, view_count: 890, own_count: 34, published_at: Date.now() - 86400000 * 5, free: false, video_url: '' },
+    { id: 'salt-water', title: 'SALT WATER', filmmaker: 'Keanu Botha', filmmaker_location: 'Cape Town', synopsis: 'Two Cape Town fishermen — an ageing coloured man and his young Xhosa apprentice — face their last season together as the sea refuses to yield.', duration_mins: 11, genre: ['Drama'], language: 'Afrikaans', price_rent: 25, price_own: 49, poster_bg: '#0F1518', status: 'live', featured: false, rating_avg: 4.7, view_count: 1240, own_count: 52, published_at: Date.now() - 86400000 * 1, free: false, is_new: true, video_url: '' },
+    { id: 'ekasi-blues', title: 'EKASI BLUES', filmmaker: 'Thabo Mokoena', filmmaker_location: 'Johannesburg', synopsis: 'A young jazz musician from Alexandra weighs a music scholarship abroad against his ailing mother and the streets that raised him.', duration_mins: 13, genre: ['Drama','Music'], language: 'Sesotho', price_rent: 25, price_own: 49, poster_bg: '#131511', status: 'live', featured: false, rating_avg: 4.9, view_count: 3100, own_count: 143, published_at: Date.now() - 86400000 * 10, free: false, video_url: '' },
+    { id: 'red-dust', title: 'RED DUST', filmmaker: 'Nomsa Vilakazi', filmmaker_location: 'Limpopo', synopsis: 'A free short. A Limpopo farmer discovers a stranger on his land with a story that mirrors his own past.', duration_mins: 10, genre: ['Thriller'], language: 'Venda', price_rent: 0, price_own: 0, poster_bg: '#16100F', status: 'live', featured: false, rating_avg: 4.3, view_count: 5800, own_count: 0, published_at: Date.now() - 86400000 * 20, free: true, video_url: '' },
+    { id: 'echo', title: 'ECHO', filmmaker: 'Sipho Dlamini', filmmaker_location: 'Soweto', synopsis: 'Three estranged siblings meet at their childhood home for one night. What begins as an argument becomes a reckoning.', duration_mins: 15, genre: ['Drama'], language: 'Zulu', price_rent: 25, price_own: 49, poster_bg: '#150F18', status: 'live', featured: false, rating_avg: 4.6, view_count: 435, own_count: 18, published_at: Date.now() - 86400000 * 30, free: false, video_url: '' },
+  ];
+}
+
+/* ============================================================
+   RENDER HOME
+   ============================================================ */
+function renderHome(genre = 'all') {
+  const filtered = genre === 'all' ? allFilms : allFilms.filter(f => f.genre && f.genre.includes(genre));
+  // Hero
+  const featured = allFilms.find(f => f.featured) || allFilms[0];
+  const heroEl = document.getElementById('hero-section');
+  if (featured) {
+    heroEl.innerHTML = heroHTML(featured);
+  } else {
+    heroEl.innerHTML = '';
+  }
+  // Grid (exclude featured from grid when showing all)
+  const gridFilms = genre === 'all' ? filtered.filter(f => f.id !== (featured && featured.id)) : filtered;
+  document.getElementById('film-grid').innerHTML = gridFilms.length
+    ? gridFilms.map(filmCardHTML).join('')
+    : `<div style="grid-column:span 2" class="empty"><p>No films in this category yet.</p></div>`;
+}
+
+function heroHTML(f) {
+  const rating = f.rating_avg ? f.rating_avg.toFixed(1) : '—';
+  return `<div class="hero-card" onclick="openFilm('${f.id}')">
+    <div class="hero-poster" style="background:${f.poster_bg||'#1C1A10'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:top center':''}">
+      <div class="grain"></div>
+      <div class="overlay"></div>
+      <div style="position:absolute;top:12px;left:12px" class="tag tag-amber">FEATURED</div>
+      <div style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.8);padding:3px 8px;border-radius:4px;display:flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:#888;fill:none;stroke-width:2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span style="font-size:10px;color:#AAA">${f.duration_mins} min</span>
+      </div>
+      <div style="position:relative;z-index:1">
+        <p class="bbn" style="font-size:32px;color:var(--text);line-height:1">${f.title}</p>
+        <p style="font-size:10px;color:var(--amber);margin-top:3px;letter-spacing:1px">${f.filmmaker.toUpperCase()} · ${(f.filmmaker_location||'').toUpperCase()}</p>
+      </div>
+    </div>
+    <div class="hero-meta">
+      <div class="pill-row">${(f.genre||[]).map(g=>`<span class="tag tag-gray">${g}</span>`).join('')} <span class="tag tag-gray">${f.language||''}</span></div>
+      <div class="price-row">
+        ${f.free ? '<span style="color:var(--green);font-size:12px;font-weight:700">FREE</span>' : `<span style="color:var(--muted);font-size:12px">R${f.price_rent} watch</span><span style="color:var(--amber);font-size:12px;font-weight:700">R${f.price_own} own</span>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function filmCardHTML(f) {
+  const owned = userPurchases[f.id];
+  return `<div class="film-card" onclick="openFilm('${f.id}')">
+    <div class="film-thumb" style="background:${f.poster_bg||'#1A1A1A'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:center':''}">
+      <div class="f-overlay"></div>
+      ${f.is_new ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-red">NEW</div>` : ''}
+      <span class="dur">${f.duration_mins}m</span>
+      <span class="f-title">${f.title}</span>
+    </div>
+    <p class="fmaker">${f.filmmaker}</p>
+    <p class="fprice ${f.free?'free':''}">${owned ? '✓ Owned' : f.free ? 'FREE' : `R${f.price_rent} watch`}</p>
+  </div>`;
+}
+
+/* ============================================================
+   FILTER CATEGORIES
+   ============================================================ */
+function filterCat(el, genre) {
+  document.querySelectorAll('.cat').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  renderHome(genre);
+}
+
+/* ============================================================
+   OPEN FILM DETAIL
+   ============================================================ */
+function openFilm(filmId) {
+  currentFilm = allFilms.find(f => f.id === filmId);
+  if (!currentFilm) return;
+  renderFilmDetail();
+  nav('film');
+}
+
+function renderFilmDetail() {
+  const f = currentFilm;
+  if (!f) return;
+  const purchased = userPurchases[f.id];
+  const rating = f.rating_avg ? f.rating_avg.toFixed(1) : '—';
+  const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : f.view_count || 0;
+  const genres = (f.genre||[]).map(g=>`<span class="tag tag-gray">${g}</span>`).join(' ');
+  const html = `
+    <div class="film-poster-lg" style="background:${f.poster_bg||'#1C1A10'}">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0,transparent 1px,transparent 4px);opacity:.5"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 50%)"></div>
+      ${!purchased ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(245,166,35,.5);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="watchTrailer('${f.id}')">
+          <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--amber);stroke:none;margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
+        </div>
+      </div>` : ''}
+      <div style="position:relative;z-index:1">
+        <div style="display:flex;gap:6px;margin-bottom:8px">${genres} <span class="tag tag-gray">${f.language||''}</span></div>
+        <p class="bbn" style="font-size:44px;color:var(--text);line-height:1">${f.title}</p>
+      </div>
+    </div>
+    <div style="padding:0 20px 14px;display:flex;justify-content:space-between;align-items:center">
+      <div class="filmmaker-row">
+        <div class="filmmaker-avatar" style="background:var(--red);color:#fff">${f.filmmaker.charAt(0)}</div>
+        <div>
+          <p style="font-size:14px;font-weight:600;color:var(--text)">${f.filmmaker}</p>
+          <p style="font-size:12px;color:var(--muted)">${f.filmmaker_location||''}</p>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><p style="color:var(--text)">${views}</p><p>Views</p></div>
+        <div class="stat"><p style="color:var(--amber)">${rating}★</p><p>Rating</p></div>
+        <div class="stat"><p style="color:var(--text)">${f.duration_mins}</p><p>min</p></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="padding:14px 20px">
+      <p class="section-label">SYNOPSIS</p>
+      <p style="color:#999;font-size:14px;line-height:1.7">${f.synopsis||''}</p>
+    </div>
+    ${purchased ? `
+      <div style="padding:0 20px 14px">
+        <div class="info-box green">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <p>${purchased.type === 'own' ? 'You own this film. ' : 'You have rental access. '}
+          <a href="#" onclick="event.preventDefault();playFilm('${f.id}')" style="color:var(--amber)">Watch now →</a></p>
+        </div>
+        <button class="btn btn-amber" onclick="playFilm('${f.id}')">WATCH NOW</button>
+      </div>
+    ` : `
+      <div style="padding:0 20px 14px">
+        ${f.free ? `
+          <button class="btn btn-amber" onclick="playFilmFree('${f.id}')">WATCH FREE</button>
+        ` : `
+          <p class="section-label" style="margin-bottom:10px">GET ACCESS</p>
+          <div class="buy-grid" style="margin-bottom:14px">
+            <div class="buy-card" onclick="startCheckout('${f.id}','rent')">
+              <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <p class="bbn" style="font-size:32px;color:var(--text)">R${f.price_rent}</p>
+              <p style="font-size:12px;color:var(--muted)">Watch once</p>
+              <p style="font-size:10px;color:var(--dim);margin-top:3px">48hr access</p>
+            </div>
+            <div class="buy-card featured" onclick="startCheckout('${f.id}','own')">
+              <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <p class="bbn" style="font-size:32px;color:var(--amber)">R${f.price_own}</p>
+              <p style="font-size:12px;color:var(--text)">Own forever</p>
+              <p style="font-size:10px;color:var(--muted);margin-top:3px">Download included</p>
+            </div>
+          </div>
+        `}
+        ${f.trailer_url ? `
+          <button class="btn btn-outline" onclick="watchTrailer('${f.id}')">WATCH FREE TRAILER</button>
+        ` : ''}
+      </div>
+    `}
+  `;
+  document.getElementById('film-detail-content').innerHTML = html;
+}
+
+/* ============================================================
+   CHECKOUT
+   ============================================================ */
+function startCheckout(filmId, type) {
+  if (!currentUser) {
+    showSnack('Please sign in to continue');
+    nav('auth');
+    return;
+  }
+  checkoutFilm = allFilms.find(f => f.id === filmId);
+  checkoutType = type;
+  if (!checkoutFilm) return;
+  renderCheckout();
+  nav('checkout');
+}
+
+function renderCheckout() {
+  const f = checkoutFilm;
+  const type = checkoutType;
+  const amount = type === 'own' ? f.price_own : f.price_rent;
+  const vat = +(amount * 0.15).toFixed(2);
+  const total = +(amount + vat).toFixed(2);
+  const label = type === 'own' ? 'Own forever' : 'Watch once (48hr)';
+
+  document.getElementById('checkout-content').innerHTML = `
+    <div style="margin-bottom:16px">
+      <p class="section-label">CHECKOUT</p>
+      <p class="bbn" style="font-size:32px;color:var(--text)">${type === 'own' ? 'OWN THIS FILM' : 'RENT THIS FILM'}</p>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;margin-bottom:14px">
+      <div style="width:48px;height:58px;border-radius:8px;background:${f.poster_bg||'#1A1A1A'};display:flex;align-items:flex-end;padding:5px;flex-shrink:0">
+        <span style="font-family:var(--fn);font-size:12px;color:var(--text);line-height:1.1">${f.title}</span>
+      </div>
+      <div>
+        <p style="font-size:14px;font-weight:600;color:var(--text)">${f.title}</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:2px">${f.filmmaker} · ${f.duration_mins} min</p>
+        <span class="tag ${type==='own'?'tag-amber':'tag-gray'}" style="margin-top:4px;display:inline-block">${label}</span>
+      </div>
+    </div>
+    <div class="summary-box">
+      <p class="section-label">ORDER SUMMARY</p>
+      <div class="summary-row"><span style="color:var(--muted);font-size:14px">${label}</span><span style="font-size:14px">R${amount.toFixed(2)}</span></div>
+      <div class="summary-row"><span style="color:var(--muted);font-size:14px">VAT (15%)</span><span style="color:var(--muted);font-size:14px">R${vat.toFixed(2)}</span></div>
+      <div style="height:1px;background:var(--border);margin:8px 0 10px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;font-weight:600">Total</span>
+        <span class="bbn" style="font-size:24px;color:var(--amber)">R${total.toFixed(2)}</span>
+      </div>
+    </div>
+    <div class="info-box amber" style="margin-bottom:16px">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <p>Payments secured by PayFast. <strong style="color:var(--amber)">70%</strong> of every purchase goes directly to the filmmaker.</p>
+    </div>
+    <p class="section-label" style="margin-bottom:10px">PAY WITH</p>
+    <div class="pay-methods" id="pay-methods">
+      <div class="pay-opt on" onclick="selectPayMethod(this,'card')"><div class="pay-dot"></div><span style="font-size:14px;font-weight:600;color:var(--text)">Card</span></div>
+      <div class="pay-opt" onclick="selectPayMethod(this,'eft')"><div class="pay-dot"></div><span style="font-size:14px;color:var(--muted)">Ozow EFT</span></div>
+    </div>
+    <div class="pay-opt" style="margin-bottom:16px" onclick="selectPayMethod(this,'snapscan')"><div class="pay-dot"></div><span style="font-size:14px;color:var(--muted)">SnapScan / Yoco</span></div>
+    <button class="btn btn-amber" onclick="processPayment(${amount},${total})" style="margin-bottom:10px">PAY R${total.toFixed(2)}</button>
+    <p style="text-align:center;color:var(--dim);font-size:12px">You'll be redirected to PayFast to complete payment securely</p>
+  `;
+}
+
+function selectPayMethod(el, method) {
+  document.querySelectorAll('.pay-opt').forEach(o => {
+    o.classList.remove('on');
+    o.querySelector('.pay-dot').style.background = 'var(--border)';
+    o.querySelector('span').style.color = 'var(--muted)';
+    o.querySelector('span').style.fontWeight = '400';
+  });
+  el.classList.add('on');
+  el.querySelector('.pay-dot').style.background = 'var(--amber)';
+  el.querySelector('span').style.color = 'var(--text)';
+  el.querySelector('span').style.fontWeight = '600';
+}
+
+async function processPayment(amount, total) {
+  if (!currentUser || !checkoutFilm) return;
+  const f = checkoutFilm;
+  const type = checkoutType;
+
+  // Write pending transaction to Firebase
+  const txRef = db.ref(DB_PREFIX + 'transactions').push();
+  const txId = txRef.key;
+  await txRef.set({
+    uid: currentUser.uid,
+    film_id: f.id,
+    film_title: f.title,
+    type: type,
+    amount: amount,
+    platform_fee: +(amount * 0.30).toFixed(2),
+    filmmaker_share: +(amount * 0.70).toFixed(2),
+    filmmaker_uid: f.filmmaker_uid || null,
+    status: 'pending',
+    created_at: Date.now()
+  });
+
+  // Build PayFast form
+  const pfData = {
+    merchant_id: PF_CONFIG.merchant_id,
+    merchant_key: PF_CONFIG.merchant_key,
+    return_url: PF_CONFIG.return_url,
+    cancel_url: PF_CONFIG.cancel_url,
+    notify_url: PF_CONFIG.notify_url,
+    name_first: (currentUser.displayName || '').split(' ')[0] || 'Viewer',
+    name_last: (currentUser.displayName || '').split(' ').slice(1).join(' ') || '',
+    email_address: currentUser.email,
+    m_payment_id: txId,
+    amount: total.toFixed(2),
+    item_name: `FLIEKS: ${f.title} (${type === 'own' ? 'Own' : 'Rent'})`,
+    item_description: `${type === 'own' ? 'Own forever' : '48hr rental'} - ${f.duration_mins} min film`,
+    custom_str1: f.id,
+    custom_str2: type,
+    custom_str3: currentUser.uid
+  };
+
+  const pfUrl = PF_CONFIG.sandbox
+    ? 'https://sandbox.payfast.co.za/eng/process'
+    : 'https://www.payfast.co.za/eng/process';
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = pfUrl;
+  Object.entries(pfData).forEach(([k, v]) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = k;
+    inp.value = v || '';
+    form.appendChild(inp);
+  });
+  document.body.appendChild(form);
+  form.submit();
+}
+
+/* ============================================================
+   PLAYER
+   ============================================================ */
+function playFilm(filmId) {
+  const f = allFilms.find(x => x.id === filmId) || currentFilm;
+  if (!f) return;
+  const purchase = userPurchases[filmId];
+  if (!purchase && !f.free) {
+    showSnack('Please purchase this film first');
+    return;
+  }
+  launchPlayer(f, purchase && purchase.type === 'own');
+}
+
+function playFilmFree(filmId) {
+  const f = allFilms.find(x => x.id === filmId) || currentFilm;
+  if (!f) return;
+  launchPlayer(f, false);
+}
+
+function launchPlayer(film, isOwned) {
+  const video = document.getElementById('flieks-video');
+  video.src = film.video_url || '';
+  video.poster = film.poster_url || '';
+  document.getElementById('player-title').textContent = film.title;
+  document.getElementById('player-maker').textContent = 'By ' + film.filmmaker;
+  document.getElementById('own-badge').style.display = isOwned ? 'flex' : 'none';
+  document.getElementById('dl-btn').style.display = isOwned ? 'flex' : 'none';
+  nav('player');
+  video.play().catch(() => {});
+  // Increment view count
+  if (film.id) {
+    db.ref(`${DB_PREFIX}films/${film.id}/view_count`).transaction(v => (v||0) + 1);
+  }
+}
+
+function watchTrailer(filmId) {
+  const f = allFilms.find(x => x.id === filmId) || currentFilm;
+  if (!f || !f.trailer_url) { showSnack('Trailer not yet available'); return; }
+  launchPlayer({ ...f, video_url: f.trailer_url }, false);
+}
+
+function togglePlay() {
+  const v = document.getElementById('flieks-video');
+  const icon = document.getElementById('play-icon');
+  if (v.paused) {
+    v.play();
+    icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  } else {
+    v.pause();
+    icon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+  }
+}
+
+function updateProgress() {
+  const v = document.getElementById('flieks-video');
+  if (!v.duration) return;
+  const pct = (v.currentTime / v.duration) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('time-cur').textContent = fmtTime(v.currentTime);
+  document.getElementById('time-dur').textContent = fmtTime(v.duration);
+}
+
+function seekVideo(e) {
+  const v = document.getElementById('flieks-video');
+  const bar = document.getElementById('prog-bar');
+  const rect = bar.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  v.currentTime = pct * v.duration;
+}
+
+function skipVid(secs) {
+  const v = document.getElementById('flieks-video');
+  v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + secs));
+}
+
+function videoEnded() {
+  const icon = document.getElementById('play-icon');
+  icon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+}
+
+function videoError() { showSnack('Video not yet available for this film.'); }
+
+function fmtTime(secs) {
+  if (!secs || isNaN(secs)) return '0:00';
+  const m = Math.floor(secs / 60);
+  const s = String(Math.floor(secs % 60)).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function downloadFilm() { showSnack('Download link sent to your email.'); }
+function shareFilm() {
+  if (navigator.share) { navigator.share({ title: 'FLIEKS', url: window.location.href }); }
+  else { navigator.clipboard.writeText(window.location.href); showSnack('Link copied!'); }
+}
+function rateFilm() { showSnack('Rating coming soon!'); }
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+function initSearch() {
+  document.getElementById('search-label').textContent = 'BROWSE ALL';
+  document.getElementById('search-grid').innerHTML = allFilms.map(filmCardHTML).join('');
+}
+
+function doSearch(q) {
+  const term = q.toLowerCase().trim();
+  document.getElementById('search-label').textContent = term ? `RESULTS FOR "${q.toUpperCase()}"` : 'BROWSE ALL';
+  const results = !term ? allFilms : allFilms.filter(f =>
+    f.title.toLowerCase().includes(term) ||
+    f.filmmaker.toLowerCase().includes(term) ||
+    (f.genre||[]).some(g => g.toLowerCase().includes(term)) ||
+    (f.language||'').toLowerCase().includes(term) ||
+    (f.filmmaker_location||'').toLowerCase().includes(term)
+  );
+  document.getElementById('search-grid').innerHTML = results.length
+    ? results.map(filmCardHTML).join('')
+    : `<div style="grid-column:span 2" class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No films found for "${q}"</p></div>`;
+}
+
+/* ============================================================
+   LIBRARY
+   ============================================================ */
+async function loadUserPurchases() {
+  if (!currentUser) return;
+  try {
+    const snap = await db.ref(`${DB_PREFIX}purchases/${currentUser.uid}`).once('value');
+    userPurchases = snap.val() || {};
+  } catch(e) { userPurchases = {}; }
+}
+
+function loadLibrary() {
+  if (!currentUser) {
+    document.getElementById('owned-films').innerHTML = `<p style="color:var(--muted);font-size:14px">Please <a href="#" onclick="nav('auth')" style="color:var(--amber)">sign in</a> to view your library.</p>`;
+    document.getElementById('rented-films').innerHTML = '';
+    return;
+  }
+  const now = Date.now();
+  const owned = Object.entries(userPurchases).filter(([id, p]) => p.type === 'own');
+  const rented = Object.entries(userPurchases).filter(([id, p]) => p.type === 'rent' && (!p.expires_at || p.expires_at > now));
+
+  const renderLib = (items, container) => {
+    if (!items.length) {
+      document.getElementById(container).innerHTML = `<p style="color:var(--muted);font-size:14px">None yet.</p>`;
+      return;
+    }
+    document.getElementById(container).innerHTML = items.map(([filmId, purchase]) => {
+      const f = allFilms.find(x => x.id === filmId) || { id: filmId, title: filmId.toUpperCase(), filmmaker: '', poster_bg: '#1A1A1A', duration_mins: '—' };
+      return `<div class="lib-card" onclick="playFilm('${f.id}')">
+        <div class="lib-thumb" style="background:${f.poster_bg||'#1A1A1A'}"><span>${f.title}</span></div>
+        <div style="flex:1">
+          <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${f.title}</p>
+          <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.duration_mins} min</p>
+          ${purchase.type === 'rent' && purchase.expires_at ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">Expires ${new Date(purchase.expires_at).toLocaleDateString('en-ZA')}</p>` : `<span class="tag tag-green" style="margin-top:4px;display:inline-block">Owned</span>`}
+        </div>
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.8;flex-shrink:0"><polygon points="5,3 19,12 5,21"/></svg>
+      </div>`;
+    }).join('');
+  };
+  renderLib(owned, 'owned-films');
+  renderLib(rented, 'rented-films');
+}
+
+/* ============================================================
+   PROFILE
+   ============================================================ */
+function loadProfile() {
+  const el = document.getElementById('profile-content');
+  if (!currentUser) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:30px 0">
+        <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:60px;width:auto;display:block;margin:0 auto 8px">
+        <p style="color:var(--muted);margin-bottom:24px">Sign in to access your films and profile</p>
+        <button class="btn btn-amber" onclick="nav('auth')" style="margin-bottom:12px">SIGN IN</button>
+        <button class="btn btn-outline" onclick="switchAuthTab('register');nav('auth')">CREATE ACCOUNT</button>
+      </div>`;
+    return;
+  }
+  const name = currentUser.displayName || currentUser.email || '';
+  const initials = name.charAt(0).toUpperCase();
+  const ownedCount = Object.values(userPurchases).filter(p => p.type === 'own').length;
+  const rentedCount = Object.values(userPurchases).filter(p => p.type === 'rent').length;
+  el.innerHTML = `
+    <div style="text-align:center;padding:20px 0 28px">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#0A0A0A;margin:0 auto 12px">${initials}</div>
+      <p style="font-size:18px;font-weight:600;color:var(--text)">${currentUser.displayName || 'Viewer'}</p>
+      <p style="font-size:14px;color:var(--muted);margin-top:2px">${currentUser.email}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <p class="bbn" style="font-size:32px;color:var(--text)">${ownedCount}</p>
+        <p style="font-size:12px;color:var(--muted)">Films Owned</p>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+        <p class="bbn" style="font-size:32px;color:var(--text)">${rentedCount}</p>
+        <p style="font-size:12px;color:var(--muted)">Films Rented</p>
+      </div>
+    </div>
+    <div class="info-box amber" style="margin-bottom:20px">
+      <svg viewBox="0 0 24 24"><path d="M19 2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M3 18h18"/></svg>
+      <p>Are you a filmmaker? <a href="filmmaker.html" style="color:var(--amber);font-weight:600">Apply to share your films →</a></p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <a href="filmmaker.html" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;color:var(--text)">Filmmaker Portal</span>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showSnack('Settings coming soon')">
+        <span style="font-size:14px;color:var(--text)">Settings</span>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showSnack('Support coming soon')">
+        <span style="font-size:14px;color:var(--text)">Help &amp; Support</span>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+    <button class="btn btn-outline" onclick="signOut()" style="margin-top:20px">SIGN OUT</button>`;
+}
+
+/* ============================================================
+   AUTH FUNCTIONS
+   ============================================================ */
+function switchAuthTab(tab) {
+  document.getElementById('auth-signin').style.display = tab === 'signin' ? 'block' : 'none';
+  document.getElementById('auth-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-signin').classList.toggle('on', tab === 'signin');
+  document.getElementById('tab-register').classList.toggle('on', tab === 'register');
+}
+
+async function signIn() {
+  const email = document.getElementById('si-email').value.trim();
+  const pass = document.getElementById('si-pass').value;
+  if (!email || !pass) return showSnack('Please enter email and password');
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    showSnack('Welcome back!');
+    navBack();
+  } catch (e) {
+    showSnack(e.code === 'auth/wrong-password' ? 'Incorrect password' : 'Sign in failed. Please try again.');
+  }
+}
+
+async function register() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  if (!name || !email || !pass) return showSnack('Please fill in all fields');
+  if (pass.length < 6) return showSnack('Password must be at least 6 characters');
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+    await db.ref(`${DB_PREFIX}users/${cred.user.uid}`).set({
+      name, email, role: 'viewer', created_at: Date.now()
+    });
+    showSnack('Account created! Welcome to FLIEKS.');
+    navBack();
+  } catch (e) {
+    showSnack(e.code === 'auth/email-already-in-use' ? 'Email already in use' : 'Registration failed.');
+  }
+}
+
+async function forgotPassword() {
+  const email = document.getElementById('si-email').value.trim();
+  if (!email) return showSnack('Enter your email address first');
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showSnack('Reset link sent to your email');
+  } catch(e) { showSnack('Error sending reset email'); }
+}
+
+function signOut() {
+  auth.signOut().then(() => {
+    userPurchases = {};
+    showSnack('Signed out');
+    nav('home');
+  });
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+let snackTimer;
+function showSnack(msg) {
+  const el = document.getElementById('snackbar');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => loadFilms());
+</script>
+</body>
+</html>

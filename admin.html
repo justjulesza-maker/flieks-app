@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1C1512">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
+<title>4flieks Admin</title>
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;
+  --border:#222;--border2:#2A2A2A;
+  --amber:#F5A623;--red:#E8462A;--green:#4CAF50;
+  --text:#F0EDE8;--muted:#888;--dim:#555;
+  --fn:'DM Sans',system-ui,sans-serif;
+  --fb:'Archivo Black',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;max-width:600px;margin:0 auto;padding-bottom:80px}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:600px;height:60px;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around}
+.nb{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:6px 16px;border:none;background:none;color:var(--dim);font-size:10px;letter-spacing:.5px;transition:color .2s}
+.nb.on{color:var(--amber)}
+.view{display:none;padding:16px 20px}
+.view.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.tag-a{background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.3);color:var(--amber)}
+.tag-g{background:rgba(76,175,80,.15);border:1px solid rgba(76,175,80,.3);color:var(--green)}
+.tag-r{background:rgba(232,70,42,.15);border:1px solid rgba(232,70,42,.3);color:var(--red)}
+.tag-m{background:var(--card);border:1px solid var(--border);color:var(--muted)}
+.btn{display:block;width:100%;padding:12px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:opacity .15s}
+.btn:active{opacity:.8}
+.btn-a{background:var(--amber);color:#0A0A0A}
+.btn-g{background:var(--green);color:#0A0A0A}
+.btn-r{background:var(--red);color:#fff}
+.btn-sm{padding:7px 14px;width:auto;font-size:12px;border-radius:6px;display:inline-block}
+.input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:11px;color:var(--text);font-family:var(--fb);font-size:14px;outline:none}
+.input:focus{border-color:var(--amber)}
+.sl{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:8px}
+.row{display:flex;justify-content:space-between;align-items:center}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin:30px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+#sb{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:#222;border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;font-size:12px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw}
+#sb.show{opacity:1}
+.video-preview{width:100%;border-radius:8px;border:1px solid var(--border);margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;vertical-align:middle"> <span style="font-size:12px;color:var(--muted);letter-spacing:2px;vertical-align:middle">ADMIN</span>
+  <span id="admin-name" style="font-size:12px;color:var(--muted)"></span>
+</div>
+
+<nav class="bnav" id="bnav" style="display:none">
+  <button class="nb on" data-v="queue" onclick="nav('queue')">📥 QUEUE</button>
+  <button class="nb" data-v="films" onclick="nav('films')">🎬 FILMS</button>
+  <button class="nb" data-v="users" onclick="nav('users')">👥 USERS</button>
+  <button class="nb" data-v="payouts" onclick="nav('payouts')">💰 PAYOUTS</button>
+  <button class="nb" data-v="stats" onclick="nav('stats')">📊 STATS</button>
+</nav>
+
+<div id="snack-area"></div>
+<div id="sb"></div>
+
+<!-- AUTH -->
+<div id="view-auth" class="view active" style="padding:40px 20px">
+  <div style="text-align:center;margin-bottom:32px">
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:44px;width:auto;display:block;margin:0 auto 4px">
+    <p style="font-size:12px;color:var(--muted)">Admin Portal</p>
+  </div>
+  <div style="margin-bottom:12px"><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:5px">Email</label><input class="input" id="a-email" type="email" placeholder="admin@flieks.co.za"></div>
+  <div style="margin-bottom:16px"><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:5px">Password</label><input class="input" id="a-pass" type="password" placeholder="Password"></div>
+  <button class="btn btn-a" onclick="adminSignIn()">SIGN IN</button>
+</div>
+
+<!-- REVIEW QUEUE -->
+<div id="view-queue" class="view">
+  <p class="sl">AWAITING REVIEW</p>
+  <div id="queue-list"><div class="spinner"></div></div>
+</div>
+
+<!-- ALL FILMS -->
+<div id="view-films" class="view">
+  <div class="row" style="margin-bottom:14px">
+    <p class="sl" style="margin:0">ALL FILMS</p>
+    <input class="input" id="film-search" placeholder="Search…" style="width:160px;padding:7px 10px" oninput="searchFilms(this.value)">
+  </div>
+  <div id="all-films-list"><div class="spinner"></div></div>
+</div>
+
+<!-- USERS -->
+<div id="view-users" class="view">
+  <p class="sl">FILMMAKER APPLICATIONS</p>
+  <div id="applications-list"><div class="spinner"></div></div>
+  <div class="sl" style="margin-top:16px">ALL USERS</div>
+  <div id="users-list"><div class="spinner"></div></div>
+</div>
+
+<!-- PAYOUTS -->
+<div id="view-payouts" class="view">
+  <p class="sl">PENDING PAYOUTS</p>
+  <div id="payouts-list"><div class="spinner"></div></div>
+</div>
+
+<!-- PLATFORM STATS -->
+<div id="view-stats" class="view">
+  <p class="sl">PLATFORM OVERVIEW</p>
+  <div id="platform-stats"><div class="spinner"></div></div>
+</div>
+
+<!-- FILM REVIEW MODAL (in-flow) -->
+<div id="view-review" class="view">
+  <button onclick="nav('queue')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;background:none;border:none;cursor:pointer;margin-bottom:16px">← Back to Queue</button>
+  <div id="review-content"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+const DB = "flieks_";
+const ADMIN_EMAILS = ["jules@danceafrikalive.com","julian@discovr.tv"]; // add admin emails
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+let currentAdmin = null;
+let allFilmsCache = [];
+
+auth.onAuthStateChanged(async user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    currentAdmin = user;
+    document.getElementById('admin-name').textContent = user.email;
+    document.getElementById('view-auth').classList.remove('active');
+    document.getElementById('view-queue').classList.add('active');
+    document.getElementById('bnav').style.display = 'flex';
+    loadQueue();
+    loadUsers();
+    loadPayouts();
+    loadStats();
+  } else if (user) {
+    auth.signOut();
+    snack('Access denied. Admin only.');
+  } else {
+    currentAdmin = null;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-auth').classList.add('active');
+    document.getElementById('bnav').style.display = 'none';
+  }
+});
+
+function nav(v) {
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.nb').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  window.scrollTo(0,0);
+  if (v === 'queue') loadQueue();
+  if (v === 'films') loadAllFilms();
+  if (v === 'users') loadUsers();
+  if (v === 'payouts') loadPayouts();
+  if (v === 'stats') loadStats();
+}
+
+/* ---- QUEUE ---- */
+async function loadQueue() {
+  const snap = await db.ref(DB+'admin_queue').orderByChild('status').equalTo('pending_review').once('value');
+  const items = [];
+  snap.forEach(c => items.push({ id: c.key, ...c.val() }));
+  const el = document.getElementById('queue-list');
+  if (!items.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films awaiting review.</p>`; return; }
+  el.innerHTML = items.map(q => `
+    <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <div>
+          <p style="font-size:14px;font-weight:700;color:var(--text)">${q.title}</p>
+          <p style="font-size:12px;color:var(--muted)">${q.filmmaker} · ${new Date(q.submitted_at).toLocaleDateString('en-ZA')}</p>
+        </div>
+        <span class="tag tag-a">PENDING</span>
+      </div>
+      <button class="btn btn-a" onclick="openReview('${q.film_id||q.id}','${q.id}')">REVIEW FILM</button>
+    </div>
+  `).join('');
+}
+
+async function openReview(filmId, queueId) {
+  const snap = await db.ref(DB+'films/'+filmId).once('value');
+  const f = { id: filmId, ...snap.val() };
+  document.getElementById('review-content').innerHTML = `
+    <div style="margin-bottom:16px">
+      <p style="font-size:24px;font-weight:700;color:var(--amber)">${f.title}</p>
+      <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.filmmaker_email} · ${f.duration_mins} min · ${f.language}</p>
+    </div>
+    ${f.video_url ? `<video src="${f.video_url}" controls class="video-preview"></video>` : `<p style="color:var(--muted);font-size:14px;margin-bottom:8px">No video URL available yet</p>`}
+    <div class="card" style="margin-top:12px">
+      <p class="sl">SYNOPSIS</p>
+      <p style="font-size:14px;color:#999;line-height:1.6">${f.synopsis||'—'}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+      <div class="stat"><p style="font-size:12px;color:var(--muted)">Genre</p><p style="font-size:14px;margin-top:2px">${(f.genre||[]).join(', ')}</p></div>
+      <div class="stat"><p style="font-size:12px;color:var(--muted)">Subtitles</p><p style="font-size:14px;margin-top:2px">${f.subtitles||'None'}</p></div>
+      <div class="stat"><p style="font-size:12px;color:var(--muted)">Rent</p><p style="font-size:14px;margin-top:2px;color:var(--amber)">${f.free ? 'Free' : 'R'+f.price_rent}</p></div>
+      <div class="stat"><p style="font-size:12px;color:var(--muted)">Own</p><p style="font-size:14px;margin-top:2px;color:var(--amber)">${f.free ? 'Free' : 'R'+f.price_own}</p></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:5px">FEATURE THIS FILM ON HOME?</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="feat-check" style="accent-color:var(--amber);width:16px;height:16px">
+        <span style="font-size:14px;color:var(--muted)">Set as featured film</span>
+      </label>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:5px">REJECTION REASON (if rejecting)</label>
+      <textarea class="input" id="rej-reason" placeholder="Optional — explain why the film was not approved…" style="resize:vertical;min-height:60px;font-size:14px"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="btn btn-g" onclick="approveFilm('${filmId}','${queueId}')">✓ APPROVE</button>
+      <button class="btn btn-r" onclick="rejectFilm('${filmId}','${queueId}')">✗ REJECT</button>
+    </div>
+  `;
+  nav('review');
+}
+
+async function approveFilm(filmId, queueId) {
+  const featured = document.getElementById('feat-check').checked;
+  if (featured) {
+    // Un-feature existing
+    const existing = await db.ref(DB+'films').orderByChild('featured').equalTo(true).once('value');
+    existing.forEach(c => db.ref(DB+'films/'+c.key+'/featured').set(false));
+  }
+  await db.ref(DB+'films/'+filmId).update({ status: 'live', featured, published_at: Date.now() });
+  if (queueId) await db.ref(DB+'admin_queue/'+queueId).update({ status: 'approved' });
+  snack('Film approved and live!');
+  nav('queue');
+}
+
+async function rejectFilm(filmId, queueId) {
+  const reason = document.getElementById('rej-reason').value.trim();
+  await db.ref(DB+'films/'+filmId).update({ status: 'rejected', rejection_reason: reason || 'Does not meet content guidelines.' });
+  if (queueId) await db.ref(DB+'admin_queue/'+queueId).update({ status: 'rejected' });
+  snack('Film rejected.');
+  nav('queue');
+}
+
+/* ---- ALL FILMS ---- */
+async function loadAllFilms() {
+  const snap = await db.ref(DB+'films').once('value');
+  allFilmsCache = [];
+  snap.forEach(c => allFilmsCache.push({ id: c.key, ...c.val() }));
+  allFilmsCache.sort((a,b) => (b.published_at||b.submitted_at||0) - (a.published_at||a.submitted_at||0));
+  renderFilmsList(allFilmsCache);
+}
+
+function renderFilmsList(films) {
+  const el = document.getElementById('all-films-list');
+  if (!films.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films.</p>`; return; }
+  const statusTag = { live:'tag-g', review:'tag-a', draft:'tag-m', rejected:'tag-r' };
+  el.innerHTML = films.map(f => `
+    <div class="card row">
+      <div style="flex:1">
+        <div class="row" style="margin-bottom:4px">
+          <p style="font-size:14px;font-weight:700">${f.title}</p>
+          <span class="tag ${statusTag[f.status]||'tag-m'}">${(f.status||'').toUpperCase()}</span>
+        </div>
+        <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
+      </div>
+      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-left:10px" onclick="toggleFilmStatus('${f.id}','${f.status}')">
+        ${f.status === 'live' ? 'Take Down' : 'Go Live'}
+      </button>
+    </div>
+  `).join('');
+}
+
+function searchFilms(q) {
+  const term = q.toLowerCase();
+  renderFilmsList(allFilmsCache.filter(f => f.title.toLowerCase().includes(term) || f.filmmaker.toLowerCase().includes(term)));
+}
+
+async function toggleFilmStatus(id, status) {
+  const newStatus = status === 'live' ? 'draft' : 'live';
+  await db.ref(DB+'films/'+id).update({ status: newStatus, ...(newStatus === 'live' ? { published_at: Date.now() } : {}) });
+  snack(`Film ${newStatus === 'live' ? 'published' : 'taken down'}.`);
+  loadAllFilms();
+}
+
+/* ---- USERS ---- */
+async function loadUsers() {
+  const appEl = document.getElementById('applications-list');
+  const uEl = document.getElementById('users-list');
+  try {
+    // Applications
+    const appSnap = await db.ref(DB+'filmmaker_applications').once('value');
+    const apps = [];
+    appSnap.forEach(c => { const v = c.val(); if (v.status === 'pending') apps.push({ id: c.key, ...v }); });
+    appEl.innerHTML = apps.length === 0 ? `<p style="color:var(--muted);font-size:14px">No pending applications.</p>` :
+      apps.map(a => `
+        <div class="card">
+          <div class="row" style="margin-bottom:6px">
+            <div><p style="font-size:14px;font-weight:600">${a.name||'—'}</p><p style="font-size:12px;color:var(--muted)">${a.email||''} · ${a.location||'—'}</p></div>
+            <span class="tag tag-a">PENDING</span>
+          </div>
+          ${a.bio ? `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">${a.bio}</p>` : ''}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn btn-g" onclick="approveFilmmaker('${a.uid}','${a.id}')">APPROVE</button>
+            <button class="btn btn-r" onclick="rejectFilmmaker('${a.uid}','${a.id}')">REJECT</button>
+          </div>
+        </div>
+      `).join('');
+  } catch(e) {
+    appEl.innerHTML = `<p style="color:var(--muted);font-size:14px">Error loading applications: ${e.message}</p>`;
+  }
+  try {
+    // All users — use REST API to bypass SDK caching
+    const token = await currentAdmin.getIdToken(true); // force refresh
+    const resp = await fetch(`https://flieks-app-default-rtdb.firebaseio.com/flieks_users.json?auth=${token}`);
+    const data = await resp.json();
+    const users = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
+    if (users.length === 0) {
+      uEl.innerHTML = `<p style="color:var(--muted);font-size:14px">No users yet.</p>`;
+    } else {
+      uEl.innerHTML = users.map(u => `
+        <div class="card row">
+          <div>
+            <p style="font-size:14px;font-weight:600">${u.name||'—'}</p>
+            <p style="font-size:12px;color:var(--muted)">${u.email||''} · <span style="color:${u.role==='filmmaker'?'var(--amber)':u.role==='admin'?'var(--green)':'var(--muted)'}">${u.role||'viewer'}</span></p>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    uEl.innerHTML = `<p style="color:var(--red);font-size:14px">Error loading users: ${e.message}</p>`;
+  }
+}
+
+async function approveFilmmaker(uid, appId) {
+  await db.ref(DB+'users/'+uid).update({ role: 'filmmaker' });
+  await db.ref(DB+'filmmaker_applications/'+appId).update({ status: 'approved' });
+  snack('Filmmaker approved!');
+  loadUsers();
+}
+
+async function rejectFilmmaker(uid, appId) {
+  await db.ref(DB+'filmmaker_applications/'+appId).update({ status: 'rejected' });
+  snack('Application rejected.');
+  loadUsers();
+}
+
+/* ---- PAYOUTS ---- */
+async function loadPayouts() {
+  const snap = await db.ref(DB+'payouts').once('value');
+  const pending = [];
+  snap.forEach(userNode => {
+    userNode.forEach(p => {
+      if (p.val().status === 'pending') pending.push({ id: p.key, uid: userNode.key, ...p.val() });
+    });
+  });
+  const el = document.getElementById('payouts-list');
+  if (!pending.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No pending payouts.</p>`; return; }
+  el.innerHTML = pending.map(p => `
+    <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <div>
+          <p style="font-size:14px;font-weight:700;color:var(--green)">R${(p.amount||0).toFixed(2)}</p>
+          <p style="font-size:12px;color:var(--muted)">${p.filmmaker_name} · ${p.filmmaker_email}</p>
+          <p style="font-size:12px;color:var(--dim)">${new Date(p.requested_at).toLocaleDateString('en-ZA')}</p>
+        </div>
+        <span class="tag tag-a">PENDING</span>
+      </div>
+      <button class="btn btn-g" onclick="markPayoutPaid('${p.uid}','${p.id}')">MARK AS PAID</button>
+    </div>
+  `).join('');
+}
+
+async function markPayoutPaid(uid, payoutId) {
+  await db.ref(DB+'payouts/'+uid+'/'+payoutId).update({ status: 'paid', paid_at: Date.now() });
+  // Mark transactions as paid out
+  snack('Payout marked as paid.');
+  loadPayouts();
+}
+
+/* ---- STATS ---- */
+async function loadStats() {
+  const [filmsSnap, usersSnap, txSnap] = await Promise.all([
+    db.ref(DB+'films').once('value'),
+    db.ref(DB+'users').once('value'),
+    db.ref(DB+'transactions').once('value')
+  ]);
+  let totalFilms=0, liveFilms=0, totalViews=0, totalRevenue=0, totalUsers=0;
+  filmsSnap.forEach(c => {
+    const f = c.val();
+    totalFilms++;
+    if (f.status==='live') liveFilms++;
+    totalViews += f.view_count||0;
+  });
+  usersSnap.forEach(() => totalUsers++);
+  txSnap.forEach(c => {
+    const t = c.val();
+    if (t.status==='complete') totalRevenue += t.amount||0;
+  });
+  document.getElementById('platform-stats').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div class="stat"><p style="font-size:10px;color:var(--muted)">Total Films</p><p style="font-size:24px;font-weight:700;margin-top:2px">${totalFilms}</p></div>
+      <div class="stat"><p style="font-size:10px;color:var(--muted)">Live</p><p style="font-size:24px;font-weight:700;margin-top:2px;color:var(--green)">${liveFilms}</p></div>
+      <div class="stat"><p style="font-size:10px;color:var(--muted)">Total Views</p><p style="font-size:24px;font-weight:700;margin-top:2px">${totalViews >= 1000 ? (totalViews/1000).toFixed(1)+'k' : totalViews}</p></div>
+      <div class="stat"><p style="font-size:10px;color:var(--muted)">Users</p><p style="font-size:24px;font-weight:700;margin-top:2px">${totalUsers}</p></div>
+    </div>
+    <div class="stat" style="text-align:center;padding:20px;margin-bottom:16px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:6px">TOTAL PLATFORM REVENUE</p>
+      <p style="font-size:32px;font-weight:700;color:var(--amber)">R${totalRevenue.toFixed(2)}</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px">30% = R${(totalRevenue*0.3).toFixed(2)} platform · 70% = R${(totalRevenue*0.7).toFixed(2)} filmmakers</p>
+    </div>
+    <button class="btn" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="auth.signOut()">SIGN OUT</button>
+  `;
+}
+
+/* ---- AUTH ---- */
+async function adminSignIn() {
+  const email = document.getElementById('a-email').value.trim();
+  const pass = document.getElementById('a-pass').value;
+  if (!email || !pass) return snack('Enter credentials');
+  try { await auth.signInWithEmailAndPassword(email, pass); }
+  catch(e) { snack('Sign in failed'); }
+}
+
+let st;
+function snack(msg) {
+  const el = document.getElementById('sb');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(st);
+  st = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
