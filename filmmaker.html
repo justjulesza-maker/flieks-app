@@ -335,6 +335,8 @@ select.input option{background:#1A1A1A;color:var(--text)}
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+<script src="/flieks-social.js"></script>
+<script src="/flieks-cast-panel.js"></script>
 <script>
 /* ============================================================
    CONFIG — same project as viewer app (change for prod)
@@ -518,6 +520,32 @@ function openFilmDetail(filmId) {
          <button class="btn btn-amber btn-sm" onclick="openEditFilm(currentFilmId)">Edit Details</button>
       </div>
     ` : ''}
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:4px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:10px">THE FILM'S OWN LINK</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+        This is the address people will use. Short, shareable, and it works on a poster or in a bio.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:13px;color:var(--muted)">4flieks.com/</span>
+        <input id="film-slug-input" value="${f.slug || ''}" placeholder="${(f.title||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}"
+          style="flex:1;min-width:140px;font:inherit;font-size:16px;padding:9px 11px;border-radius:8px;
+                 background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text)">
+        <button class="btn btn-outline btn-sm" onclick="saveFilmSlug('${f.id}')">Save</button>
+      </div>
+      <div id="slug-msg" style="font-size:12px;color:var(--muted);min-height:1.2em"></div>
+      ${f.slug ? `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="copyFilmLink('${f.slug}')">Copy link</button>
+        <a class="btn btn-outline btn-sm" style="text-align:center" target="_blank" rel="noopener"
+           href="https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&ecc=H&margin=8&data=${encodeURIComponent(location.origin + '/' + f.slug)}">Download QR</a>
+      </div>` : `<p style="font-size:12px;color:var(--dim);margin-top:6px">Save a link name to get the film's address and QR code.</p>`}
+      <p style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5">
+        Once your cast start posting this link, changing it would break every one they've shared.
+        Pick it carefully.</p>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <div id="castPanel"></div>
+    </div>
+
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:4px">
       <p class="section-label" style="margin-bottom:10px">REPLACE FILM FILE</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Uploaded the wrong file? Replace it here. ${f.status === 'live' ? 'The film will be taken offline for re-review.' : 'Your submission will be requeued for review.'}</p>
@@ -535,6 +563,61 @@ function openFilmDetail(filmId) {
     </div>
   `;
   nav('film-detail');
+  mountCastPanel(f);
+}
+
+/* ---- cast, links and QR ------------------------------------------------- */
+
+function mountCastPanel(f) {
+  if (!window.FlieksCastPanel) return;          // module not loaded yet
+  FlieksCastPanel.mount('#castPanel', {
+    filmId:   f.id,
+    filmSlug: f.slug || f.id,
+    canEdit:  true
+  });
+}
+
+async function saveFilmSlug(filmId) {
+  const msg = document.getElementById('slug-msg');
+  const raw = document.getElementById('film-slug-input');
+  const slug = FlieksSocial.slugify(raw.value || raw.placeholder);
+  msg.style.color = 'var(--muted)';
+  if (!slug) { msg.style.color = 'var(--red)'; msg.textContent = 'Give the film a link name.'; return; }
+
+  const RESERVED = ['index','admin','filmmaker','cast','attribution','about','terms',
+                    'privacy','login','signup','account','assets','images','static'];
+  if (RESERVED.includes(slug)) {
+    msg.style.color = 'var(--red)'; msg.textContent = 'That name is reserved. Try another.'; return;
+  }
+
+  msg.textContent = 'Checking…';
+  try {
+    const taken = await db.ref(DB_PREFIX + 'film_slugs/' + slug).once('value');
+    if (taken.exists() && taken.val() !== filmId) {
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Another film already uses that name.';
+      return;
+    }
+    const film = myFilms.find(x => x.id === filmId);
+    const old = film && film.slug;
+    if (old && old !== slug) await db.ref(DB_PREFIX + 'film_slugs/' + old).remove();
+    await db.ref(DB_PREFIX + 'film_slugs/' + slug).set(filmId);
+    await db.ref(DB_PREFIX + 'films/' + filmId + '/slug').set(slug);
+    if (film) film.slug = slug;
+    msg.style.color = 'var(--green, #4ADE80)';
+    msg.textContent = 'Saved. 4flieks.com/' + slug + ' is live.';
+    raw.value = slug;
+    mountCastPanel(film);                        // links now use the new slug
+    setTimeout(() => openFilmDetail(filmId), 900);
+  } catch (e) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Could not save that. Try again.';
+  }
+}
+
+function copyFilmLink(slug) {
+  navigator.clipboard.writeText(location.origin + '/' + slug);
+  showSnack('Link copied');
 }
 
 let replacementFile = null;
