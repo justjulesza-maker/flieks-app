@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4flieks — Attribution</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--clay:#1C1512;--clay-2:#261D18;--bone:#F2EADA;--sunset:#D85A2C;--ochre:#D49A2C;
+--haze:#9A8D80;--line:rgba(242,234,218,.13);
+--fd:'Archivo Black',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'DM Sans',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--clay);color:var(--bone);font-family:var(--fb);font-size:15px;line-height:1.55;padding:22px}
+.wrap{max-width:1060px;margin:0 auto}
+h1{font-family:var(--fd);font-size:28px;font-weight:400;letter-spacing:-.01em}
+.sub{font-family:var(--fm);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--haze);margin-top:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:24px 0}
+.card{background:var(--clay-2);border:1px solid var(--line);border-radius:6px;padding:16px}
+.card .k{font-family:var(--fm);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--haze)}
+.card .v{font-family:var(--fd);font-size:29px;line-height:1.1;margin-top:6px}
+.card .v.amber{color:var(--sunset)}
+.bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+select{background:var(--clay-2);border:1px solid var(--line);border-radius:4px;padding:10px 12px;color:var(--bone);font:inherit;font-size:15px}
+table{width:100%;border-collapse:collapse;margin-top:6px}
+th,td{text-align:left;padding:12px 9px;border-bottom:1px solid var(--line);font-size:14px}
+th{font-family:var(--fm);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--haze);font-weight:400}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:rgba(242,234,218,.03)}
+.who{font-weight:700;font-size:15px}
+.slug{font-family:var(--fm);font-size:10.5px;color:var(--haze);margin-top:2px}
+.meter{height:4px;background:var(--sunset);border-radius:2px;min-width:2px;margin-top:5px}
+.rate{color:var(--sunset)}
+.filmrow{background:rgba(216,90,44,.07)}
+.filmrow td{font-weight:700}
+.gate{max-width:340px;margin:14vh auto;background:var(--clay-2);border:1px solid var(--line);border-radius:6px;padding:24px}
+input{width:100%;background:var(--clay);border:1px solid var(--line);border-radius:4px;padding:11px;color:var(--bone);font:inherit;font-size:16px;margin-bottom:11px}
+button{background:var(--sunset);border:0;color:#fff;font-family:var(--fm);font-weight:700;font-size:12px;
+letter-spacing:.12em;text-transform:uppercase;padding:13px 20px;border-radius:4px;cursor:pointer;min-height:46px}
+.err{color:#E5484D;font-size:13px;margin-top:8px}
+.note{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--haze);margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="gate" id="gate">
+    <h1 style="font-size:20px">Attribution</h1>
+    <p class="sub" style="margin-bottom:16px">Admin only</p>
+    <input id="em" type="email" placeholder="Email" autocomplete="email">
+    <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="go" style="width:100%">Sign in</button>
+    <div class="err" id="err"></div>
+  </div>
+  <div id="app" style="display:none"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:            "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain:        "flieks-app.firebaseapp.com",
+  databaseURL:       "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId:         "flieks-app",
+  storageBucket:     "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId:             "1:392470139152:web:586fa5b8cf3a43acaf9595"
+});
+const auth = firebase.auth();
+const DB = 'https://flieks-app-default-rtdb.firebaseio.com';
+const $ = s => document.querySelector(s);
+const esc = s => { const d=document.createElement('div'); d.textContent=s??''; return d.innerHTML; };
+const rand = n => 'R' + (Number(n)||0).toLocaleString('en-ZA',{minimumFractionDigits:2});
+
+let STATS={}, FILMS={}, CAST={}, VIEW='all';
+
+$('#go').onclick = async () => {
+  $('#err').textContent='';
+  try { await auth.signInWithEmailAndPassword($('#em').value.trim(), $('#pw').value); }
+  catch { $('#err').textContent='Sign-in failed.'; }
+};
+
+auth.onAuthStateChanged(async u => {
+  if (!u) { $('#gate').style.display=''; $('#app').style.display='none'; return; }
+  const token = await u.getIdToken(true);
+  const me = await fetch(`${DB}/flieks_users/${u.uid}.json?auth=${token}`).then(r=>r.json()).catch(()=>null);
+  if (!me || me.role !== 'admin') { $('#err').textContent='Not an admin account.'; auth.signOut(); return; }
+  $('#gate').style.display='none'; $('#app').style.display='';
+  await load(token);
+});
+
+async function load(token) {
+  const [stats, films, cast] = await Promise.all([
+    fetch(`${DB}/flieks_stats.json?auth=${token}`).then(r=>r.json()),
+    fetch(`${DB}/flieks_films.json?auth=${token}`).then(r=>r.json()),
+    fetch(`${DB}/flieks_cast.json?auth=${token}`).then(r=>r.json())
+  ]);
+  STATS = stats||{}; FILMS = films||{}; CAST = cast||{};
+  render();
+}
+
+function rowsFor(filmId) {
+  const s = STATS[filmId] || {};
+  const refs = s.refs || {};
+  const cast = CAST[filmId] || {};
+  return Object.entries(refs).map(([slug, r]) => ({
+    filmId, slug,
+    name: (cast[slug] && cast[slug].name) || slug,
+    reach: (cast[slug] && cast[slug].reach) || '',
+    clicks: r.clicks||0, trailers: r.trailerPlays||0,
+    sales: r.sales||0, revenue: r.revenue||0
+  }));
+}
+
+function render() {
+  const filmIds = Object.keys(STATS).filter(k => STATS[k] && STATS[k].refs);
+  let rows = VIEW === 'all'
+    ? filmIds.flatMap(rowsFor)
+    : rowsFor(VIEW);
+  rows.sort((a,b) => b.revenue-a.revenue || b.sales-a.sales);
+
+  const clicks = rows.reduce((n,r)=>n+r.clicks,0);
+  const sales  = rows.reduce((n,r)=>n+r.sales,0);
+  const rev    = rows.reduce((n,r)=>n+r.revenue,0);
+  const maxRev = Math.max(1, ...rows.map(r=>r.revenue));
+
+  const opts = ['<option value="all">All films</option>'].concat(
+    filmIds.map(id => `<option value="${esc(id)}" ${VIEW===id?'selected':''}>${esc((FILMS[id]&&FILMS[id].title)||id)}</option>`)
+  ).join('');
+
+  $('#app').innerHTML = `
+    <h1>Attribution</h1>
+    <p class="sub">Who is actually converting, across the platform</p>
+    <div class="cards">
+      <div class="card"><div class="k">Attributed revenue</div><div class="v amber">${rand(rev)}</div></div>
+      <div class="card"><div class="k">Attributed sales</div><div class="v">${sales}</div></div>
+      <div class="card"><div class="k">Link clicks</div><div class="v">${clicks}</div></div>
+      <div class="card"><div class="k">Click → sale</div><div class="v">${clicks? (sales/clicks*100).toFixed(1)+'%' : '—'}</div></div>
+      <div class="card"><div class="k">Films tracking</div><div class="v">${filmIds.length}</div></div>
+    </div>
+    <div class="bar"><select id="pick">${opts}</select></div>
+    <table>
+      <thead><tr>
+        <th>Cast member</th>${VIEW==='all'?'<th>Film</th>':''}
+        <th class="n">Clicks</th><th class="n">Trailer</th><th class="n">Sales</th>
+        <th class="n">Conv.</th><th class="n">Revenue</th>
+      </tr></thead>
+      <tbody>${rows.length ? rows.map(r => `
+        <tr>
+          <td><div class="who">${esc(r.name)}</div>
+              <div class="slug">?a=${esc(r.slug)}${r.reach?' · '+esc(r.reach):''}</div></td>
+          ${VIEW==='all'?`<td style="font-size:13px;color:var(--haze)">${esc((FILMS[r.filmId]&&FILMS[r.filmId].title)||r.filmId)}</td>`:''}
+          <td class="n">${r.clicks}</td>
+          <td class="n">${r.trailers}</td>
+          <td class="n">${r.sales}</td>
+          <td class="n rate">${r.clicks? (r.sales/r.clicks*100).toFixed(1)+'%' : '—'}</td>
+          <td class="n">${rand(r.revenue)}<div class="meter" style="width:${r.revenue/maxRev*100}%"></div></td>
+        </tr>`).join('')
+        : `<tr><td colspan="7" style="color:var(--haze)">No tagged traffic yet. Add cast to a film and hand out their links.</td></tr>`}
+      </tbody>
+    </table>
+    <p class="note">Conv. = sales ÷ clicks on that person's link. Referrals stick for 30 days, per film.</p>`;
+
+  $('#pick').onchange = e => { VIEW = e.target.value; render(); };
+}
+</script>
+</body>
+</html>
