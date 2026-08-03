@@ -57,8 +57,10 @@ function getRef(filmId) {
    --------------------------------------------------------------------------- */
 async function filmIdFromSlug(slug) {
   if (!slug) return null;
-  const s = await db().ref('flieks_film_slugs/' + slug).get().catch(() => null);
-  return (s && s.val()) || null;
+  try {
+    const s = await db().ref('flieks_film_slugs/' + slug).once('value');
+    return s.val() || null;
+  } catch { return null; }
 }
 
 function slugify(s) {
@@ -163,8 +165,9 @@ const NETWORKS = {
 };
 
 async function loadCast(filmId) {
-  const s = await db().ref('flieks_cast/' + filmId).get().catch(() => null);
-  const v = (s && s.val()) || {};
+  let v = {};
+  try { v = (await db().ref('flieks_cast/' + filmId).once('value')).val() || {}; }
+  catch (e) { console.error('[flieks-social] cast read failed:', e); }
   return Object.entries(v)
     .map(([slug, c]) => ({ slug, ...c }))
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));

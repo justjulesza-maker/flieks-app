@@ -40,8 +40,19 @@ function qrFor(url, size) {
 }
 
 async function load() {
-  const s = await db().ref('flieks_cast/' + state.filmId).get().catch(() => null);
-  state.cast = (s && s.val()) || {};
+  // .once('value') rather than .get() — works on Firebase compat 9.x and 10.x alike
+  try {
+    const s = await db().ref('flieks_cast/' + state.filmId).once('value');
+    state.cast = s.val() || {};
+  } catch (e) {
+    console.error('[cast panel] could not read flieks_cast:', e);
+    state.cast = {};
+    if (state.el) {
+      state.el.innerHTML = '<p class="fcp-empty">Could not load the cast list. ' +
+        'If this persists, check the database rules for flieks_cast.</p>';
+    }
+    throw e;
+  }
 }
 
 function styles() {
@@ -245,7 +256,7 @@ async function mount(target, opts) {
   state.canEdit  = opts.canEdit !== false;
   styles();
   state.el.innerHTML = '<p class="fcp-empty">Loading cast…</p>';
-  await load();
+  try { await load(); } catch { return; }
   render();
 }
 
