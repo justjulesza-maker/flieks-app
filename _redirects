@@ -1,0 +1,20 @@
+# 4flieks routing
+#
+# Real pages first — these must win before the catch-all below.
+/index.html      /index.html        200
+/admin           /admin.html        200
+/filmmaker       /filmmaker.html    200
+/cast            /cast.html         200
+/attribution     /attribution.html  200
+
+# Netlify functions are untouched by SPA rules
+/.netlify/*      /.netlify/:splat   200
+
+# Legacy form, kept working so any link already shared still resolves
+/f/*             /index.html        200
+
+# Every other single-segment path is a film slug:
+#   4flieks.com/metamorph
+#   4flieks.com/metamorph?a=actor-name
+# flieks-social.js reads the slug from the path.
+/*               /index.html        200
