@@ -7,9 +7,6 @@
 /cast            /cast.html         200
 /attribution     /attribution.html  200
 
-# Netlify functions are untouched by SPA rules
-/.netlify/*      /.netlify/:splat   200
-
 # Legacy form, kept working so any link already shared still resolves
 /f/*             /index.html        200
 
