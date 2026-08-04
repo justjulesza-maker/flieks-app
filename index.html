@@ -947,8 +947,9 @@ function renderFilmDetail() {
   const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : f.view_count || 0;
   const genres = (f.genre||[]).map(g=>`<span class="tag tag-gray">${g}</span>`).join(' ');
   const html = `
-    <div class="film-poster-lg" style="background:${f.poster_bg||'#1C1A10'}">
-      <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0,transparent 1px,transparent 4px);opacity:.5"></div>
+    <div class="film-poster-lg" style="background:${f.poster_bg||'#1C1A10'}${
+      f.poster_url ? `;background-image:url('${f.poster_url}');background-size:cover;background-position:center` : ''}">
+      ${!f.poster_url ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0,transparent 1px,transparent 4px);opacity:.5"></div>` : ''}
       <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 50%)"></div>
       ${!purchased ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
         <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(245,166,35,.5);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="watchTrailer('${f.id}')">
