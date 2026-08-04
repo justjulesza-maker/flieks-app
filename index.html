@@ -786,8 +786,10 @@ const FIREBASE_CONFIG = {
 
 /* PayFast config — replace with your merchant details */
 const PF_CONFIG = {
-  merchant_id: "10000100",         // Sandbox ID
-  merchant_key: "46f0cd694581a",   // Sandbox key
+  // Our own sandbox account. The shared 10000100 account cannot be used:
+  // anyone can set a passphrase on it, so ITN signatures are unverifiable.
+  merchant_id: "10052306",
+  merchant_key: "3caxiyw4yn00x",
   return_url: window.location.origin + "/?payment=success",
   cancel_url: window.location.origin + "/?payment=cancel",
   notify_url: window.location.origin + "/.netlify/functions/payfast-itn",
