@@ -447,6 +447,291 @@ input,textarea{font-family:var(--fb)}
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+<script>
+(function (global) {
+'use strict';
+
+const THEMES = {
+
+  midnight: {
+    name: 'Midnight',
+    note: 'The 4flieks house look. Warm amber on near-black.',
+    fonts: 'Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Archivo Black', system-ui, sans-serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'DM Sans', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#12100F',
+      '--t-surface': '#1C1917',
+      '--t-raised':  '#262220',
+      '--t-text':    '#F5F1EA',
+      '--t-muted':   '#9A9088',
+      '--t-accent':  '#F0A62E',
+      '--t-accent-2':'#D85A2C',
+      '--t-on-accent':'#12100F',
+      '--t-line':    'rgba(245,241,234,.14)',
+      '--t-radius':  '10px'
+    }
+  },
+
+  paper: {
+    name: 'Paper',
+    note: 'Torn-paper collage, handwritten titles. Warm and irreverent.',
+    fonts: 'Anton&family=Caveat:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Anton', Impact, sans-serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'Caveat', cursive",
+    vars: {
+      '--t-bg':      '#EDE7DD',
+      '--t-surface': '#F6F2EC',
+      '--t-raised':  '#FFFFFF',
+      '--t-text':    '#211E22',
+      '--t-muted':   '#5A545B',
+      '--t-accent':  '#E0559F',
+      '--t-accent-2':'#1B181C',
+      '--t-on-accent':'#FFFFFF',
+      '--t-line':    'rgba(33,30,34,.16)',
+      '--t-radius':  '3px'
+    }
+  },
+
+  noir: {
+    name: 'Noir',
+    note: 'High contrast black and white. Editorial, serious.',
+    fonts: 'Bebas+Neue&family=Inter:wght@400;500;700',
+    display: "'Bebas Neue', Impact, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    hand: "'Inter', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#0A0A0A',
+      '--t-surface': '#141414',
+      '--t-raised':  '#1E1E1E',
+      '--t-text':    '#FAFAFA',
+      '--t-muted':   '#8A8A8A',
+      '--t-accent':  '#FAFAFA',
+      '--t-accent-2':'#C4302B',
+      '--t-on-accent':'#0A0A0A',
+      '--t-line':    'rgba(250,250,250,.16)',
+      '--t-radius':  '0px'
+    }
+  },
+
+  sunburst: {
+    name: 'Sunburst',
+    note: 'Hot and bright. Comedy, music, anything joyful.',
+    fonts: 'Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Archivo Black', system-ui, sans-serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'DM Sans', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#1A0F2E',
+      '--t-surface': '#241640',
+      '--t-raised':  '#2E1D52',
+      '--t-text':    '#FFF4E6',
+      '--t-muted':   '#A995C4',
+      '--t-accent':  '#FF6B35',
+      '--t-accent-2':'#FFC93C',
+      '--t-on-accent':'#1A0F2E',
+      '--t-line':    'rgba(255,244,230,.16)',
+      '--t-radius':  '14px'
+    }
+  },
+
+  verdant: {
+    name: 'Verdant',
+    note: 'Earthy greens. Documentary, rural stories, nature.',
+    fonts: 'Fraunces:opsz,wght@9..144,600;9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'Fraunces', Georgia, serif",
+    vars: {
+      '--t-bg':      '#121A14',
+      '--t-surface': '#1B261E',
+      '--t-raised':  '#243228',
+      '--t-text':    '#F0EDE4',
+      '--t-muted':   '#93A396',
+      '--t-accent':  '#8FBF6B',
+      '--t-accent-2':'#D9A441',
+      '--t-on-accent':'#121A14',
+      '--t-line':    'rgba(240,237,228,.14)',
+      '--t-radius':  '8px'
+    }
+  },
+
+  ice: {
+    name: 'Ice',
+    note: 'Cool and clean. Thrillers, sci-fi, anything with edge.',
+    fonts: 'Space+Grotesk:wght@500;700&family=Inter:wght@400;500;700',
+    display: "'Space Grotesk', system-ui, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    hand: "'Space Grotesk', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#0B1418',
+      '--t-surface': '#122027',
+      '--t-raised':  '#193039',
+      '--t-text':    '#E8F4F8',
+      '--t-muted':   '#7D9AA6',
+      '--t-accent':  '#4CC9E0',
+      '--t-accent-2':'#7B61FF',
+      '--t-on-accent':'#0B1418',
+      '--t-line':    'rgba(232,244,248,.15)',
+      '--t-radius':  '6px'
+    }
+  }
+};
+
+const DEFAULT = 'midnight';
+
+function get(id) { return THEMES[id] || THEMES[DEFAULT]; }
+
+function list() {
+  return Object.entries(THEMES).map(([id, t]) => ({
+    id, name: t.name, note: t.note,
+    swatch: [t.vars['--t-bg'], t.vars['--t-surface'], t.vars['--t-accent'], t.vars['--t-text']]
+  }));
+}
+
+let loadedFonts = null;
+
+/** Apply a theme to the page. Safe to call repeatedly. */
+function apply(id, target) {
+  const t = get(id);
+  const el = target || document.documentElement;
+
+  Object.entries(t.vars).forEach(([k, v]) => el.style.setProperty(k, v));
+  el.style.setProperty('--t-display', t.display);
+  el.style.setProperty('--t-body', t.body);
+  el.style.setProperty('--t-hand', t.hand);
+
+  if (loadedFonts !== t.fonts) {
+    let link = document.getElementById('flieks-theme-fonts');
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'flieks-theme-fonts';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    link.href = `https://fonts.googleapis.com/css2?family=${t.fonts}&display=swap`;
+    loadedFonts = t.fonts;
+  }
+
+  // let the page colour its own chrome to match
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    document.head.appendChild(meta);
+  }
+  meta.content = t.vars['--t-bg'];
+
+  el.setAttribute('data-flieks-theme', THEMES[id] ? id : DEFAULT);
+  return t;
+}
+
+/** A small preview card's worth of inline style, for the picker. */
+function previewStyle(id) {
+  const t = get(id);
+  return `background:${t.vars['--t-surface']};color:${t.vars['--t-text']};` +
+         `border:1px solid ${t.vars['--t-line']};border-radius:${t.vars['--t-radius']}`;
+}
+
+global.FlieksThemes = { apply, get, list, previewStyle, DEFAULT, THEMES };
+
+})(window);
+
+</script>
+
+<script>
+
+/* ============================================================
+   CAST-LED SELLING — referral capture, deep links, cast wall
+   ============================================================ */
+(function (global) {
+'use strict';
+const REF_TTL_DAYS = 30, LS = 'flieks_ref_v1';
+const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const slugify = s => String(s||'').toLowerCase().trim()
+  .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+
+function store(){ try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; } }
+function write(o){ try { localStorage.setItem(LS, JSON.stringify(o)); } catch {} }
+function prune(o){ const cut = Date.now() - REF_TTL_DAYS*864e5;
+  Object.keys(o).forEach(k => { if (!o[k] || o[k].at < cut) delete o[k]; }); return o; }
+
+function setRef(filmId, slug){ if(!filmId||!slug) return;
+  const o = prune(store()); o[filmId] = { slug, at: Date.now() }; write(o); }
+function getRef(filmId){ const o = prune(store()); write(o);
+  return (o[filmId] && o[filmId].slug) || null; }
+
+function bump(path){ try { firebase.database().ref(path)
+  .transaction(v => (v||0)+1).catch(()=>{}); } catch {} }
+
+async function filmIdFromSlug(slug){
+  if (!slug) return null;
+  try { const s = await firebase.database().ref('flieks_film_slugs/'+slug).once('value');
+        return s.val() || null; } catch { return null; }
+}
+
+const RESERVED = /^(index|admin|filmmaker|cast|attribution|about|terms|privacy|login|signup|account|assets|images|static)$|\.[a-z0-9]+$/i;
+
+/* Reads /slug or ?f=slug plus ?a=castmember. Returns {filmId, ref}. */
+async function readLink(){
+  const q = new URLSearchParams(location.search);
+  let key = q.get('f') || q.get('film');
+  if (!key) {
+    const legacy = location.pathname.match(/^\/f\/([^\/?#]+)/);
+    if (legacy) key = decodeURIComponent(legacy[1]);
+    else {
+      const root = location.pathname.match(/^\/([^\/?#]+)\/?$/);
+      if (root && !RESERVED.test(root[1])) key = decodeURIComponent(root[1]);
+    }
+  }
+  const raw = q.get('a') || q.get('ref');
+  const ref = raw ? slugify(raw) : null;
+  if (!key) return { filmId: null, ref: null };
+
+  const filmId = (await filmIdFromSlug(key)) || key;
+  if (ref) {
+    setRef(filmId, ref);
+    bump(`flieks_stats/${filmId}/refs/${ref}/clicks`);
+    bump(`flieks_stats/${filmId}/clicks`);
+  }
+  if (q.has('a') || q.has('ref')) {
+    const onPath = /^\/[^\/?#]+\/?$/.test(location.pathname) && location.pathname !== '/';
+    history.replaceState({}, '', onPath ? location.pathname : '/' + encodeURIComponent(key));
+  }
+  return { filmId, ref };
+}
+
+function linkFor(filmSlugOrId, castSlug){
+  const f = encodeURIComponent(filmSlugOrId);
+  return castSlug ? `${location.origin}/${f}?a=${encodeURIComponent(castSlug)}`
+                  : `${location.origin}/${f}`;
+}
+
+async function loadCast(filmId){
+  try {
+    const s = await firebase.database().ref('flieks_cast/' + filmId).once('value');
+    const v = s.val() || {};
+    return Object.entries(v).map(([slug,c]) => ({ slug, ...c }))
+                 .sort((a,b) => (a.order??99)-(b.order??99));
+  } catch { return []; }
+}
+
+function trailerPlayed(filmId){
+  bump(`flieks_stats/${filmId}/trailerPlays`);
+  const r = getRef(filmId);
+  if (r) bump(`flieks_stats/${filmId}/refs/${r}/trailerPlays`);
+}
+
+function bumpView(filmId){ bump(`flieks_stats/${filmId}/views`); }
+
+global.FlieksSocial = { readLink, getRef, setRef, slugify, loadCast, linkFor,
+                        trailerPlayed, bumpView, filmIdFromSlug, esc };
+})(window);
+
+</script>
 <script>
 /* ============================================================
    CONFIG — swap to your dedicated FLIEKS Firebase project
@@ -579,6 +864,7 @@ function getSampleFilms() {
    RENDER HOME
    ============================================================ */
 function renderHome(genre = 'all') {
+  if (window.FlieksThemes) FlieksThemes.apply(FlieksThemes.DEFAULT);
   const filtered = genre === 'all' ? allFilms : allFilms.filter(f => f.genre && f.genre.includes(genre));
   // Hero
   const featured = allFilms.find(f => f.featured) || allFilms[0];
@@ -693,6 +979,7 @@ function renderFilmDetail() {
       <p class="section-label">SYNOPSIS</p>
       <p style="color:#999;font-size:14px;line-height:1.7">${f.synopsis||''}</p>
     </div>
+    <div id="film-cast-wall"></div>
     ${purchased ? `
       <div style="padding:0 20px 14px">
         <div class="info-box green">
@@ -730,6 +1017,56 @@ function renderFilmDetail() {
     `}
   `;
   document.getElementById('film-detail-content').innerHTML = html;
+
+  if (window.FlieksThemes) FlieksThemes.apply(f.theme);
+  renderCastWall(f);
+  if (window.FlieksSocial) FlieksSocial.bumpView(f.id);
+}
+
+/* ============================================================
+   CAST WALL — only people the filmmaker marked as public
+   ============================================================ */
+async function renderCastWall(f) {
+  const box = document.getElementById('film-cast-wall');
+  if (!box || !window.FlieksSocial) return;
+  const all = await FlieksSocial.loadCast(f.id);
+  const cast = all.filter(c => !c.hidden);
+  if (!cast.length) { box.innerHTML = ''; return; }
+
+  const esc = FlieksSocial.esc;
+  const NETS = { instagram:'Instagram', tiktok:'TikTok', x:'X', youtube:'YouTube', facebook:'Facebook' };
+
+  box.innerHTML = `
+    <div class="divider"></div>
+    <div style="padding:14px 20px">
+      <p class="section-label" style="margin-bottom:12px">CAST</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:14px">
+        ${cast.map(c => `
+          <div style="text-align:center">
+            ${c.photoUrl
+              ? `<img src="${esc(c.photoUrl)}" alt="${esc(c.name)}" loading="lazy"
+                   style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 8px;display:block;
+                          background:var(--card);border:1px solid var(--border)">`
+              : `<div style="width:72px;height:72px;border-radius:50%;margin:0 auto 8px;
+                          background:var(--card);border:1px solid var(--border);display:flex;
+                          align-items:center;justify-content:center;font-size:22px;font-weight:700;
+                          color:var(--muted)">${esc((c.name||'?').charAt(0))}</div>`}
+            <p style="font-size:13px;font-weight:600;color:var(--text);line-height:1.25">${esc(c.name)}</p>
+            ${c.role ? `<p style="font-size:11px;color:var(--amber);margin-top:2px">${esc(c.role)}</p>` : ''}
+            <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:7px">
+              ${Object.keys(NETS).filter(k => c[k]).map(k =>
+                `<a href="${esc(c[k])}" target="_blank" rel="noopener"
+                    style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;
+                           border:1px solid var(--border);border-radius:99px;color:var(--muted);
+                           text-decoration:none;min-height:28px;display:inline-flex;align-items:center"
+                 >${NETS[k]}</a>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+      ${FlieksSocial.getRef(f.id) ? `<p style="font-size:11px;color:var(--dim);margin-top:14px;text-align:center">
+        You arrived through ${esc((cast.find(c => c.slug === FlieksSocial.getRef(f.id))||{}).name || 'a cast link')} —
+        your purchase supports them directly.</p>` : ''}
+    </div>`;
 }
 
 /* ============================================================
@@ -826,6 +1163,7 @@ async function processPayment(amount, total) {
     platform_fee: +(amount * 0.30).toFixed(2),
     filmmaker_share: +(amount * 0.70).toFixed(2),
     filmmaker_uid: f.filmmaker_uid || null,
+    ref: (window.FlieksSocial ? FlieksSocial.getRef(f.id) : null),
     status: 'pending',
     created_at: Date.now()
   });
@@ -846,7 +1184,8 @@ async function processPayment(amount, total) {
     item_description: `${type === 'own' ? 'Own forever' : '48hr rental'} - ${f.duration_mins} min film`,
     custom_str1: f.id,
     custom_str2: type,
-    custom_str3: currentUser.uid
+    custom_str3: currentUser.uid,
+    custom_str4: (window.FlieksSocial ? FlieksSocial.getRef(f.id) : null) || ''
   };
 
   const pfUrl = PF_CONFIG.sandbox
@@ -904,6 +1243,7 @@ function launchPlayer(film, isOwned) {
 }
 
 function watchTrailer(filmId) {
+  if (window.FlieksSocial) FlieksSocial.trailerPlayed(filmId);
   const f = allFilms.find(x => x.id === filmId) || currentFilm;
   if (!f || !f.trailer_url) { showSnack('Trailer not yet available'); return; }
   launchPlayer({ ...f, video_url: f.trailer_url }, false);
@@ -1160,7 +1500,16 @@ function showSnack(msg) {
 /* ============================================================
    BOOT
    ============================================================ */
-document.addEventListener('DOMContentLoaded', () => loadFilms());
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadFilms();
+  // a link like 4flieks.com/fhf?a=someone opens that film straight away
+  if (window.FlieksSocial) {
+    try {
+      const { filmId } = await FlieksSocial.readLink();
+      if (filmId && allFilms.some(f => f.id === filmId)) openFilm(filmId);
+    } catch (e) { console.error('[flieks] link handling failed:', e); }
+  }
+});
 </script>
 </body>
 </html>

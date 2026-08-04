@@ -336,6 +336,201 @@ select.input option{background:#1A1A1A;color:var(--text)}
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 
+<!-- Film themes -->
+<script>
+(function (global) {
+'use strict';
+
+const THEMES = {
+
+  midnight: {
+    name: 'Midnight',
+    note: 'The 4flieks house look. Warm amber on near-black.',
+    fonts: 'Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Archivo Black', system-ui, sans-serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'DM Sans', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#12100F',
+      '--t-surface': '#1C1917',
+      '--t-raised':  '#262220',
+      '--t-text':    '#F5F1EA',
+      '--t-muted':   '#9A9088',
+      '--t-accent':  '#F0A62E',
+      '--t-accent-2':'#D85A2C',
+      '--t-on-accent':'#12100F',
+      '--t-line':    'rgba(245,241,234,.14)',
+      '--t-radius':  '10px'
+    }
+  },
+
+  paper: {
+    name: 'Paper',
+    note: 'Torn-paper collage, handwritten titles. Warm and irreverent.',
+    fonts: 'Anton&family=Caveat:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Anton', Impact, sans-serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'Caveat', cursive",
+    vars: {
+      '--t-bg':      '#EDE7DD',
+      '--t-surface': '#F6F2EC',
+      '--t-raised':  '#FFFFFF',
+      '--t-text':    '#211E22',
+      '--t-muted':   '#5A545B',
+      '--t-accent':  '#E0559F',
+      '--t-accent-2':'#1B181C',
+      '--t-on-accent':'#FFFFFF',
+      '--t-line':    'rgba(33,30,34,.16)',
+      '--t-radius':  '3px'
+    }
+  },
+
+  noir: {
+    name: 'Noir',
+    note: 'High contrast black and white. Editorial, serious.',
+    fonts: 'Bebas+Neue&family=Inter:wght@400;500;700',
+    display: "'Bebas Neue', Impact, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    hand: "'Inter', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#0A0A0A',
+      '--t-surface': '#141414',
+      '--t-raised':  '#1E1E1E',
+      '--t-text':    '#FAFAFA',
+      '--t-muted':   '#8A8A8A',
+      '--t-accent':  '#FAFAFA',
+      '--t-accent-2':'#C4302B',
+      '--t-on-accent':'#0A0A0A',
+      '--t-line':    'rgba(250,250,250,.16)',
+      '--t-radius':  '0px'
+    }
+  },
+
+  sunburst: {
+    name: 'Sunburst',
+    note: 'Hot and bright. Comedy, music, anything joyful.',
+    fonts: 'Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Archivo Black', system-ui, sans-serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'DM Sans', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#1A0F2E',
+      '--t-surface': '#241640',
+      '--t-raised':  '#2E1D52',
+      '--t-text':    '#FFF4E6',
+      '--t-muted':   '#A995C4',
+      '--t-accent':  '#FF6B35',
+      '--t-accent-2':'#FFC93C',
+      '--t-on-accent':'#1A0F2E',
+      '--t-line':    'rgba(255,244,230,.16)',
+      '--t-radius':  '14px'
+    }
+  },
+
+  verdant: {
+    name: 'Verdant',
+    note: 'Earthy greens. Documentary, rural stories, nature.',
+    fonts: 'Fraunces:opsz,wght@9..144,600;9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700',
+    display: "'Fraunces', Georgia, serif",
+    body: "'DM Sans', system-ui, sans-serif",
+    hand: "'Fraunces', Georgia, serif",
+    vars: {
+      '--t-bg':      '#121A14',
+      '--t-surface': '#1B261E',
+      '--t-raised':  '#243228',
+      '--t-text':    '#F0EDE4',
+      '--t-muted':   '#93A396',
+      '--t-accent':  '#8FBF6B',
+      '--t-accent-2':'#D9A441',
+      '--t-on-accent':'#121A14',
+      '--t-line':    'rgba(240,237,228,.14)',
+      '--t-radius':  '8px'
+    }
+  },
+
+  ice: {
+    name: 'Ice',
+    note: 'Cool and clean. Thrillers, sci-fi, anything with edge.',
+    fonts: 'Space+Grotesk:wght@500;700&family=Inter:wght@400;500;700',
+    display: "'Space Grotesk', system-ui, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    hand: "'Space Grotesk', system-ui, sans-serif",
+    vars: {
+      '--t-bg':      '#0B1418',
+      '--t-surface': '#122027',
+      '--t-raised':  '#193039',
+      '--t-text':    '#E8F4F8',
+      '--t-muted':   '#7D9AA6',
+      '--t-accent':  '#4CC9E0',
+      '--t-accent-2':'#7B61FF',
+      '--t-on-accent':'#0B1418',
+      '--t-line':    'rgba(232,244,248,.15)',
+      '--t-radius':  '6px'
+    }
+  }
+};
+
+const DEFAULT = 'midnight';
+
+function get(id) { return THEMES[id] || THEMES[DEFAULT]; }
+
+function list() {
+  return Object.entries(THEMES).map(([id, t]) => ({
+    id, name: t.name, note: t.note,
+    swatch: [t.vars['--t-bg'], t.vars['--t-surface'], t.vars['--t-accent'], t.vars['--t-text']]
+  }));
+}
+
+let loadedFonts = null;
+
+/** Apply a theme to the page. Safe to call repeatedly. */
+function apply(id, target) {
+  const t = get(id);
+  const el = target || document.documentElement;
+
+  Object.entries(t.vars).forEach(([k, v]) => el.style.setProperty(k, v));
+  el.style.setProperty('--t-display', t.display);
+  el.style.setProperty('--t-body', t.body);
+  el.style.setProperty('--t-hand', t.hand);
+
+  if (loadedFonts !== t.fonts) {
+    let link = document.getElementById('flieks-theme-fonts');
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'flieks-theme-fonts';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    link.href = `https://fonts.googleapis.com/css2?family=${t.fonts}&display=swap`;
+    loadedFonts = t.fonts;
+  }
+
+  // let the page colour its own chrome to match
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    document.head.appendChild(meta);
+  }
+  meta.content = t.vars['--t-bg'];
+
+  el.setAttribute('data-flieks-theme', THEMES[id] ? id : DEFAULT);
+  return t;
+}
+
+/** A small preview card's worth of inline style, for the picker. */
+function previewStyle(id) {
+  const t = get(id);
+  return `background:${t.vars['--t-surface']};color:${t.vars['--t-text']};` +
+         `border:1px solid ${t.vars['--t-line']};border-radius:${t.vars['--t-radius']}`;
+}
+
+global.FlieksThemes = { apply, get, list, previewStyle, DEFAULT, THEMES };
+
+})(window);
+
+</script>
+
 <!-- Cast panel — inlined so there is no external file to fail to load -->
 <script>
 (function (global) {
@@ -389,6 +584,15 @@ function styles() {
   .fcp-face{width:58px;height:58px;border-radius:50%;object-fit:cover;background:rgba(128,128,128,.15)}
   .fcp-name{font-weight:700;font-size:15px}
   .fcp-meta{font-size:12px;opacity:.6;margin-top:2px}
+  .fcp-pill{display:inline-block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+    padding:3px 8px;border-radius:99px;border:1px solid rgba(128,128,128,.4);margin-left:7px;vertical-align:middle}
+  .fcp-pill.on{border-color:#4ADE80;color:#4ADE80}
+  .fcp-pill.off{border-color:rgba(128,128,128,.5);opacity:.7}
+  .fcp-check{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:8px;
+    background:rgba(128,128,128,.08);border:1px solid rgba(128,128,128,.25);margin-top:4px;cursor:pointer}
+  .fcp-check input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:#D85A2C}
+  .fcp-check .lab{font-size:13px;line-height:1.45}
+  .fcp-check .lab b{display:block;font-size:14px;margin-bottom:2px}
   .fcp-link{font-family:ui-monospace,monospace;font-size:11px;opacity:.55;margin-top:5px;word-break:break-all}
   .fcp-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:9px}
   .fcp-qr{width:74px;height:74px;background:#fff;border-radius:4px;padding:4px}
@@ -426,17 +630,19 @@ function render() {
   const rows = Object.entries(state.cast).sort((a,b) => (a[1].order??99)-(b[1].order??99));
   state.el.innerHTML = `
     <div class="fcp-head">
-      <h3 style="margin:0">Cast</h3>
+      <h3 style="margin:0">Cast &amp; crew</h3>
       <span class="fcp-count">${rows.length} ${rows.length===1?'person':'people'}</span>
     </div>
-    <p class="fcp-hint">Each person gets their own link and QR code. When someone buys through
-    it, that sale is recorded against them — so you can see who is actually selling your film.</p>
+    <p class="fcp-hint">Everyone here gets their own link and QR code — cast, crew, anyone
+    helping push the film. Sales through their link are recorded against them.
+    Choose separately who appears on the public film page.</p>
     <div id="fcpList">${rows.length ? rows.map(([slug,c]) => {
       const url = linkFor(slug);
       return `<div class="fcp-row">
         <img class="fcp-face" src="${esc(c.photoUrl||'')}" alt="">
         <div>
-          <div class="fcp-name">${esc(c.name)}</div>
+          <div class="fcp-name">${esc(c.name)}<span class="fcp-pill ${c.hidden ? 'off' : 'on'}">${
+            c.hidden ? 'link only' : 'on film page'}</span></div>
           <div class="fcp-meta">${esc(c.role||'')}${c.reach?' · '+esc(c.reach)+' following':''}</div>
           <div class="fcp-link">${esc(url)}</div>
           <div class="fcp-tools">
@@ -507,6 +713,12 @@ function form(slug) {
       <input id="fcpPhoto" value="${esc(c.photoUrl)}" placeholder="Upload below, or paste a URL">
       <div class="fcp-drop" id="fcpDrop">Drop a headshot, or click to choose
         <div class="fcp-prog"><i></i></div></div></div>
+    <label class="fcp-check" style="margin-top:14px">
+      <input type="checkbox" id="fcpShow" ${c.hidden ? '' : 'checked'}>
+      <span class="lab"><b>Show them on the film's page</b>
+        Leave this off for crew and anyone who'd rather not be listed publicly.
+        They still get their own link and QR either way.</span>
+    </label>
     <div class="fcp-grid two" style="margin-top:12px">
       <div class="fcp-f"><label>Instagram</label><input id="fcpIg" value="${esc(c.instagram)}" placeholder="https://instagram.com/…"></div>
       <div class="fcp-f"><label>TikTok</label><input id="fcpTt" value="${esc(c.tiktok)}" placeholder="https://tiktok.com/@…"></div>
@@ -538,6 +750,7 @@ function form(slug) {
       await db().ref(`flieks_cast/${state.filmId}/${key}`).update({
         name: $('#fcpName').value.trim(), role: $('#fcpRole').value.trim(),
         order: +$('#fcpOrder').value || 99, reach: $('#fcpReach').value.trim(),
+        hidden: !$('#fcpShow').checked,
         photoUrl: $('#fcpPhoto').value.trim(),
         instagram: $('#fcpIg').value.trim(), tiktok: $('#fcpTt').value.trim(),
         x: $('#fcpX').value.trim(), youtube: $('#fcpYt').value.trim()
@@ -792,6 +1005,13 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:6px">LOOK &amp; FEEL</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+        How your film's page looks to viewers. Pick what suits the film.</p>
+      <div id="themePicker"></div>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
       <div id="castPanel"></div>
     </div>
 
@@ -813,9 +1033,51 @@ function openFilmDetail(filmId) {
   `;
   nav('film-detail');
   mountCastPanel(f);
+  mountThemePicker(f);
 }
 
 /* ---- cast, links and QR ------------------------------------------------- */
+
+function mountThemePicker(f) {
+  const box = document.getElementById('themePicker');
+  if (!box || !window.FlieksThemes) return;
+  const current = f.theme || FlieksThemes.DEFAULT;
+
+  box.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px">` +
+    FlieksThemes.list().map(t => `
+      <button type="button" data-theme="${t.id}"
+        style="cursor:pointer;text-align:left;padding:0;overflow:hidden;border-radius:10px;
+               border:2px solid ${t.id === current ? 'var(--accent,#F0A62E)' : 'var(--border)'};
+               background:${t.swatch[1]}">
+        <div style="height:46px;background:${t.swatch[0]};position:relative">
+          <div style="position:absolute;left:9px;bottom:9px;display:flex;gap:4px">
+            <span style="width:15px;height:15px;border-radius:50%;background:${t.swatch[2]}"></span>
+            <span style="width:15px;height:15px;border-radius:50%;background:${t.swatch[3]};opacity:.85"></span>
+          </div>
+        </div>
+        <div style="padding:9px 10px 11px">
+          <div style="font-weight:700;font-size:13px;color:${t.swatch[3]}">${t.name}</div>
+          <div style="font-size:10.5px;line-height:1.35;margin-top:3px;color:${t.swatch[3]};opacity:.6">${t.note}</div>
+          ${t.id === current ? '<div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-top:6px;color:'+t.swatch[2]+'">Selected</div>' : ''}
+        </div>
+      </button>`).join('') + `</div>
+    <div id="theme-msg" style="font-size:12px;color:var(--muted);min-height:1.2em;margin-top:9px"></div>`;
+
+  box.querySelectorAll('[data-theme]').forEach(b => b.onclick = () => saveTheme(f.id, b.dataset.theme));
+}
+
+async function saveTheme(filmId, theme) {
+  const msg = document.getElementById('theme-msg');
+  if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = 'Saving…'; }
+  try {
+    await db.ref(DB_PREFIX + 'films/' + filmId + '/theme').set(theme);
+    const film = myFilms.find(x => x.id === filmId);
+    if (film) { film.theme = theme; mountThemePicker(film); }
+    if (msg) { msg.style.color = 'var(--green,#4ADE80)'; msg.textContent = 'Saved.'; }
+  } catch {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Could not save that.'; }
+  }
+}
 
 function mountCastPanel(f) {
   const box = document.getElementById('castPanel');
