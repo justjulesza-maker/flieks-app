@@ -585,6 +585,21 @@ const DEFAULT = 'midnight';
 
 function get(id) { return THEMES[id] || THEMES[DEFAULT]; }
 
+/* blend two hex colours; used to derive the dimmest text tone */
+function mix(a, b, amount) {
+  const hex = c => {
+    c = String(c).replace('#','');
+    if (c.length === 3) c = c.split('').map(x => x+x).join('');
+    const n = parseInt(c, 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  };
+  try {
+    const [r1,g1,b1] = hex(a), [r2,g2,b2] = hex(b);
+    const m = (x,y) => Math.round(x + (y - x) * amount);
+    return `rgb(${m(r1,r2)},${m(g1,g2)},${m(b1,b2)})`;
+  } catch { return a; }
+}
+
 function list() {
   return Object.entries(THEMES).map(([id, t]) => ({
     id, name: t.name, note: t.note,
@@ -603,6 +618,21 @@ function apply(id, target) {
   el.style.setProperty('--t-display', t.display);
   el.style.setProperty('--t-body', t.body);
   el.style.setProperty('--t-hand', t.hand);
+
+  // Map onto the variables the app's stylesheet actually uses, otherwise
+  // the theme sets values nothing reads.
+  el.style.setProperty('--bg',      t.vars['--t-bg']);
+  el.style.setProperty('--surface', t.vars['--t-surface']);
+  el.style.setProperty('--card',    t.vars['--t-raised']);
+  el.style.setProperty('--text',    t.vars['--t-text']);
+  el.style.setProperty('--muted',   t.vars['--t-muted']);
+  el.style.setProperty('--dim',     mix(t.vars['--t-muted'], t.vars['--t-bg'], .45));
+  el.style.setProperty('--amber',   t.vars['--t-accent']);
+  el.style.setProperty('--red',     t.vars['--t-accent-2']);
+  el.style.setProperty('--border',  t.vars['--t-line']);
+  el.style.setProperty('--border2', t.vars['--t-line']);
+  el.style.setProperty('--fb',      t.display);
+  el.style.setProperty('--fn',      t.body);
 
   if (loadedFonts !== t.fonts) {
     let link = document.getElementById('flieks-theme-fonts');
@@ -629,6 +659,14 @@ function apply(id, target) {
   return t;
 }
 
+/* Put the page back to the stylesheet's own values. */
+function reset(target) {
+  const el = target || document.documentElement;
+  ['--bg','--surface','--card','--text','--muted','--dim','--amber','--red',
+   '--border','--border2','--fb','--fn'].forEach(k => el.style.removeProperty(k));
+  el.removeAttribute('data-flieks-theme');
+}
+
 /** A small preview card's worth of inline style, for the picker. */
 function previewStyle(id) {
   const t = get(id);
@@ -636,7 +674,7 @@ function previewStyle(id) {
          `border:1px solid ${t.vars['--t-line']};border-radius:${t.vars['--t-radius']}`;
 }
 
-global.FlieksThemes = { apply, get, list, previewStyle, DEFAULT, THEMES };
+global.FlieksThemes = { apply, reset, get, list, previewStyle, DEFAULT, THEMES };
 
 })(window);
 
@@ -864,7 +902,7 @@ function getSampleFilms() {
    RENDER HOME
    ============================================================ */
 function renderHome(genre = 'all') {
-  if (window.FlieksThemes) FlieksThemes.apply(FlieksThemes.DEFAULT);
+  if (window.FlieksThemes) FlieksThemes.reset();
   const filtered = genre === 'all' ? allFilms : allFilms.filter(f => f.genre && f.genre.includes(genre));
   // Hero
   const featured = allFilms.find(f => f.featured) || allFilms[0];

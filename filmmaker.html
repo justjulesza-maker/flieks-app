@@ -772,7 +772,10 @@ function uploader(el, path, done) {
     const p = el.querySelector('.fcp-prog'); p.style.display='block';
     task.on('state_changed',
       s => p.querySelector('i').style.width = (s.bytesTransferred/s.totalBytes*100)+'%',
-      () => { p.style.display='none'; alert('Upload failed. Check your connection and try again.'); },
+      (err) => { p.style.display='none';
+        alert(err && err.code === 'storage/unauthorized'
+          ? 'Upload blocked by Storage rules. The flieks_cast path needs write access.'
+          : 'Upload failed: ' + ((err && err.message) || 'unknown error')); },
       async () => { p.style.display='none'; done(await task.snapshot.ref.getDownloadURL()); });
   };
   el.onclick = () => input.click();
