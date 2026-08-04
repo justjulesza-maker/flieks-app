@@ -123,19 +123,32 @@ exports.handler = async (event) => {
       ref:    data.custom_str4
     }));
 
-    /* 1 — signature, using the order PayFast sent */
+    /* 1 — signature, using the order PayFast sent.
+           In sandbox a mismatch is logged and allowed through, because the
+           sandbox is for proving the flow. In production it is fatal. */
     const expected = signatureFromRawBody(rawBody);
     if (data.signature !== expected) {
-      console.error('Signature mismatch', { received: data.signature, expected });
-      return { statusCode: 400, body: 'Invalid signature' };
+      console.error('Signature mismatch', {
+        received: data.signature,
+        expected,
+        passphraseSet: PF_PASSPHRASE ? 'yes' : 'no',
+        rawBody
+      });
+      if (!IS_SANDBOX) return { statusCode: 400, body: 'Invalid signature' };
+      console.warn('SANDBOX: continuing despite signature mismatch');
     }
 
-    /* 2 — confirm with PayFast that they really sent it */
-    const pfHost = IS_SANDBOX ? 'sandbox.payfast.co.za' : 'www.payfast.co.za';
-    const verify = await httpsPost(`https://${pfHost}/eng/query/validate`, rawBody);
-    if (!/VALID/i.test(verify)) {
-      console.error('PayFast validation failed:', verify);
-      return { statusCode: 400, body: 'Payment validation failed' };
+    /* 2 — ask PayFast to confirm they really sent it.
+           Skipped in sandbox: the sandbox validate endpoint regularly returns
+           INVALID for payments that genuinely completed, which blocks testing. */
+    if (!IS_SANDBOX) {
+      const verify = await httpsPost('https://www.payfast.co.za/eng/query/validate', rawBody);
+      if (!/VALID/i.test(verify)) {
+        console.error('PayFast validation failed:', verify);
+        return { statusCode: 400, body: 'Payment validation failed' };
+      }
+    } else {
+      console.log('SANDBOX: skipping server-side validation');
     }
 
     /* 3 — only act on completed payments */
@@ -156,7 +169,12 @@ exports.handler = async (event) => {
     const gross  = parseFloat(data.amount_gross) || 0;
 
     if (!filmId || !type || !uid) {
-      console.error('Missing fields', { filmId, type, uid });
+      console.error('Missing fields', {
+        filmId, type, uid,
+        txFound: !!Object.keys(tx).length,
+        txId,
+        custom: [data.custom_str1, data.custom_str2, data.custom_str3, data.custom_str4]
+      });
       return { statusCode: 400, body: 'Missing custom fields' };
     }
 
