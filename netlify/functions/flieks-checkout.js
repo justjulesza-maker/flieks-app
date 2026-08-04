@@ -52,13 +52,31 @@ const dbPut = async (path, data) => {
 };
 
 async function verifyToken(token) {
+  if (!API_KEY) {
+    throw new Error('FIREBASE_API_KEY is not set on this Netlify site. ' +
+      'Add it under Site configuration -> Environment variables, then redeploy.');
+  }
   const b = JSON.stringify({ idToken: token });
   const r = await req(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) }
   }, b);
-  const d = JSON.parse(r.body || '{}');
-  if (!d.users || !d.users[0]) throw new Error('bad token');
+
+  let d = {};
+  try { d = JSON.parse(r.body || '{}'); } catch {}
+
+  if (!d.users || !d.users[0]) {
+    // Google's own message is far more useful than a generic failure
+    const reason = (d.error && (d.error.message || d.error.status)) || r.body || 'no user returned';
+    console.error('token verification failed:', {
+      httpStatus: r.status,
+      googleSays: reason,
+      apiKeyLooksValid: /^AIza[\w-]{30,}$/.test(API_KEY),
+      apiKeyLength: API_KEY.length,
+      tokenLength: (token || '').length
+    });
+    throw new Error('bad token: ' + reason);
+  }
   return d.users[0];
 }
 
