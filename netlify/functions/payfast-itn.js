@@ -1,62 +1,91 @@
+/**
+ * payfast-itn — 4flieks payment webhook.
+ *
+ * Grants access, mints gift codes, and records which cast member drove the sale.
+ *
+ * Changes from the previous version:
+ *   1. Signature is built in the order PayFast posted the fields, not sorted.
+ *      Sorting produces a different hash, so every ITN failed verification.
+ *   2. Updates the pending transaction the browser created (keyed by
+ *      m_payment_id) instead of writing a second, unrelated record.
+ *   3. Ignores a repeated ITN rather than granting and counting twice.
+ *   4. Gift purchases mint a code instead of granting access.
+ *   5. Records attribution to flieks_stats.
+ */
 const crypto = require('crypto');
-const https = require('https');
+const https  = require('https');
 
-// ── ENV ──────────────────────────────────────────────────────────────────────
-const PF_MERCHANT_ID  = process.env.PAYFAST_MERCHANT_ID;
-const PF_MERCHANT_KEY = process.env.PAYFAST_MERCHANT_KEY;
-const PF_PASSPHRASE   = process.env.PAYFAST_PASSPHRASE || '';
-const IS_SANDBOX      = process.env.PAYFAST_SANDBOX === 'true';
-const FB_DB_URL       = process.env.FIREBASE_DB_URL;   // https://flieks-app-default-rtdb.firebaseio.com
-const FB_SECRET       = process.env.FIREBASE_DB_SECRET; // Firebase DB legacy secret
+const PF_PASSPHRASE = process.env.PAYFAST_PASSPHRASE || '';
+const IS_SANDBOX    = process.env.PAYFAST_SANDBOX === 'true';
+const FB_DB_URL     = (process.env.FIREBASE_DB_URL || '').replace(/\/$/, '');
+const FB_SECRET     = process.env.FIREBASE_DB_SECRET;
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-function buildSignatureString(data, includePassphrase = true) {
-  const ordered = Object.keys(data)
-    .filter(k => k !== 'signature' && data[k] !== '')
-    .sort()
-    .map(k => `${k}=${encodeURIComponent(data[k]).replace(/%20/g, '+')}`)
-    .join('&');
-  return includePassphrase && PF_PASSPHRASE
-    ? `${ordered}&passphrase=${encodeURIComponent(PF_PASSPHRASE).replace(/%20/g, '+')}`
-    : ordered;
+/* ── firebase helpers ─────────────────────────────────────────────────────── */
+
+function fbRequest(path, method, value) {
+  const body = value === undefined ? null : JSON.stringify(value);
+  const url  = new URL(`${FB_DB_URL}/${path}.json?auth=${FB_SECRET}`);
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method,
+      headers: body
+        ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        : {}
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try { resolve(d ? JSON.parse(d) : null); } catch { resolve(null); }
+      });
+    });
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
 }
 
-function md5(str) {
-  return crypto.createHash('md5').update(str).digest('hex');
+const fbGet   = p        => fbRequest(p, 'GET');
+const fbPut   = (p, v)   => fbRequest(p, 'PUT', v);
+const fbPatch = (p, v)   => fbRequest(p, 'PATCH', v);
+
+async function fbIncrement(path, field) {
+  const current = await fbGet(`${path}/${field}`);
+  await fbPut(`${path}/${field}`, (parseInt(current) || 0) + 1);
+}
+
+/* ── payfast helpers ──────────────────────────────────────────────────────── */
+
+/**
+ * PayFast signs the ITN payload in the order the fields arrive. Rebuilding it
+ * from a sorted object gives a different string and therefore a different
+ * hash, so the raw body is parsed in sequence here rather than via an object.
+ */
+function signatureFromRawBody(rawBody) {
+  const pairs = rawBody.split('&').filter(p => !p.startsWith('signature='));
+  const qs = pairs.join('&');
+  const full = PF_PASSPHRASE
+    ? `${qs}&passphrase=${encodeURIComponent(PF_PASSPHRASE.trim()).replace(/%20/g, '+')}`
+    : qs;
+  return crypto.createHash('md5').update(full).digest('hex');
 }
 
 function httpsPost(url, body) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const req = https.request({
-      hostname: u.hostname, path: u.pathname + u.search,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) }
-    }, res => {
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => resolve(data));
-    });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-async function firebaseWrite(path, value) {
-  const url = `${FB_DB_URL}/${path}.json?auth=${FB_SECRET}`;
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify(value);
-    const u = new URL(url);
-    const req = https.request({
       hostname: u.hostname,
       path: u.pathname + u.search,
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body)
+      }
     }, res => {
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => resolve(JSON.parse(data)));
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve(d));
     });
     req.on('error', reject);
     req.write(body);
@@ -64,97 +93,152 @@ async function firebaseWrite(path, value) {
   });
 }
 
-async function firebaseIncrement(path, field) {
-  // Read current value, increment, write back
-  const readUrl = `${FB_DB_URL}/${path}/${field}.json?auth=${FB_SECRET}`;
-  const current = await new Promise((resolve, reject) => {
-    https.get(readUrl, res => {
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => resolve(parseInt(data) || 0));
-    }).on('error', reject);
-  });
-  await firebaseWrite(`${path}/${field}`, current + 1);
+/* Gift codes: 6 characters, no 0 O 1 I L, so they survive being read aloud. */
+const ALPHA = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+function giftCode(seed) {
+  const h = crypto.createHash('sha256').update(seed + FB_SECRET).digest();
+  let out = '';
+  for (let i = 0; i < 6; i++) out += ALPHA[h[i] % ALPHA.length];
+  return 'FL-' + out;
 }
 
-// ── HANDLER ──────────────────────────────────────────────────────────────────
+/* ── handler ──────────────────────────────────────────────────────────────── */
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
-    // Parse body
-    const params = new URLSearchParams(event.body);
-    const data = Object.fromEntries(params.entries());
+    const rawBody = event.body || '';
+    const data = Object.fromEntries(new URLSearchParams(rawBody));
 
-    console.log('PayFast ITN received:', JSON.stringify({
-      payment_status: data.payment_status,
-      pf_payment_id: data.pf_payment_id,
-      amount_gross: data.amount_gross,
-      custom_str1: data.custom_str1,
-      custom_str2: data.custom_str2,
-      custom_str3: data.custom_str3
+    console.log('ITN received:', JSON.stringify({
+      status: data.payment_status,
+      pf_id:  data.pf_payment_id,
+      m_id:   data.m_payment_id,
+      gross:  data.amount_gross,
+      film:   data.custom_str1,
+      type:   data.custom_str2,
+      ref:    data.custom_str4
     }));
 
-    // 1. Verify signature
-    const sigString = buildSignatureString(data);
-    const expectedSig = md5(sigString);
-    if (data.signature !== expectedSig) {
-      console.error('Signature mismatch', { received: data.signature, expected: expectedSig });
+    /* 1 — signature, using the order PayFast sent */
+    const expected = signatureFromRawBody(rawBody);
+    if (data.signature !== expected) {
+      console.error('Signature mismatch', { received: data.signature, expected });
       return { statusCode: 400, body: 'Invalid signature' };
     }
 
-    // 2. Verify with PayFast servers
+    /* 2 — confirm with PayFast that they really sent it */
     const pfHost = IS_SANDBOX ? 'sandbox.payfast.co.za' : 'www.payfast.co.za';
-    const verifyBody = new URLSearchParams(data).toString();
-    const verifyResult = await httpsPost(`https://${pfHost}/eng/query/validate`, verifyBody);
-    if (verifyResult.trim() !== 'VALID') {
-      console.error('PayFast validation failed:', verifyResult);
+    const verify = await httpsPost(`https://${pfHost}/eng/query/validate`, rawBody);
+    if (!/VALID/i.test(verify)) {
+      console.error('PayFast validation failed:', verify);
       return { statusCode: 400, body: 'Payment validation failed' };
     }
 
-    // 3. Check payment complete
+    /* 3 — only act on completed payments */
     if (data.payment_status !== 'COMPLETE') {
-      console.log('Payment not complete:', data.payment_status);
+      console.log('Ignoring status:', data.payment_status);
       return { statusCode: 200, body: 'Not complete' };
     }
 
-    // 4. Extract custom fields
-    const filmId = data.custom_str1;
-    const type   = data.custom_str2; // 'rent' or 'own'
-    const uid    = data.custom_str3;
+    /* 4 — prefer the pending transaction the browser wrote; fall back to the
+           custom fields, which PayFast occasionally trims */
+    const txId = data.m_payment_id;
+    const tx   = (txId && await fbGet(`flieks_transactions/${txId}`)) || {};
+
+    const filmId = tx.film_id || data.custom_str1;
+    const type   = tx.type    || data.custom_str2;     // rent | own | gift
+    const uid    = tx.uid     || data.custom_str3;
+    const ref    = tx.ref     || data.custom_str4 || null;
+    const gross  = parseFloat(data.amount_gross) || 0;
 
     if (!filmId || !type || !uid) {
-      console.error('Missing custom fields', { filmId, type, uid });
+      console.error('Missing fields', { filmId, type, uid });
       return { statusCode: 400, body: 'Missing custom fields' };
     }
 
-    const now       = Date.now();
-    const expiresAt = type === 'rent' ? now + 48 * 60 * 60 * 1000 : null;
+    /* 5 — a repeat delivery must not grant or count twice */
+    if (tx.status === 'complete') {
+      console.log('Already processed:', txId);
+      return { statusCode: 200, body: 'Already processed' };
+    }
 
-    // 5. Write purchase record
-    await firebaseWrite(`flieks_purchases/${uid}/${filmId}`, {
-      type,
-      purchased_at: now,
-      expires_at:   expiresAt,
-      transaction_id: data.pf_payment_id,
-      amount: parseFloat(data.amount_gross)
+    const now = Date.now();
+
+    if (type === 'gift') {
+      /* The buyer gets a code, not access. */
+      const code = giftCode(txId || data.pf_payment_id);
+      await fbPut(`flieks_gifts/${code}`, {
+        filmId,
+        buyerUid:   uid,
+        buyerEmail: data.email_address || '',
+        toName:     tx.gift_to  || '',
+        message:    tx.gift_msg || '',
+        amount:     gross,
+        ref,
+        claimedBy:  null,
+        claimedAt:  null,
+        createdAt:  now
+      });
+      // private pointer so the buyer can see their own code and nobody else's
+      await fbPatch(`flieks_my_gifts/${uid}`, { [code]: now });
+      console.log(`Gift minted: ${code} for ${filmId}`);
+
+    } else {
+      const expiresAt = type === 'rent' ? now + 48 * 60 * 60 * 1000 : null;
+      await fbPut(`flieks_purchases/${uid}/${filmId}`, {
+        film_id: filmId,
+        uid,
+        type,
+        purchased_at: now,
+        created_at:   now,
+        expires_at:   expiresAt,
+        transaction_id: data.pf_payment_id,
+        amount: gross,
+        ref,
+        status: 'complete'
+      });
+      await fbIncrement(`flieks_films/${filmId}`, type === 'own' ? 'own_count' : 'rent_count');
+      console.log(`Access granted: ${uid} -> ${filmId} (${type})`);
+    }
+
+    /* 6 — close off the transaction the browser opened */
+    if (txId) {
+      await fbPatch(`flieks_transactions/${txId}`, {
+        status: 'complete',
+        pf_payment_id: data.pf_payment_id,
+        amount_paid: gross,
+        completed_at: now
+      });
+    } else {
+      await fbPut(`flieks_transactions/${data.pf_payment_id}`, {
+        uid, film_id: filmId, type, amount: gross, ref,
+        pf_payment_id: data.pf_payment_id,
+        created_at: now, completed_at: now, status: 'complete'
+      });
+    }
+
+    /* 7 — attribution: which cast member's link earned this */
+    if (ref) {
+      const s = (await fbGet(`flieks_stats/${filmId}/refs/${ref}`)) || {};
+      await fbPatch(`flieks_stats/${filmId}/refs/${ref}`, {
+        sales:   (s.sales   || 0) + 1,
+        revenue: +(((s.revenue || 0) + gross).toFixed(2)),
+        [`by_${type}`]: (s[`by_${type}`] || 0) + 1
+      });
+      console.log(`Attributed to ${ref}`);
+    }
+
+    const t = (await fbGet(`flieks_stats/${filmId}/totals`)) || {};
+    await fbPatch(`flieks_stats/${filmId}/totals`, {
+      sales:   (t.sales   || 0) + 1,
+      revenue: +(((t.revenue || 0) + gross).toFixed(2)),
+      [`by_${type}`]: (t[`by_${type}`] || 0) + 1
     });
 
-    // 6. Increment film counter
-    await firebaseIncrement(`flieks_films/${filmId}`, type === 'own' ? 'own_count' : 'rent_count');
-
-    // 7. Write transaction log
-    await firebaseWrite(`flieks_transactions/${data.pf_payment_id}`, {
-      uid, filmId, type,
-      amount: parseFloat(data.amount_gross),
-      created_at: now,
-      pf_payment_id: data.pf_payment_id,
-      status: 'complete'
-    });
-
-    console.log(`✓ Purchase granted: ${uid} → ${filmId} (${type})`);
     return { statusCode: 200, body: 'OK' };
 
   } catch (err) {
