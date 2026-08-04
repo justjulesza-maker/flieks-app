@@ -18,7 +18,10 @@ const https  = require('https');
 const DB      = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET  = process.env.FIREBASE_DB_SECRET;
 const API_KEY = process.env.FIREBASE_API_KEY;
-const SANDBOX = String(process.env.PAYFAST_SANDBOX).trim() === 'true';
+/* Accept true/1/yes in any case. A stray capital or space here silently
+   posts sandbox credentials to the live endpoint, which is a baffling failure. */
+const SANDBOX = ['true', '1', 'yes', 'on']
+  .includes(String(process.env.PAYFAST_SANDBOX || '').trim().toLowerCase());
 const PF_HOST = SANDBOX ? 'https://sandbox.payfast.co.za/eng/process'
                         : 'https://www.payfast.co.za/eng/process';
 
@@ -112,6 +115,9 @@ exports.handler = async event => {
   try {
     const { token, filmId, type, giftTo, giftMsg, ref, returnUrl } =
       JSON.parse(event.body || '{}');
+
+    console.log('checkout:', { type, filmId, sandbox: SANDBOX, posting_to: PF_HOST,
+      merchant: process.env.PAYFAST_MERCHANT_ID });
 
     if (!token || !filmId || !['rent', 'own', 'gift'].includes(type)) {
       return fail(400, 'Missing or invalid request.');

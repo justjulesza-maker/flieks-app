@@ -16,7 +16,9 @@ const crypto = require('crypto');
 const https  = require('https');
 
 const PF_PASSPHRASE = process.env.PAYFAST_PASSPHRASE || '';
-const IS_SANDBOX    = process.env.PAYFAST_SANDBOX === 'true';
+/* Accept true/1/yes in any case — see note in flieks-checkout.js */
+const IS_SANDBOX = ['true', '1', 'yes', 'on']
+  .includes(String(process.env.PAYFAST_SANDBOX || '').trim().toLowerCase());
 const FB_DB_URL     = (process.env.FIREBASE_DB_URL || '').replace(/\/$/, '');
 const FB_SECRET     = process.env.FIREBASE_DB_SECRET;
 
