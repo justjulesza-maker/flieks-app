@@ -786,14 +786,11 @@ const FIREBASE_CONFIG = {
 
 /* PayFast config — replace with your merchant details */
 const PF_CONFIG = {
-  // Our own sandbox account. The shared 10000100 account cannot be used:
-  // anyone can set a passphrase on it, so ITN signatures are unverifiable.
-  merchant_id: "10052306",
-  merchant_key: "3caxiyw4yn00x",
+  // Merchant credentials live in Netlify env vars and are used only by
+  // flieks-checkout. Nothing secret belongs in this file — it is public.
   return_url: window.location.origin + "/?payment=success",
   cancel_url: window.location.origin + "/?payment=cancel",
   notify_url: window.location.origin + "/.netlify/functions/payfast-itn",
-  sandbox: true                    // set false for production
 };
 
 const DB_PREFIX = "flieks_";
@@ -1341,61 +1338,53 @@ async function processPayment(amount, total, extra) {
   const f = checkoutFilm;
   const type = checkoutType;
 
-  // Write pending transaction to Firebase
-  const txRef = db.ref(DB_PREFIX + 'transactions').push();
-  const txId = txRef.key;
-  await txRef.set({
-    uid: currentUser.uid,
-    film_id: f.id,
-    film_title: f.title,
-    type: type,
-    amount: amount,
-    platform_fee: +(amount * 0.30).toFixed(2),
-    filmmaker_share: +(amount * 0.70).toFixed(2),
-    filmmaker_uid: f.filmmaker_uid || null,
-    ref: (window.FlieksSocial ? FlieksSocial.getRef(f.id) : null),
-    gift_to: extra.giftTo || null,
-    gift_msg: extra.giftMsg || null,
-    status: 'pending',
-    created_at: Date.now()
-  });
+  const btn = document.querySelector('#checkout-content .btn-amber');
+  const original = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'STARTING…'; }
 
-  // Build PayFast form
-  const pfData = {
-    merchant_id: PF_CONFIG.merchant_id,
-    merchant_key: PF_CONFIG.merchant_key,
-    return_url: PF_CONFIG.return_url,
-    cancel_url: PF_CONFIG.cancel_url,
-    notify_url: PF_CONFIG.notify_url,
-    name_first: (currentUser.displayName || '').split(' ')[0] || 'Viewer',
-    name_last: (currentUser.displayName || '').split(' ').slice(1).join(' ') || '',
-    email_address: currentUser.email,
-    m_payment_id: txId,
-    amount: total.toFixed(2),
-    item_name: `FLIEKS: ${f.title} (${type === 'own' ? 'Own' : type === 'gift' ? 'Gift' : 'Rent'})`,
-    item_description: `${type === 'own' ? 'Own forever' : '48hr rental'} - ${f.duration_mins} min film`,
-    custom_str1: f.id,
-    custom_str2: type,
-    custom_str3: currentUser.uid,
-    custom_str4: (window.FlieksSocial ? FlieksSocial.getRef(f.id) : null) || ''
-  };
+  try {
+    // The server looks the price up and signs the payload, so the amount
+    // cannot be edited in the browser before submitting.
+    const r = await fetch('/.netlify/functions/flieks-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: await currentUser.getIdToken(true),
+        filmId: f.id,
+        type,
+        ref: (window.FlieksSocial ? FlieksSocial.getRef(f.id) : null),
+        giftTo: extra.giftTo || null,
+        giftMsg: extra.giftMsg || null,
+        returnUrl: window.location.origin
+      })
+    });
 
-  const pfUrl = PF_CONFIG.sandbox
-    ? 'https://sandbox.payfast.co.za/eng/process'
-    : 'https://www.payfast.co.za/eng/process';
+    if (!r.ok) {
+      let msg = await r.text();
+      try { msg = JSON.parse(msg).message || msg; } catch {}
+      throw new Error(msg);
+    }
 
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = pfUrl;
-  Object.entries(pfData).forEach(([k, v]) => {
-    const inp = document.createElement('input');
-    inp.type = 'hidden';
-    inp.name = k;
-    inp.value = v || '';
-    form.appendChild(inp);
-  });
-  document.body.appendChild(form);
-  form.submit();
+    const { action, fields } = await r.json();
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = action;
+    Object.entries(fields).forEach(([k, v]) => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = k;
+      inp.value = v;
+      form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
+
+  } catch (e) {
+    console.error('checkout failed:', e);
+    showSnack(e.message || 'Could not start checkout. Try again.');
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+  }
 }
 
 /* ============================================================
