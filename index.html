@@ -823,9 +823,15 @@ auth.onAuthStateChanged(async user => {
   // Handle return from PayFast
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('payment') === 'success') {
-    showSnack('Payment successful! Your film is in your Library.');
+    // A gift purchase returns a code rather than access, so check before redirecting
+    const gifted = user ? await pendingGiftCode() : null;
     window.history.replaceState({}, '', '/');
-    nav('library');
+    if (gifted) {
+      showGiftCode(gifted);
+    } else {
+      showSnack('Payment successful! Your film is in your Library.');
+      nav('library');
+    }
   } else if (urlParams.get('payment') === 'cancel') {
     showSnack('Payment cancelled.');
     window.history.replaceState({}, '', '/');
@@ -1048,10 +1054,28 @@ function renderFilmDetail() {
               <p style="font-size:10px;color:var(--muted);margin-top:3px">Download included</p>
             </div>
           </div>
+          <div class="buy-card" onclick="openGift('${f.id}')" style="margin-bottom:14px;display:flex;
+               align-items:center;gap:12px;text-align:left;padding:14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            <div>
+              <p style="font-size:14px;font-weight:600;color:var(--text)">Gift it to someone — R${f.price_own}</p>
+              <p style="font-size:11px;color:var(--muted);margin-top:2px">They get a code and a permanent copy</p>
+            </div>
+          </div>
         `}
         ${f.trailer_url ? `
           <button class="btn btn-outline" onclick="watchTrailer('${f.id}')">WATCH FREE TRAILER</button>
         ` : ''}
+        <div style="margin-top:18px;border:1px solid var(--border);border-radius:12px;padding:14px">
+          <p class="section-label" style="margin-bottom:4px">GOT A GIFT CODE?</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Someone bought this for you. Type it in.</p>
+          <input id="redeem-code" placeholder="FL-XXXXXX" autocomplete="off"
+            style="width:100%;font:inherit;font-size:16px;padding:11px;border-radius:8px;
+                   background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">
+          <button class="btn btn-outline" onclick="redeemGift()">UNLOCK THE FILM</button>
+          <p id="redeem-msg" style="font-size:12px;margin-top:8px;min-height:1.2em;color:var(--muted)"></p>
+        </div>
       </div>
     `}
   `;
@@ -1106,6 +1130,130 @@ async function renderCastWall(f) {
         You arrived through ${esc((cast.find(c => c.slug === FlieksSocial.getRef(f.id))||{}).name || 'a cast link')} —
         your purchase supports them directly.</p>` : ''}
     </div>`;
+}
+
+/* ============================================================
+   GIFTING
+   ============================================================ */
+let giftFilm = null;
+
+function openGift(filmId) {
+  if (!currentUser) { showSnack('Please sign in to continue'); nav('auth'); return; }
+  giftFilm = allFilms.find(f => f.id === filmId);
+  if (!giftFilm) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'gift-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.75);' +
+    'display:flex;align-items:flex-end;justify-content:center;padding:0';
+  wrap.innerHTML = `
+    <div style="background:var(--surface);width:100%;max-width:480px;border-radius:18px 18px 0 0;
+                padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:88dvh;overflow:auto">
+      <div style="width:38px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px"></div>
+      <p class="section-label">GIFT THIS FILM</p>
+      <p class="bbn" style="font-size:26px;color:var(--text);line-height:1.1;margin:4px 0 4px">${giftFilm.title}</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5">
+        R${giftFilm.price_own} — you'll get a code to send them. They get a permanent copy.</p>
+      <label style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Who's it for</label>
+      <input id="gift-to" placeholder="Their name" autocomplete="off"
+        style="width:100%;font:inherit;font-size:16px;padding:12px;border-radius:8px;
+               background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:12px">
+      <label style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Message (optional)</label>
+      <textarea id="gift-msg" rows="3" maxlength="300" placeholder="Watch this, then call me."
+        style="width:100%;font:inherit;font-size:16px;padding:12px;border-radius:8px;resize:vertical;
+               background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:6px"></textarea>
+      <p id="gift-err" style="font-size:12px;color:var(--red);min-height:1.2em;margin-bottom:8px"></p>
+      <button class="btn btn-amber" onclick="payForGift()">CONTINUE TO PAYMENT</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="closeGift()">CANCEL</button>
+      <p style="font-size:11px;color:var(--dim);margin-top:12px;line-height:1.5;text-align:center">
+        You'll get the code straight after payment — send it by WhatsApp, DM, or read it out.</p>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) closeGift(); });
+}
+
+function closeGift() {
+  const m = document.getElementById('gift-modal');
+  if (m) m.remove();
+}
+
+async function payForGift() {
+  const to = document.getElementById('gift-to').value.trim();
+  const err = document.getElementById('gift-err');
+  err.style.color = 'var(--red)';
+  if (!to) { err.textContent = 'Who is this for? Their name is enough.'; return; }
+  if (/\S+@\S+\.\S+/.test(to)) {
+    err.textContent = "Their name, not an email — you'll get a code to send them.";
+    return;
+  }
+  const msg = document.getElementById('gift-msg').value.trim().slice(0, 300);
+  closeGift();
+  checkoutFilm = giftFilm;
+  checkoutType = 'gift';
+  await processPayment(giftFilm.price_own, +(giftFilm.price_own * 1.15).toFixed(2), { giftTo: to, giftMsg: msg });
+}
+
+/* ---- redeeming a code ---- */
+async function redeemGift() {
+  const el = document.getElementById('redeem-code');
+  const msg = document.getElementById('redeem-msg');
+  const code = (el.value || '').trim().toUpperCase();
+  msg.style.color = 'var(--muted)';
+  if (!code) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter the code you were sent.'; return; }
+  if (!currentUser) { showSnack('Please sign in to redeem'); nav('auth'); return; }
+  msg.textContent = 'Checking…';
+  try {
+    const r = await fetch('/.netlify/functions/flieks-redeem', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await currentUser.getIdToken(true), code })
+    });
+    const d = await r.json();
+    if (!r.ok) { msg.style.color = 'var(--red)'; msg.textContent = d.message || 'That code did not work.'; return; }
+    msg.style.color = 'var(--green)';
+    msg.textContent = 'Unlocked. It is yours.';
+    await loadUserPurchases();
+    renderFilmDetail();
+  } catch {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Could not reach the server. Try again.';
+  }
+}
+
+/* ---- after PayFast sends them back, was this a gift? ---- */
+async function pendingGiftCode() {
+  await new Promise(r => setTimeout(r, 2600));   // give the ITN a moment to land
+  try {
+    const snap = await db.ref(DB_PREFIX + 'my_gifts/' + currentUser.uid).once('value');
+    const v = snap.val();
+    if (!v) return null;
+    const [code, at] = Object.entries(v).sort((a, b) => b[1] - a[1])[0];
+    // only surface a code minted in the last few minutes
+    return (Date.now() - at < 10 * 60 * 1000) ? code : null;
+  } catch { return null; }
+}
+
+function showGiftCode(code) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);' +
+    'display:flex;align-items:center;justify-content:center;padding:20px';
+  wrap.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;padding:26px 22px;max-width:400px;width:100%">
+      <p class="section-label">YOUR GIFT CODE</p>
+      <p style="font-size:13px;color:var(--muted);margin:6px 0 14px;line-height:1.5">
+        Send this to them. It unlocks one permanent copy.</p>
+      <p style="font-family:ui-monospace,monospace;font-size:26px;font-weight:700;letter-spacing:.2em;
+                text-align:center;color:var(--amber);background:var(--card);border:2px dashed var(--border);
+                border-radius:10px;padding:18px;margin-bottom:14px">${code}</p>
+      <button class="btn btn-amber" onclick="shareGiftCode('${code}')">SHARE IT</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="this.closest('div').parentElement.remove()">DONE</button>
+    </div>`;
+  document.body.appendChild(wrap);
+}
+
+async function shareGiftCode(code) {
+  const text = `I bought you a film on 4flieks. Unlock it at ${location.origin} with code ${code}`;
+  if (navigator.share) { try { await navigator.share({ text }); } catch {} }
+  else { await navigator.clipboard.writeText(text); showSnack('Copied'); }
 }
 
 /* ============================================================
@@ -1185,7 +1333,8 @@ function selectPayMethod(el, method) {
   el.querySelector('span').style.fontWeight = '600';
 }
 
-async function processPayment(amount, total) {
+async function processPayment(amount, total, extra) {
+  extra = extra || {};
   if (!currentUser || !checkoutFilm) return;
   const f = checkoutFilm;
   const type = checkoutType;
@@ -1203,6 +1352,8 @@ async function processPayment(amount, total) {
     filmmaker_share: +(amount * 0.70).toFixed(2),
     filmmaker_uid: f.filmmaker_uid || null,
     ref: (window.FlieksSocial ? FlieksSocial.getRef(f.id) : null),
+    gift_to: extra.giftTo || null,
+    gift_msg: extra.giftMsg || null,
     status: 'pending',
     created_at: Date.now()
   });
@@ -1219,7 +1370,7 @@ async function processPayment(amount, total) {
     email_address: currentUser.email,
     m_payment_id: txId,
     amount: total.toFixed(2),
-    item_name: `FLIEKS: ${f.title} (${type === 'own' ? 'Own' : 'Rent'})`,
+    item_name: `FLIEKS: ${f.title} (${type === 'own' ? 'Own' : type === 'gift' ? 'Gift' : 'Rent'})`,
     item_description: `${type === 'own' ? 'Own forever' : '48hr rental'} - ${f.duration_mins} min film`,
     custom_str1: f.id,
     custom_str2: type,
