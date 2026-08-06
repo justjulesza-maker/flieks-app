@@ -352,16 +352,12 @@ input,textarea{font-family:var(--fb)}
     </div>
     <div id="own-badge" style="display:none" class="info-box green">
       <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-      <p>You own this film — tap the download button below to save it</p>
+      <p>You own this film — watch it any time, as often as you like</p>
     </div>
     <div style="display:flex;gap:20px;padding-top:4px">
       <button style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px" onclick="rateFilm()">
         <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         <span style="font-size:10px;color:var(--muted)">RATE</span>
-      </button>
-      <button id="dl-btn" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;display:none" onclick="downloadFilm()">
-        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span style="font-size:10px;color:var(--amber)">OWN</span>
       </button>
       <button style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px" onclick="shareFilm()">
         <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -1044,13 +1040,13 @@ function renderFilmDetail() {
               <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               <p class="bbn" style="font-size:32px;color:var(--text)">R${f.price_rent}</p>
               <p style="font-size:12px;color:var(--muted)">Watch once</p>
-              <p style="font-size:10px;color:var(--dim);margin-top:3px">48hr access</p>
+              <p style="font-size:10px;color:var(--dim);margin-top:3px">48 hours from first play</p>
             </div>
             <div class="buy-card featured" onclick="startCheckout('${f.id}','own')">
               <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <p class="bbn" style="font-size:32px;color:var(--amber)">R${f.price_own}</p>
               <p style="font-size:12px;color:var(--text)">Own forever</p>
-              <p style="font-size:10px;color:var(--muted);margin-top:3px">Download included</p>
+              <p style="font-size:10px;color:var(--muted);margin-top:3px">Watch any time, no expiry</p>
             </div>
           </div>
           <div class="buy-card" onclick="openGift('${f.id}')" style="margin-bottom:14px;display:flex;
@@ -1152,7 +1148,7 @@ function openGift(filmId) {
       <p class="section-label">GIFT THIS FILM</p>
       <p class="bbn" style="font-size:26px;color:var(--text);line-height:1.1;margin:4px 0 4px">${giftFilm.title}</p>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5">
-        R${giftFilm.price_own} — you'll get a code to send them. They get a permanent copy.</p>
+        R${giftFilm.price_own} — you'll get a code to send them. They get permanent access to stream it.</p>
       <label style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Who's it for</label>
       <input id="gift-to" placeholder="Their name" autocomplete="off"
         style="width:100%;font:inherit;font-size:16px;padding:12px;border-radius:8px;
@@ -1239,7 +1235,7 @@ function showGiftCode(code) {
     <div style="background:var(--surface);border-radius:16px;padding:26px 22px;max-width:400px;width:100%">
       <p class="section-label">YOUR GIFT CODE</p>
       <p style="font-size:13px;color:var(--muted);margin:6px 0 14px;line-height:1.5">
-        Send this to them. It unlocks one permanent copy.</p>
+        Send this to them. It unlocks permanent access for one person.</p>
       <p style="font-family:ui-monospace,monospace;font-size:26px;font-weight:700;letter-spacing:.2em;
                 text-align:center;color:var(--amber);background:var(--card);border:2px dashed var(--border);
                 border-radius:10px;padding:18px;margin-bottom:14px">${code}</p>
@@ -1277,7 +1273,7 @@ function renderCheckout() {
   const amount = type === 'own' ? f.price_own : f.price_rent;
   const vat = +(amount * 0.15).toFixed(2);
   const total = +(amount + vat).toFixed(2);
-  const label = type === 'own' ? 'Own forever' : 'Watch once (48hr)';
+  const label = type === 'own' ? 'Own forever — unlimited streaming' : 'Watch for 48 hours from first play';
 
   document.getElementById('checkout-content').innerHTML = `
     <div style="margin-bottom:16px">
@@ -1390,7 +1386,7 @@ async function processPayment(amount, total, extra) {
 /* ============================================================
    PLAYER
    ============================================================ */
-function playFilm(filmId) {
+async function playFilm(filmId) {
   const f = allFilms.find(x => x.id === filmId) || currentFilm;
   if (!f) return;
   const purchase = userPurchases[filmId];
@@ -1398,7 +1394,38 @@ function playFilm(filmId) {
     showSnack('Please purchase this film first');
     return;
   }
-  launchPlayer(f, purchase && purchase.type === 'own');
+  if (f.free || !purchase) { launchPlayer(f, false); return; }
+
+  // A rental's 48 hours begin here, on first play — not at purchase. So
+  // buying in the morning to watch that evening doesn't cost half the window.
+  try {
+    const r = await fetch('/.netlify/functions/flieks-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await currentUser.getIdToken(), filmId })
+    });
+    const d = await r.json();
+
+    if (!r.ok) {
+      showSnack(d.message || 'Could not start playback.');
+      if (d.expired) { await loadUserPurchases(); renderFilmDetail(); }
+      return;
+    }
+
+    if (d.type === 'rent') {
+      userPurchases[filmId] = { ...purchase, expires_at: d.expiresAt };
+      showSnack(d.justStarted
+        ? `Rental started — 48 hours from now`
+        : `${d.hoursLeft} hour${d.hoursLeft === 1 ? '' : 's'} left on this rental`);
+    }
+
+    launchPlayer(f, d.type === 'own');
+
+  } catch (e) {
+    console.error('play failed:', e);
+    // Don't hold a paying viewer hostage to a network wobble
+    launchPlayer(f, purchase.type === 'own');
+  }
 }
 
 function playFilmFree(filmId) {
@@ -1414,7 +1441,6 @@ function launchPlayer(film, isOwned) {
   document.getElementById('player-title').textContent = film.title;
   document.getElementById('player-maker').textContent = 'By ' + film.filmmaker;
   document.getElementById('own-badge').style.display = isOwned ? 'flex' : 'none';
-  document.getElementById('dl-btn').style.display = isOwned ? 'flex' : 'none';
   nav('player');
   video.play().catch(() => {});
   // Increment view count
@@ -1478,7 +1504,6 @@ function fmtTime(secs) {
   return `${m}:${s}`;
 }
 
-function downloadFilm() { showSnack('Download link sent to your email.'); }
 function shareFilm() {
   if (navigator.share) { navigator.share({ title: 'FLIEKS', url: window.location.href }); }
   else { navigator.clipboard.writeText(window.location.href); showSnack('Link copied!'); }
@@ -1541,7 +1566,11 @@ function loadLibrary() {
         <div style="flex:1">
           <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${f.title}</p>
           <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.duration_mins} min</p>
-          ${purchase.type === 'rent' && purchase.expires_at ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">Expires ${new Date(purchase.expires_at).toLocaleDateString('en-ZA')}</p>` : `<span class="tag tag-green" style="margin-top:4px;display:inline-block">Owned</span>`}
+          ${purchase.type === 'rent'
+              ? (purchase.expires_at
+                  ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">Expires ${new Date(purchase.expires_at).toLocaleString('en-ZA', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</p>`
+                  : `<p style="font-size:10px;color:var(--amber);margin-top:3px">48 hours, starting when you press play</p>`)
+              : `<span class="tag tag-green" style="margin-top:4px;display:inline-block">Owned</span>`}
         </div>
         <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.8;flex-shrink:0"><polygon points="5,3 19,12 5,21"/></svg>
       </div>`;
