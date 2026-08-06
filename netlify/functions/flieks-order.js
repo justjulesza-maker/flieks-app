@@ -80,7 +80,12 @@ exports.handler = async event => {
             Math.abs((g.createdAt || 0) - (tx.completed_at || tx.created_at || 0)) < 5 * 60 * 1000
           );
         }
-        if (found) out.code = found[0];
+        if (found) {
+          out.code = found[0];
+          // The buyer's name, so the share message reads properly even when
+          // the sign-in session didn't survive the trip to PayFast.
+          out.buyerName = found[1].buyerName || '';
+        }
       }
     }
 
