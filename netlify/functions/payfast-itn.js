@@ -191,10 +191,12 @@ exports.handler = async (event) => {
     if (type === 'gift') {
       /* The buyer gets a code, not access. */
       const code = giftCode(txId || data.pf_payment_id);
+      const buyer = await fbGet(`flieks_users/${uid}`) || {};
       await fbPut(`flieks_gifts/${code}`, {
         filmId,
         buyerUid:   uid,
         buyerEmail: data.email_address || '',
+        buyerName:  buyer.name || buyer.display_name || (data.name_first || ''),
         toName:     tx.gift_to  || '',
         message:    tx.gift_msg || '',
         amount:     gross,
@@ -203,8 +205,19 @@ exports.handler = async (event) => {
         claimedAt:  null,
         createdAt:  now
       });
-      // private pointer so the buyer can see their own code and nobody else's
-      await fbPatch(`flieks_my_gifts/${uid}`, { [code]: now });
+      // Private pointer so the buyer can see their own code and nobody else's.
+      // Carries enough detail to build a proper share message.
+      const film = await fbGet(`flieks_films/${filmId}`) || {};
+      await fbPatch(`flieks_my_gifts/${uid}`, {
+        [code]: {
+          at: now,
+          filmId,
+          filmTitle: film.title || '',
+          filmSlug: film.slug || filmId,
+          toName: tx.gift_to || '',
+          message: tx.gift_msg || ''
+        }
+      });
       console.log(`Gift minted: ${code} for ${filmId}`);
 
     } else {

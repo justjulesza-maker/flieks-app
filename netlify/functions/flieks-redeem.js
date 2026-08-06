@@ -96,7 +96,12 @@ exports.handler = async event => {
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok: true, filmId })
+      body: JSON.stringify({
+        ok: true,
+        filmId,
+        message: gift.message || '',
+        from: gift.buyerName || ''
+      })
     };
   } catch (e) {
     return fail(500, 'Could not redeem right now.');
