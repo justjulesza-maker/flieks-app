@@ -886,17 +886,9 @@ auth.onAuthStateChanged(async user => {
   // Handle return from PayFast
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('payment') === 'success') {
+    const tx = urlParams.get('tx');
     window.history.replaceState({}, '', '/');
-    if (!user) {
-      // Auth hasn't restored yet — remember, and finish once it has, rather
-      // than bouncing a paying customer to a login screen.
-      try { sessionStorage.setItem('flieks_pending_payment', '1'); } catch {}
-      return;
-    }
-    await handlePaymentReturn();
-  } else if (user && sessionStorage.getItem('flieks_pending_payment')) {
-    sessionStorage.removeItem('flieks_pending_payment');   // clear first, always
-    await handlePaymentReturn();
+    await handlePaymentReturn(tx);
   } else if (urlParams.get('payment') === 'cancel') {
     showSnack('Payment cancelled.');
     window.history.replaceState({}, '', '/');
@@ -1217,24 +1209,60 @@ async function renderCastWall(f) {
     </div>`;
 }
 
-/* Finish a purchase once we actually know who the buyer is. */
-async function handlePaymentReturn() {
+/* Finish a purchase using the transaction id PayFast handed back.
+   Deliberately independent of the sign-in session: on mobile the session often
+   does not survive the redirect, and a buyer must still get what they paid for. */
+async function handlePaymentReturn(txId) {
   try { sessionStorage.removeItem('flieks_pending_payment'); } catch {}
-  await loadUserPurchases();
-  const gifted = await pendingGiftCode();
-  if (gifted) { showGiftCode(gifted); return; }
 
-  // A gift grants no access, so if the buyer has nothing new in their library
-  // either, the webhook probably hasn't landed yet.
-  const beforeCount = Object.keys(userPurchases || {}).length;
-  await loadUserPurchases();
-  if (Object.keys(userPurchases || {}).length === beforeCount) {
-    showSnack('Payment received. If this was a gift, your code will appear shortly — check Profile.');
-    nav('profile');
+  if (!txId) {                       // older links, or a manual visit
+    const user = await requireUser();
+    if (user) await loadUserPurchases();
+    showSnack('Payment received.');
+    nav(user ? 'library' : 'home');
     return;
   }
-  showSnack('Payment successful! Your film is in your Library.');
-  nav('library');
+
+  // The webhook can land a moment after the browser does.
+  let order = null;
+  for (let i = 0; i < 6; i++) {
+    try {
+      const r = await fetch('/.netlify/functions/flieks-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txId })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.status === 'complete') { order = d; break; }
+      }
+    } catch (e) { console.warn('order lookup:', e); }
+    await new Promise(r => setTimeout(r, i === 0 ? 1200 : 1500));
+  }
+
+  const user = await requireUser();
+  if (user) await loadUserPurchases();
+
+  if (!order) {
+    showSnack('Payment received. It may take a moment to appear — check your Library shortly.');
+    nav(user ? 'library' : 'home');
+    return;
+  }
+
+  if (order.type === 'gift' && order.code) {
+    showGiftCode({
+      code: order.code,
+      filmId: order.filmId,
+      filmTitle: order.filmTitle,
+      filmSlug: order.filmSlug,
+      toName: order.toName,
+      message: order.message
+    });
+    return;
+  }
+
+  showSnack(`${order.filmTitle || 'Your film'} is in your Library.`);
+  nav(user ? 'library' : 'home');
 }
 
 /* ============================================================
