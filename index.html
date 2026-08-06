@@ -1820,12 +1820,12 @@ async function renderMyGifts() {
                     border-radius:10px;padding:14px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
             <div style="min-width:0">
-              <p style="font-size:14px;font-weight:600;color:var(--text)">${esc(title)}</p>
-              ${g.toName ? `<p style="font-size:12px;color:var(--muted);margin-top:2px">For ${esc(g.toName)}</p>` : ''}
+              <p style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(title)}</p>
+              ${g.toName ? `<p style="font-size:12px;color:var(--muted);margin-top:2px">For ${escHtml(g.toName)}</p>` : ''}
               <p style="font-family:ui-monospace,monospace;font-size:16px;color:var(--amber);
                         letter-spacing:.12em;margin-top:6px">${g.code}</p>
             </div>
-            <button class="btn btn-outline gift-send" data-code="${esc(g.code)}"
+            <button class="btn btn-outline gift-send" data-code="${escHtml(g.code)}"
               style="width:auto;padding:8px 14px;font-size:11px;flex-shrink:0">SEND</button>
           </div>
         </div>`;
@@ -1844,6 +1844,14 @@ async function renderMyGifts() {
 }
 
 let myGiftRecords = {};
+
+/* The social module keeps its own esc() inside a closure, so the app needs
+   its own. Anything user-supplied that lands in markup goes through this. */
+function escHtml(v) {
+  const d = document.createElement('div');
+  d.textContent = v ?? '';
+  return d.innerHTML;
+}
 
 function resendGift(g) {
   const film = allFilms.find(f => f.id === g.filmId);
