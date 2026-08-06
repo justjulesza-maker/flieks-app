@@ -1778,6 +1778,61 @@ async function loadLibrary() {
 /* ============================================================
    PROFILE
    ============================================================ */
+/* Gift codes bought but not yet sent. A code shown once in a modal is a code
+   that gets lost — this is where a buyer can always find it again. */
+async function renderMyGifts() {
+  const box = document.getElementById('my-gifts');
+  if (!box) return;
+  const user = await requireUser();
+  if (!user) return;
+
+  let v = null;
+  try {
+    const token = await user.getIdToken(true);
+    const res = await fetch(
+      `https://flieks-app-default-rtdb.firebaseio.com/${DB_PREFIX}my_gifts/${user.uid}.json?auth=${token}`
+    );
+    if (res.ok) v = await res.json();
+  } catch (e) { console.warn('could not load gift codes:', e); }
+
+  if (!v) { box.innerHTML = ''; return; }
+
+  const rows = Object.entries(v)
+    .map(([code, d]) => (typeof d === 'number' ? { code, at: d } : { code, ...d }))
+    .sort((a, b) => b.at - a.at);
+  if (!rows.length) { box.innerHTML = ''; return; }
+
+  box.innerHTML = `
+    <p class="section-label" style="margin-bottom:10px">GIFTS YOU'VE BOUGHT</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+      ${rows.map(g => {
+        const film = allFilms.find(f => f.id === g.filmId);
+        const title = g.filmTitle || (film && film.title) || 'A film';
+        return `<div style="background:var(--card);border:1px solid var(--border);
+                    border-radius:10px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div style="min-width:0">
+              <p style="font-size:14px;font-weight:600;color:var(--text)">${title}</p>
+              ${g.toName ? `<p style="font-size:12px;color:var(--muted);margin-top:2px">For ${g.toName}</p>` : ''}
+              <p style="font-family:ui-monospace,monospace;font-size:16px;color:var(--amber);
+                        letter-spacing:.12em;margin-top:6px">${g.code}</p>
+            </div>
+            <button class="btn btn-outline" style="width:auto;padding:8px 14px;font-size:11px;flex-shrink:0"
+              onclick='resendGift(${JSON.stringify(g).replace(/'/g, "&#39;")})'>SEND</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function resendGift(g) {
+  const film = allFilms.find(f => f.id === g.filmId);
+  const title = g.filmTitle || (film && film.title) || 'a film';
+  const slug = g.filmSlug || (film && film.slug) || g.filmId || '';
+  const url = location.origin + (slug ? '/' + slug : '');
+  shareGiftMessage(buildGiftMessage(g, title, url));
+}
+
 async function loadProfile() {
   const el = document.getElementById('profile-content');
   if (!authResolved) {
@@ -1814,6 +1869,8 @@ async function loadProfile() {
         <p style="font-size:12px;color:var(--muted)">Films Rented</p>
       </div>
     </div>
+    <div id="my-gifts"></div>
+
     <div class="info-box amber" style="margin-bottom:20px">
       <svg viewBox="0 0 24 24"><path d="M19 2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M3 18h18"/></svg>
       <p>Are you a filmmaker? <a href="filmmaker.html" style="color:var(--amber);font-weight:600">Apply to share your films →</a></p>
@@ -1833,6 +1890,7 @@ async function loadProfile() {
       </div>
     </div>
     <button class="btn btn-outline" onclick="signOut()" style="margin-top:20px">SIGN OUT</button>`;
+  renderMyGifts();
 }
 
 /* ============================================================
