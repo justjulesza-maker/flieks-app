@@ -203,6 +203,7 @@ exports.handler = async (event) => {
         ref,
         claimedBy:  null,
         claimedAt:  null,
+        txId,
         createdAt:  now
       });
       // Private pointer so the buyer can see their own code and nobody else's.

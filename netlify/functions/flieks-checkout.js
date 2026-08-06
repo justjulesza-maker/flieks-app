@@ -183,7 +183,9 @@ exports.handler = async event => {
     const fields = {
       merchant_id:   process.env.PAYFAST_MERCHANT_ID,
       merchant_key:  process.env.PAYFAST_MERCHANT_KEY,
-      return_url:    `${origin}/?payment=success`,
+      // Carry the transaction id back. It lets the site show a gift code even if
+      // the sign-in session doesn't survive the round trip to PayFast.
+      return_url:    `${origin}/?payment=success&tx=${txId}`,
       cancel_url:    `${origin}/?payment=cancel`,
       notify_url:    `${origin}/.netlify/functions/payfast-itn`,
       name_first:    clean((user.displayName || 'Viewer').split(' ')[0]) || 'Viewer',
@@ -206,7 +208,18 @@ exports.handler = async event => {
       if (fields[k] === '') delete fields[k];
     }
 
-    fields.signature = sign(fields, process.env.PAYFAST_PASSPHRASE);
+    const pass = process.env.PAYFAST_PASSPHRASE;
+    fields.signature = sign(fields, pass);
+
+    console.log('signing:', {
+      passphraseSet: pass ? `yes, length ${pass.length}` : 'no',
+      merchant: fields.merchant_id,
+      stringSigned: Object.entries(fields)
+        .filter(([k]) => k !== 'signature')
+        .map(([k, v]) => `${k}=${pfEncode(v)}`).join('&')
+        + (pass ? '&passphrase=<set>' : ''),
+      signature: fields.signature
+    });
 
     return {
       statusCode: 200,
