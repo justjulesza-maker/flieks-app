@@ -208,14 +208,16 @@ exports.handler = async (event) => {
       console.log(`Gift minted: ${code} for ${filmId}`);
 
     } else {
-      const expiresAt = type === 'rent' ? now + 48 * 60 * 60 * 1000 : null;
+      /* Rentals start their 48 hours on first play, not here — flieks-play
+         stamps expires_at the first time the viewer presses play. */
       await fbPut(`flieks_purchases/${uid}/${filmId}`, {
         film_id: filmId,
         uid,
         type,
         purchased_at: now,
         created_at:   now,
-        expires_at:   expiresAt,
+        expires_at:   null,
+        rental_hours: type === 'rent' ? 48 : null,
         transaction_id: data.pf_payment_id,
         amount: gross,
         ref,
