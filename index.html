@@ -864,10 +864,40 @@ let navHistory = ['home'];
 /* ============================================================
    AUTH STATE
    ============================================================ */
+/* ---- auth diagnostics --------------------------------------------------
+   Sessions have been dropping unexpectedly. This records every auth event so
+   the cause is visible after the fact: run authLog() in the console.
+   Firebase only ends a session on signOut, or when a token refresh is rejected
+   — so a refresh failure here names the real reason. */
+const AUTH_LOG = [];
+function authNote(what, detail) {
+  const entry = { t: new Date().toISOString(), what, ...detail };
+  AUTH_LOG.push(entry);
+  try { sessionStorage.setItem('flieks_authlog', JSON.stringify(AUTH_LOG.slice(-40))); } catch {}
+  console.log('[auth]', what, detail || '');
+}
+window.authLog = () => {
+  try { return JSON.parse(sessionStorage.getItem('flieks_authlog') || '[]'); }
+  catch { return AUTH_LOG; }
+};
+
+auth.onIdTokenChanged(u => {
+  authNote(u ? 'token ok' : 'token gone', { user: u ? u.email : null });
+});
+
+// A rejected refresh is what actually ends a session — surface the reason.
+setInterval(async () => {
+  const u = auth.currentUser;
+  if (!u) return;
+  try { await u.getIdToken(); }
+  catch (e) { authNote('TOKEN REFRESH FAILED', { code: e.code, message: e.message }); }
+}, 30000);
+
 auth.onAuthStateChanged(async user => {
   if (currentUser && !user) {
-    console.warn('[auth] signed out by Firebase at', new Date().toISOString(),
-      '- was', currentUser.email);
+    authNote('SIGNED OUT', { was: currentUser.email, url: location.href });
+  } else if (user) {
+    authNote('signed in', { user: user.email });
   }
   currentUser = user;
   authResolved = true;
@@ -1272,7 +1302,16 @@ let giftFilm = null;
 
 async function openGift(filmId) {
   const user = await requireUser();
-  if (!user) { showSnack('Please sign in to continue'); nav('auth'); return; }
+  if (!user) {
+    authNote('gift blocked - no user', {
+      sdkUser: auth.currentUser ? auth.currentUser.email : null,
+      cached: currentUser ? currentUser.email : null,
+      authResolved
+    });
+    showSnack('Please sign in to continue');
+    nav('auth');
+    return;
+  }
   giftFilm = allFilms.find(f => f.id === filmId);
   if (!giftFilm) return;
 
