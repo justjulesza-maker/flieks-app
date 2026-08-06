@@ -1,15 +1,5 @@
-[build]
-  publish = "."
-  functions = "netlify/functions"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-
-[[headers]]
-  for = "/.netlify/functions/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
+# Per-film link previews. Without this the WhatsApp and Instagram card is the
+# same generic 4flieks image whatever film the link points at.
+[[edge_functions]]
+  function = "og"
+  path = "/*"

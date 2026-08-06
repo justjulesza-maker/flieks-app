@@ -1297,6 +1297,10 @@ async function redeemGift() {
     msg.textContent = 'Unlocked. It is yours.';
     await loadUserPurchases();
     renderFilmDetail();
+    if (d.message) {
+      setTimeout(() => showSnack(
+        d.from ? `${d.from} said: "${d.message}"` : `"${d.message}"`), 600);
+    }
   } catch {
     msg.style.color = 'var(--red)';
     msg.textContent = 'Could not reach the server. Try again.';
@@ -1310,28 +1314,78 @@ async function pendingGiftCode() {
     const snap = await db.ref(DB_PREFIX + 'my_gifts/' + currentUser.uid).once('value');
     const v = snap.val();
     if (!v) return null;
-    const [code, at] = Object.entries(v).sort((a, b) => b[1] - a[1])[0];
+    // Entries are objects now; older ones were a bare timestamp.
+    const rows = Object.entries(v).map(([code, d]) =>
+      typeof d === 'number' ? { code, at: d } : { code, ...d });
+    rows.sort((a, b) => b.at - a.at);
+    const latest = rows[0];
     // only surface a code minted in the last few minutes
-    return (Date.now() - at < 10 * 60 * 1000) ? code : null;
+    return (Date.now() - latest.at < 10 * 60 * 1000) ? latest : null;
   } catch { return null; }
 }
 
-function showGiftCode(code) {
+function showGiftCode(gift) {
+  // tolerate being handed just a code
+  if (typeof gift === 'string') gift = { code: gift };
+  const film = allFilms.find(f => f.id === gift.filmId);
+  const title = gift.filmTitle || (film && film.title) || 'a film';
+  const slug = gift.filmSlug || (film && film.slug) || gift.filmId || '';
+  const url = location.origin + (slug ? '/' + slug : '');
+  const who = gift.toName ? gift.toName : 'them';
+
+  const preview = buildGiftMessage(gift, title, url);
+
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);' +
-    'display:flex;align-items:center;justify-content:center;padding:20px';
+    'display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
   wrap.innerHTML = `
-    <div style="background:var(--surface);border-radius:16px;padding:26px 22px;max-width:400px;width:100%">
-      <p class="section-label">YOUR GIFT CODE</p>
+    <div style="background:var(--surface);border-radius:16px;padding:24px 20px;max-width:420px;width:100%">
+      <p class="section-label">GIFT READY FOR ${who.toUpperCase()}</p>
       <p style="font-size:13px;color:var(--muted);margin:6px 0 14px;line-height:1.5">
-        Send this to them. It unlocks permanent access for one person.</p>
-      <p style="font-family:ui-monospace,monospace;font-size:26px;font-weight:700;letter-spacing:.2em;
-                text-align:center;color:var(--amber);background:var(--card);border:2px dashed var(--border);
-                border-radius:10px;padding:18px;margin-bottom:14px">${code}</p>
-      <button class="btn btn-amber" onclick="shareGiftCode('${code}')">SHARE IT</button>
-      <button class="btn btn-outline" style="margin-top:8px" onclick="this.closest('div').parentElement.remove()">DONE</button>
+        Send this message. It has the film, your note and the code in it.</p>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;
+                  padding:14px;font-size:13px;line-height:1.55;color:var(--text);
+                  white-space:pre-wrap;margin-bottom:14px">${preview.replace(/</g,'&lt;')}</div>
+
+      <button class="btn btn-amber" onclick='shareGiftMessage(${JSON.stringify(preview)})'>SEND IT</button>
+      <button class="btn btn-outline" style="margin-top:8px"
+        onclick='copyGiftMessage(${JSON.stringify(preview)}, this)'>COPY MESSAGE</button>
+      <button class="btn btn-outline" style="margin-top:8px;border:0;color:var(--muted)"
+        onclick="this.closest('div').parentElement.remove()">DONE</button>
+
+      <p style="font-size:11px;color:var(--dim);margin-top:14px;line-height:1.5;text-align:center">
+        Code <b style="color:var(--amber);letter-spacing:.1em">${gift.code}</b> — it works once,
+        and only for the person who uses it first.</p>
     </div>`;
   document.body.appendChild(wrap);
+}
+
+/* One message with everything in it, so nothing has to be sent separately. */
+function buildGiftMessage(gift, title, url) {
+  const from = (currentUser && (currentUser.displayName || '').trim()) || '';
+  const lines = [];
+  lines.push(from ? `${from} has sent you a film to watch.` : `Someone has sent you a film to watch.`);
+  lines.push('');
+  lines.push(`🎬 ${title}`);
+  if (gift.message) { lines.push(''); lines.push(`"${gift.message}"`); }
+  lines.push('');
+  lines.push(`Watch it here: ${url}`);
+  lines.push(`Sign up, then enter this code: ${gift.code}`);
+  return lines.join('\n');
+}
+
+async function shareGiftMessage(text) {
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch {} }
+  await navigator.clipboard.writeText(text);
+  showSnack('Message copied — paste it to them');
+}
+
+async function copyGiftMessage(text, btn) {
+  await navigator.clipboard.writeText(text);
+  const was = btn.textContent;
+  btn.textContent = 'COPIED';
+  setTimeout(() => btn.textContent = was, 1600);
 }
 
 async function shareGiftCode(code) {
