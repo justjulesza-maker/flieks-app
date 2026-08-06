@@ -1008,6 +1008,34 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:6px">LINK PREVIEW IMAGE</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+        The picture people see when your film's link is posted to WhatsApp, Instagram or X.
+        For most viewers this is the first thing they'll see of your film.</p>
+      ${f.og_image
+        ? `<img src="${f.og_image}" alt="" style="width:100%;max-width:320px;aspect-ratio:1200/630;
+             object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-bottom:10px">`
+        : ''}
+      <div class="upload-zone" id="og-drop" style="padding:18px"
+        onclick="document.getElementById('og-input').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');uploadOgImage('${f.id}', event.dataTransfer.files[0])">
+        <p style="font-size:13px;color:var(--muted)">${f.og_image ? 'Replace preview image' : 'Add a preview image'}</p>
+        <p style="font-size:11px;color:var(--dim);margin-top:4px">1200 &times; 630 landscape &middot; JPG</p>
+      </div>
+      <input type="file" id="og-input" accept="image/*" style="display:none"
+        onchange="uploadOgImage('${f.id}', this.files[0])">
+      <div id="og-prog" style="height:3px;background:var(--border);border-radius:2px;margin-top:9px;display:none">
+        <i id="og-prog-fill" style="display:block;height:100%;background:var(--accent,#F0A62E);width:0;border-radius:2px"></i>
+      </div>
+      <div id="og-msg" style="font-size:12px;color:var(--muted);min-height:1.2em;margin-top:8px"></div>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5">
+        Keep it under 300KB — WhatsApp quietly ignores anything bigger and shows a
+        generic icon instead. We'll shrink it for you if it's too large.</p>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
       <p class="section-label" style="margin-bottom:6px">LOOK &amp; FEEL</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
         How your film's page looks to viewers. Pick what suits the film.</p>
@@ -1093,6 +1121,77 @@ function mountCastPanel(f) {
     filmId:   f.id,
     filmSlug: f.slug || f.id,
     canEdit:  true
+  });
+}
+
+/* Link preview images have to be small — WhatsApp gives up over about 300KB.
+   Rather than ask filmmakers to understand that, resize before uploading. */
+async function uploadOgImage(filmId, file) {
+  if (!file) return;
+  const msg = document.getElementById('og-msg');
+  const prog = document.getElementById('og-prog');
+  const fill = document.getElementById('og-prog-fill');
+  msg.style.color = 'var(--muted)';
+
+  if (!file.type.startsWith('image/')) {
+    msg.style.color = 'var(--red)'; msg.textContent = 'That needs to be an image.'; return;
+  }
+
+  try {
+    msg.textContent = 'Preparing…';
+    const blob = await fitTo1200x630(file);
+    const kb = Math.round(blob.size / 1024);
+
+    prog.style.display = 'block';
+    const ref = storage.ref('flieks_films/' + filmId + '/og.jpg');
+    const task = ref.put(blob, { contentType: 'image/jpeg' });
+
+    task.on('state_changed',
+      sn => fill.style.width = (sn.bytesTransferred / sn.totalBytes * 100) + '%',
+      () => { prog.style.display = 'none'; msg.style.color = 'var(--red)';
+              msg.textContent = 'Upload failed. Check your connection and try again.'; },
+      async () => {
+        prog.style.display = 'none';
+        const url = await ref.getDownloadURL();
+        await db.ref(DB_PREFIX + 'films/' + filmId + '/og_image').set(url);
+        const film = myFilms.find(x => x.id === filmId);
+        if (film) film.og_image = url;
+        msg.style.color = 'var(--green,#4ADE80)';
+        msg.textContent = `Saved (${kb}KB). New links will preview with this image.`;
+        setTimeout(() => openFilmDetail(filmId), 900);
+      });
+  } catch (e) {
+    prog.style.display = 'none';
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Could not process that image.';
+  }
+}
+
+/* Cover-crop to 1200x630 and compress until it comfortably fits. */
+function fitTo1200x630(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const W = 1200, H = 630;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, W, H);
+
+      const scale = Math.max(W / img.width, H / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+
+      const tryQuality = q => c.toBlob(b => {
+        if (!b) return reject(new Error('encode failed'));
+        if (b.size > 260 * 1024 && q > 0.5) return tryQuality(q - 0.1);
+        resolve(b);
+      }, 'image/jpeg', q);
+      tryQuality(0.85);
+    };
+    img.onerror = () => reject(new Error('bad image'));
+    img.src = URL.createObjectURL(file);
   });
 }
 
