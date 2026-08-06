@@ -1066,6 +1066,26 @@ function renderFilmDetail() {
           <a href="#" onclick="event.preventDefault();playFilm('${f.id}')" style="color:var(--amber)">Watch now →</a></p>
         </div>
         <button class="btn btn-amber" onclick="playFilm('${f.id}')">WATCH NOW</button>
+
+        ${!f.free ? `
+        <div class="buy-card" onclick="openGift('${f.id}')" style="margin-top:12px;display:flex;
+             align-items:center;gap:12px;text-align:left;padding:14px">
+          <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--amber);fill:none;stroke-width:1.6;flex-shrink:0"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+          <div>
+            <p style="font-size:14px;font-weight:600;color:var(--text)">Loved it? Gift it — R${f.price_own}</p>
+            <p style="font-size:11px;color:var(--muted);margin-top:2px">They get a code for permanent access</p>
+          </div>
+        </div>` : ''}
+
+        ${purchased.type === 'rent' ? `
+        <div class="buy-card" onclick="startCheckout('${f.id}','own')" style="margin-top:10px;display:flex;
+             align-items:center;gap:12px;text-align:left;padding:14px">
+          <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <div>
+            <p style="font-size:14px;font-weight:600;color:var(--text)">Keep it forever — R${f.price_own}</p>
+            <p style="font-size:11px;color:var(--muted);margin-top:2px">No expiry, watch any time</p>
+          </div>
+        </div>` : ''}
       </div>
     ` : `
       <div style="padding:0 20px 14px">
