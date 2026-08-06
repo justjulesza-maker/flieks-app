@@ -1039,11 +1039,11 @@ function renderFilmDetail() {
             <div class="buy-card" onclick="startCheckout('${f.id}','rent')">
               <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               <p class="bbn" style="font-size:32px;color:var(--text)">R${f.price_rent}</p>
-              <p style="font-size:12px;color:var(--muted)">Watch once</p>
+              <p style="font-size:12px;color:var(--muted)">48-hour rental</p>
               <p style="font-size:10px;color:var(--dim);margin-top:3px">48 hours from first play</p>
             </div>
             <div class="buy-card featured" onclick="startCheckout('${f.id}','own')">
-              <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               <p class="bbn" style="font-size:32px;color:var(--amber)">R${f.price_own}</p>
               <p style="font-size:12px;color:var(--text)">Own forever</p>
               <p style="font-size:10px;color:var(--muted);margin-top:3px">Watch any time, no expiry</p>
@@ -1054,7 +1054,7 @@ function renderFilmDetail() {
             <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
             <div>
               <p style="font-size:14px;font-weight:600;color:var(--text)">Gift it to someone — R${f.price_own}</p>
-              <p style="font-size:11px;color:var(--muted);margin-top:2px">They get a code and a permanent copy</p>
+              <p style="font-size:11px;color:var(--muted);margin-top:2px">They get a code for permanent access</p>
             </div>
           </div>
         `}
