@@ -1902,10 +1902,11 @@ async function loadProfile() {
 
     <div class="info-box amber" style="margin-bottom:20px">
       <svg viewBox="0 0 24 24"><path d="M19 2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M3 18h18"/></svg>
-      <p>Are you a filmmaker? <a href="filmmaker.html" style="color:var(--amber);font-weight:600">Apply to share your films →</a></p>
+      <p id="filmmaker-prompt">Are you a filmmaker?
+        <a href="filmmaker.html" style="color:var(--amber);font-weight:600">Apply to release your films →</a></p>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <a href="filmmaker.html" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+      <a href="filmmaker.html" id="portal-link" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;justify-content:space-between;align-items:center">
         <span style="font-size:14px;color:var(--text)">Filmmaker Portal</span>
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
       </a>
@@ -1920,6 +1921,34 @@ async function loadProfile() {
     </div>
     <button class="btn btn-outline" onclick="signOut()" style="margin-top:20px">SIGN OUT</button>`;
   renderMyGifts();
+  revealFilmmakerLink();
+}
+
+/* The portal is only useful to approved filmmakers, so only show the shortcut
+   to them — and swap the "apply" prompt for the ones who already have. */
+async function revealFilmmakerLink() {
+  const user = await requireUser();
+  if (!user) return;
+  try {
+    const token = await user.getIdToken();
+    const p = await fetch(
+      `https://flieks-app-default-rtdb.firebaseio.com/${DB_PREFIX}users/${user.uid}.json?auth=${token}`
+    ).then(r => r.json()) || {};
+
+    const isMaker = p.role === 'filmmaker' || p.role === 'admin';
+    const link = document.getElementById('portal-link');
+    if (link && isMaker) link.style.display = 'flex';
+
+    const prompt = document.getElementById('filmmaker-prompt');
+    if (prompt) {
+      if (isMaker) {
+        prompt.innerHTML = 'Your films are managed in the ' +
+          '<a href="filmmaker.html" style="color:var(--amber);font-weight:600">Filmmaker Portal →</a>';
+      } else if (p.filmmaker_application_at) {
+        prompt.textContent = 'Your filmmaker application is being reviewed.';
+      }
+    }
+  } catch (e) { console.warn('role check failed:', e); }
 }
 
 /* ============================================================

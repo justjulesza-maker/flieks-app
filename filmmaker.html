@@ -833,13 +833,26 @@ let trailerFile = null;
    ============================================================ */
 auth.onAuthStateChanged(async user => {
   if (user) {
-    // Check if filmmaker role
-    const snap = await db.ref(`${DB_PREFIX}users/${user.uid}`).once('value');
-    const profile = snap.val() || {};
-    if (profile.role !== 'filmmaker' && profile.role !== 'admin') {
-      showSnack('Your filmmaker application is under review. We\'ll notify you by email.');
-      // Allow access but show pending state
+    // Read the role over REST with a fresh token — the SDK's socket can still
+    // be unauthenticated moments after sign-in, which reads as no role at all.
+    let profile = {};
+    try {
+      const token = await user.getIdToken(true);
+      profile = await fetch(
+        `https://flieks-app-default-rtdb.firebaseio.com/${DB_PREFIX}users/${user.uid}.json?auth=${token}`
+      ).then(r => r.json()) || {};
+    } catch (e) {
+      console.warn('could not read role:', e);
     }
+
+    const role = profile.role;
+    if (role !== 'filmmaker' && role !== 'admin') {
+      // A viewer must not reach the upload tools. Show them where they stand
+      // and how to apply, rather than a dashboard they cannot legitimately use.
+      showPendingState(profile);
+      return;
+    }
+
     currentUser = user;
     document.getElementById('view-auth').classList.remove('active');
     document.getElementById('view-dashboard').classList.add('active');
@@ -852,6 +865,62 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('bnav').style.display = 'none';
   }
 });
+
+/* Shown to anyone signed in who isn't a filmmaker or admin. */
+function showPendingState(profile) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('bnav').style.display = 'none';
+
+  const applied = profile && profile.filmmaker_application_at;
+  const authView = document.getElementById('view-auth');
+  authView.classList.add('active');
+  authView.innerHTML = `
+    <div style="padding:40px 22px;max-width:460px;margin:0 auto;text-align:center">
+      <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"
+           style="height:54px;width:auto;display:block;margin:0 auto 26px">
+      <h2 style="font-size:22px;color:var(--text);margin-bottom:10px">
+        ${applied ? 'Application received' : 'Filmmaker access'}</h2>
+      <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px">
+        ${applied
+          ? 'Your application is being reviewed. We\'ll email you as soon as it\'s approved — usually within a couple of days.'
+          : 'This area is for filmmakers releasing their work on 4flieks. Apply and we\'ll be in touch once your account is approved.'}
+      </p>
+      ${applied ? '' : `<button class="btn btn-amber" id="applyBtn">APPLY TO BECOME A FILMMAKER</button>`}
+      <a href="/" class="btn btn-outline" style="margin-top:10px;display:block;text-decoration:none">
+        BACK TO 4FLIEKS</a>
+      <button class="btn btn-outline" style="margin-top:10px;border:0;color:var(--muted)"
+        onclick="auth.signOut()">SIGN OUT</button>
+      <div id="applyMsg" style="font-size:13px;color:var(--muted);margin-top:14px;min-height:1.2em"></div>
+    </div>`;
+
+  const btn = document.getElementById('applyBtn');
+  if (btn) btn.onclick = () => applyAsFilmmaker();
+}
+
+async function applyAsFilmmaker() {
+  const msg = document.getElementById('applyMsg');
+  const u = auth.currentUser;
+  if (!u) return;
+  msg.style.color = 'var(--muted)';
+  msg.textContent = 'Sending…';
+  try {
+    await db.ref(`${DB_PREFIX}filmmaker_applications/${u.uid}`).set({
+      uid: u.uid,
+      email: u.email || '',
+      name: u.displayName || '',
+      status: 'pending',
+      created_at: Date.now()
+    });
+    await db.ref(`${DB_PREFIX}users/${u.uid}/filmmaker_application_at`).set(Date.now());
+    msg.style.color = 'var(--green,#4ADE80)';
+    msg.textContent = 'Application sent. We\'ll email you once it\'s reviewed.';
+    const b = document.getElementById('applyBtn');
+    if (b) b.style.display = 'none';
+  } catch (e) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Could not send that. Please try again.';
+  }
+}
 
 /* ============================================================
    NAVIGATION
