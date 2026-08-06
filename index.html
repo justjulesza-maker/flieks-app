@@ -865,6 +865,10 @@ let navHistory = ['home'];
    AUTH STATE
    ============================================================ */
 auth.onAuthStateChanged(async user => {
+  if (currentUser && !user) {
+    console.warn('[auth] signed out by Firebase at', new Date().toISOString(),
+      '- was', currentUser.email);
+  }
   currentUser = user;
   authResolved = true;
   updateAvatars();
@@ -891,7 +895,7 @@ auth.onAuthStateChanged(async user => {
     }
     await handlePaymentReturn();
   } else if (user && sessionStorage.getItem('flieks_pending_payment')) {
-    sessionStorage.removeItem('flieks_pending_payment');
+    sessionStorage.removeItem('flieks_pending_payment');   // clear first, always
     await handlePaymentReturn();
   } else if (urlParams.get('payment') === 'cancel') {
     showSnack('Payment cancelled.');
@@ -1735,6 +1739,7 @@ async function loadLibrary() {
     document.getElementById('rented-films').innerHTML = '';
     await authReady;
   }
+  currentUser = auth.currentUser || currentUser;
   if (!currentUser) {
     document.getElementById('owned-films').innerHTML = `<p style="color:var(--muted);font-size:14px">Please <a href="#" onclick="nav('auth')" style="color:var(--amber)">sign in</a> to view your library.</p>`;
     document.getElementById('rented-films').innerHTML = '';
@@ -1788,7 +1793,7 @@ async function renderMyGifts() {
 
   let v = null;
   try {
-    const token = await user.getIdToken(true);
+    const token = await user.getIdToken();
     const res = await fetch(
       `https://flieks-app-default-rtdb.firebaseio.com/${DB_PREFIX}my_gifts/${user.uid}.json?auth=${token}`
     );
@@ -1839,6 +1844,7 @@ async function loadProfile() {
     el.innerHTML = `<p style="color:var(--muted);font-size:14px;padding:20px">Loading…</p>`;
     await authReady;
   }
+  currentUser = auth.currentUser || currentUser;
   if (!currentUser) {
     el.innerHTML = `
       <div style="text-align:center;padding:30px 0">
