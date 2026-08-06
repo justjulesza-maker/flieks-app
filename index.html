@@ -834,13 +834,6 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.database();
 
-// Keep the session across reloads and redirects (the PayFast round trip
-// counts as one). Without this a browser with restrictive storage settings
-// silently drops the user on every navigation.
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => {
-  console.warn('auth persistence fell back:', e && e.code);
-});
-
 let currentUser = null;
 
 /* Resolves once Firebase has told us whether anyone is signed in. Views must
@@ -849,6 +842,15 @@ let authResolved = false;
 const authReady = new Promise(resolve => {
   const off = auth.onAuthStateChanged(u => { authResolved = true; off(); resolve(u); });
 });
+
+/* Anything gated on being signed in should go through this rather than
+   reading currentUser directly — a click can easily land before Firebase has
+   finished restoring the session, which looks exactly like being logged out. */
+async function requireUser() {
+  if (currentUser) return currentUser;
+  if (!authResolved) await authReady;
+  return auth.currentUser || currentUser;
+}
 let currentFilm = null;
 let checkoutFilm = null;
 let checkoutType = null;
@@ -1212,6 +1214,16 @@ async function handlePaymentReturn() {
   await loadUserPurchases();
   const gifted = await pendingGiftCode();
   if (gifted) { showGiftCode(gifted); return; }
+
+  // A gift grants no access, so if the buyer has nothing new in their library
+  // either, the webhook probably hasn't landed yet.
+  const beforeCount = Object.keys(userPurchases || {}).length;
+  await loadUserPurchases();
+  if (Object.keys(userPurchases || {}).length === beforeCount) {
+    showSnack('Payment received. If this was a gift, your code will appear shortly — check Profile.');
+    nav('profile');
+    return;
+  }
   showSnack('Payment successful! Your film is in your Library.');
   nav('library');
 }
@@ -1221,8 +1233,9 @@ async function handlePaymentReturn() {
    ============================================================ */
 let giftFilm = null;
 
-function openGift(filmId) {
-  if (!currentUser) { showSnack('Please sign in to continue'); nav('auth'); return; }
+async function openGift(filmId) {
+  const user = await requireUser();
+  if (!user) { showSnack('Please sign in to continue'); nav('auth'); return; }
   giftFilm = allFilms.find(f => f.id === filmId);
   if (!giftFilm) return;
 
@@ -1309,10 +1322,21 @@ async function redeemGift() {
 
 /* ---- after PayFast sends them back, was this a gift? ---- */
 async function pendingGiftCode() {
-  await new Promise(r => setTimeout(r, 2600));   // give the ITN a moment to land
+  const user = await requireUser();
+  if (!user) return null;
+
+  // The ITN is a webhook — it can land a second or two after the browser gets
+  // back. Poll briefly rather than looking once and giving up.
+  let v = null;
+  for (let i = 0; i < 6 && !v; i++) {
+    await new Promise(r => setTimeout(r, i === 0 ? 1500 : 1200));
+    try {
+      const snap = await db.ref(DB_PREFIX + 'my_gifts/' + user.uid).once('value');
+      v = snap.val();
+    } catch (e) { console.warn('gift lookup failed:', e); }
+  }
+
   try {
-    const snap = await db.ref(DB_PREFIX + 'my_gifts/' + currentUser.uid).once('value');
-    const v = snap.val();
     if (!v) return null;
     // Entries are objects now; older ones were a bare timestamp.
     const rows = Object.entries(v).map(([code, d]) =>
@@ -1397,8 +1421,9 @@ async function shareGiftCode(code) {
 /* ============================================================
    CHECKOUT
    ============================================================ */
-function startCheckout(filmId, type) {
-  if (!currentUser) {
+async function startCheckout(filmId, type) {
+  const user = await requireUser();
+  if (!user) {
     showSnack('Please sign in to continue');
     nav('auth');
     return;
@@ -1538,6 +1563,8 @@ async function playFilm(filmId) {
     return;
   }
   if (f.free || !purchase) { launchPlayer(f, false); return; }
+  const user = await requireUser();
+  if (!user) { showSnack('Please sign in to continue'); nav('auth'); return; }
 
   // A rental's 48 hours begin here, on first play — not at purchase. So
   // buying in the morning to watch that evening doesn't cost half the window.
@@ -1545,7 +1572,7 @@ async function playFilm(filmId) {
     const r = await fetch('/.netlify/functions/flieks-play', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: await currentUser.getIdToken(), filmId })
+      body: JSON.stringify({ token: await user.getIdToken(), filmId })
     });
     const d = await r.json();
 
