@@ -146,6 +146,35 @@ input,textarea{font-family:var(--fb)}
 /* ===================== PLAYER ===================== */
 .video-wrap{background:#000;position:relative;flex-shrink:0}
 .video-wrap video{width:100%;display:block;max-height:56vw;object-fit:contain}
+
+/* ---------- watching on a laptop or TV ----------
+   Everything else stays a phone-width column on purpose. The player is the
+   one place that shouldn't be: a postcard-sized video with black bars either
+   side is a bad way to watch a film. On wider screens the player breaks out
+   of the column and fills the window. */
+@media (min-width: 700px) {
+  body:has(#view-player.active){max-width:100%}
+  #view-player.active{
+    position:fixed;inset:0;z-index:200;max-width:100%;
+    background:#000;justify-content:center
+  }
+  #view-player.active .video-wrap{
+    width:100%;max-width:1400px;margin:0 auto;
+    display:flex;align-items:center;justify-content:center
+  }
+  #view-player.active .video-wrap video{
+    max-height:calc(100dvh - 190px);
+    width:auto;max-width:100%
+  }
+  #view-player.active .player-controls{
+    width:100%;max-width:1400px;margin:0 auto;flex:0 0 auto
+  }
+}
+
+/* Landscape phones: the controls eat the screen, so trim them back */
+@media (max-height: 500px) and (orientation: landscape) {
+  #view-player.active .video-wrap video{max-height:calc(100dvh - 96px)}
+}
 .player-controls{background:#0D0D0D;padding:16px 20px 12px;flex:1}
 .prog-bar{height:3px;background:var(--border);position:relative;cursor:pointer;border-radius:2px;margin-bottom:10px}
 .prog-fill{height:100%;background:var(--amber);border-radius:2px;position:relative;pointer-events:none}
@@ -159,8 +188,12 @@ input,textarea{font-family:var(--fb)}
 /* ===================== LIBRARY ===================== */
 .lib-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:opacity .15s}
 .lib-card:active{opacity:.85}
-.lib-thumb{width:52px;height:64px;border-radius:8px;display:flex;align-items:flex-end;padding:5px;flex-shrink:0}
-.lib-thumb span{font-family:var(--fn);font-size:12px;color:var(--text);line-height:1.1}
+.lib-thumb{width:52px;height:64px;border-radius:8px;display:flex;align-items:flex-end;padding:5px;flex-shrink:0;overflow:hidden;background-size:cover;background-position:center;position:relative}
+.lib-thumb span{font-family:var(--fn);font-size:9px;color:var(--text);line-height:1.05;
+  width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.lib-card .info{flex:1;min-width:0}
+.lib-card .info p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ===================== AUTH ===================== */
 .auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
@@ -312,6 +345,9 @@ input,textarea{font-family:var(--fb)}
   <div class="video-wrap">
     <video id="flieks-video" playsinline controls
            poster=""
+           x-webkit-airplay="allow"
+           controlsList="nodownload"
+           disablepictureinpicture="false"
            onerror="videoError()"
            ontimeupdate="updateProgress()"
            onended="videoEnded()">
@@ -818,15 +854,17 @@ auth.onAuthStateChanged(async user => {
   // Handle return from PayFast
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('payment') === 'success') {
-    // A gift purchase returns a code rather than access, so check before redirecting
-    const gifted = user ? await pendingGiftCode() : null;
     window.history.replaceState({}, '', '/');
-    if (gifted) {
-      showGiftCode(gifted);
-    } else {
-      showSnack('Payment successful! Your film is in your Library.');
-      nav('library');
+    if (!user) {
+      // Auth hasn't restored yet — remember, and finish once it has, rather
+      // than bouncing a paying customer to a login screen.
+      try { sessionStorage.setItem('flieks_pending_payment', '1'); } catch {}
+      return;
     }
+    await handlePaymentReturn();
+  } else if (user && sessionStorage.getItem('flieks_pending_payment')) {
+    sessionStorage.removeItem('flieks_pending_payment');
+    await handlePaymentReturn();
   } else if (urlParams.get('payment') === 'cancel') {
     showSnack('Payment cancelled.');
     window.history.replaceState({}, '', '/');
@@ -1125,6 +1163,16 @@ async function renderCastWall(f) {
         You arrived through ${esc((cast.find(c => c.slug === FlieksSocial.getRef(f.id))||{}).name || 'a cast link')} —
         your purchase supports them directly.</p>` : ''}
     </div>`;
+}
+
+/* Finish a purchase once we actually know who the buyer is. */
+async function handlePaymentReturn() {
+  try { sessionStorage.removeItem('flieks_pending_payment'); } catch {}
+  await loadUserPurchases();
+  const gifted = await pendingGiftCode();
+  if (gifted) { showGiftCode(gifted); return; }
+  showSnack('Payment successful! Your film is in your Library.');
+  nav('library');
 }
 
 /* ============================================================
@@ -1562,14 +1610,19 @@ function loadLibrary() {
     document.getElementById(container).innerHTML = items.map(([filmId, purchase]) => {
       const f = allFilms.find(x => x.id === filmId) || { id: filmId, title: filmId.toUpperCase(), filmmaker: '', poster_bg: '#1A1A1A', duration_mins: '—' };
       return `<div class="lib-card" onclick="playFilm('${f.id}')">
-        <div class="lib-thumb" style="background:${f.poster_bg||'#1A1A1A'}"><span>${f.title}</span></div>
-        <div style="flex:1">
+        <div class="lib-thumb" style="background:${f.poster_bg||'#1A1A1A'}${f.poster_url ? `;background-image:url('${f.poster_url}')` : ''}">${f.poster_url ? '' : `<span>${f.title}</span>`}</div>
+        <div class="info">
           <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${f.title}</p>
           <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.duration_mins} min</p>
           ${purchase.type === 'rent'
               ? (purchase.expires_at
-                  ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">Expires ${new Date(purchase.expires_at).toLocaleString('en-ZA', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</p>`
-                  : `<p style="font-size:10px;color:var(--amber);margin-top:3px">48 hours, starting when you press play</p>`)
+                  ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">${
+                      (() => { const h = Math.round((purchase.expires_at - now) / 3600e3);
+                        return h > 24 ? `${Math.floor(h/24)}d ${h%24}h left`
+                             : h > 0  ? `${h} hour${h === 1 ? '' : 's'} left`
+                             : 'Less than an hour left'; })()
+                    }</p>`
+                  : `<p style="font-size:10px;color:var(--amber);margin-top:3px">Not started — 48h begins on play</p>`)
               : `<span class="tag tag-green" style="margin-top:4px;display:inline-block">Owned</span>`}
         </div>
         <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.8;flex-shrink:0"><polygon points="5,3 19,12 5,21"/></svg>
