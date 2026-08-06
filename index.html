@@ -834,7 +834,21 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.database();
 
+// Keep the session across reloads and redirects (the PayFast round trip
+// counts as one). Without this a browser with restrictive storage settings
+// silently drops the user on every navigation.
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => {
+  console.warn('auth persistence fell back:', e && e.code);
+});
+
 let currentUser = null;
+
+/* Resolves once Firebase has told us whether anyone is signed in. Views must
+   wait for this — reading currentUser too early looks like being logged out. */
+let authResolved = false;
+const authReady = new Promise(resolve => {
+  const off = auth.onAuthStateChanged(u => { authResolved = true; off(); resolve(u); });
+});
 let currentFilm = null;
 let checkoutFilm = null;
 let checkoutType = null;
@@ -847,7 +861,14 @@ let navHistory = ['home'];
    ============================================================ */
 auth.onAuthStateChanged(async user => {
   currentUser = user;
+  authResolved = true;
   updateAvatars();
+
+  // If a gated view is already on screen, redraw it now that we know who
+  // this is — otherwise it stays stuck on the signed-out message.
+  const open = document.querySelector('.view.active');
+  if (open && open.id === 'view-library') loadLibrary();
+  if (open && open.id === 'view-profile') loadProfile();
   if (user) {
     await loadUserPurchases();
   }
@@ -1612,7 +1633,13 @@ async function loadUserPurchases() {
   } catch(e) { userPurchases = {}; }
 }
 
-function loadLibrary() {
+async function loadLibrary() {
+  if (!authResolved) {
+    document.getElementById('owned-films').innerHTML =
+      `<p style="color:var(--muted);font-size:14px">Loading…</p>`;
+    document.getElementById('rented-films').innerHTML = '';
+    await authReady;
+  }
   if (!currentUser) {
     document.getElementById('owned-films').innerHTML = `<p style="color:var(--muted);font-size:14px">Please <a href="#" onclick="nav('auth')" style="color:var(--amber)">sign in</a> to view your library.</p>`;
     document.getElementById('rented-films').innerHTML = '';
@@ -1656,8 +1683,12 @@ function loadLibrary() {
 /* ============================================================
    PROFILE
    ============================================================ */
-function loadProfile() {
+async function loadProfile() {
   const el = document.getElementById('profile-content');
+  if (!authResolved) {
+    el.innerHTML = `<p style="color:var(--muted);font-size:14px;padding:20px">Loading…</p>`;
+    await authReady;
+  }
   if (!currentUser) {
     el.innerHTML = `
       <div style="text-align:center;padding:30px 0">
