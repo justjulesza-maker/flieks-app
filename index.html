@@ -1286,7 +1286,8 @@ async function handlePaymentReturn(txId) {
       filmTitle: order.filmTitle,
       filmSlug: order.filmSlug,
       toName: order.toName,
-      message: order.message
+      message: order.message,
+      buyerName: order.buyerName
     });
     return;
   }
@@ -1472,7 +1473,11 @@ function showGiftCode(gift) {
 
 /* One message with everything in it, so nothing has to be sent separately. */
 function buildGiftMessage(gift, title, url) {
-  const from = (currentUser && (currentUser.displayName || '').trim()) || '';
+  // The record's own copy first — the session may be gone by the time the
+  // buyer gets back from PayFast.
+  const from = (gift.buyerName || '').trim()
+    || (currentUser && (currentUser.displayName || '').trim())
+    || '';
   const lines = [];
   lines.push(from ? `${from} has sent you a film to watch.` : `Someone has sent you a film to watch.`);
   lines.push('');
