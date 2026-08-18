@@ -1364,7 +1364,7 @@ async function payForGift() {
   closeGift();
   checkoutFilm = giftFilm;
   checkoutType = 'gift';
-  await processPayment(giftFilm.price_own, +(giftFilm.price_own * 1.15).toFixed(2), { giftTo: to, giftMsg: msg });
+  await processPayment(giftFilm.price_own, giftFilm.price_own, { giftTo: to, giftMsg: msg });
 }
 
 /* ---- redeeming a code ---- */
@@ -1528,9 +1528,11 @@ async function startCheckout(filmId, type) {
 function renderCheckout() {
   const f = checkoutFilm;
   const type = checkoutType;
-  const amount = type === 'own' ? f.price_own : f.price_rent;
-  const vat = +(amount * 0.15).toFixed(2);
-  const total = +(amount + vat).toFixed(2);
+  // Prices shown on the site are VAT-inclusive, as required for consumer
+  // pricing. The VAT portion is broken out of the total, not added to it.
+  const total = type === 'own' ? f.price_own : f.price_rent;
+  const vat = +(total - total / 1.15).toFixed(2);
+  const amount = +(total - vat).toFixed(2);
   const label = type === 'own' ? 'Own forever — unlimited streaming' : 'Watch for 48 hours from first play';
 
   document.getElementById('checkout-content').innerHTML = `
@@ -1551,7 +1553,7 @@ function renderCheckout() {
     <div class="summary-box">
       <p class="section-label">ORDER SUMMARY</p>
       <div class="summary-row"><span style="color:var(--muted);font-size:14px">${label}</span><span style="font-size:14px">R${amount.toFixed(2)}</span></div>
-      <div class="summary-row"><span style="color:var(--muted);font-size:14px">VAT (15%)</span><span style="color:var(--muted);font-size:14px">R${vat.toFixed(2)}</span></div>
+      <div class="summary-row"><span style="color:var(--muted);font-size:14px">VAT (15%) included</span><span style="color:var(--muted);font-size:14px">R${vat.toFixed(2)}</span></div>
       <div style="height:1px;background:var(--border);margin:8px 0 10px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:14px;font-weight:600">Total</span>
@@ -1569,7 +1571,10 @@ function renderCheckout() {
     </div>
     <div class="pay-opt" style="margin-bottom:16px" onclick="selectPayMethod(this,'snapscan')"><div class="pay-dot"></div><span style="font-size:14px;color:var(--muted)">SnapScan / Yoco</span></div>
     <button class="btn btn-amber" onclick="processPayment(${amount},${total})" style="margin-bottom:10px">PAY R${total.toFixed(2)}</button>
-    <p style="text-align:center;color:var(--dim);font-size:12px">You'll be redirected to PayFast to complete payment securely</p>
+    <p style="text-align:center;color:var(--dim);font-size:12px;line-height:1.6">
+      You'll be redirected to Payfast to complete payment securely.<br>
+      By paying you agree to our <a href="/terms" style="color:var(--muted);text-decoration:underline">terms</a>
+      and <a href="/terms#refunds" style="color:var(--muted);text-decoration:underline">refund policy</a>.</p>
   `;
 }
 
@@ -1978,6 +1983,11 @@ async function loadProfile() {
         <a href="filmmaker.html" style="color:var(--amber);font-weight:600">Apply to release your films →</a></p>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
+      <a href="/terms" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;color:var(--text)">Terms, refunds &amp; privacy</span>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+
       <a href="filmmaker.html" id="portal-link" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;justify-content:space-between;align-items:center">
         <span style="font-size:14px;color:var(--text)">Filmmaker Portal</span>
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
