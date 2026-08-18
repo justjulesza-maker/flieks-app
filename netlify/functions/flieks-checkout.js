@@ -135,12 +135,14 @@ exports.handler = async event => {
     if (!film) return fail(404, 'That film could not be found.');
     if (film.status !== 'live') return fail(403, 'That film is not on sale.');
 
-    /* The price comes from the database, never from the browser. */
-    const base = type === 'rent' ? Number(film.price_rent) : Number(film.price_own);
-    if (!(base > 0)) return fail(400, 'That film has no price set.');
+    /* The price comes from the database, never from the browser.
+       Listed prices are VAT-inclusive, so the VAT portion is extracted from
+       the total rather than added to it — the customer pays what they saw. */
+    const total = type === 'rent' ? Number(film.price_rent) : Number(film.price_own);
+    if (!(total > 0)) return fail(400, 'That film has no price set.');
 
-    const vat   = +(base * VAT_RATE).toFixed(2);
-    const total = +(base + vat).toFixed(2);
+    const vat  = +(total - total / (1 + VAT_RATE)).toFixed(2);
+    const base = +(total - vat).toFixed(2);
 
     /* Already owns it? Don't take their money twice. */
     if (type !== 'gift') {
@@ -167,7 +169,7 @@ exports.handler = async event => {
       amount: base,
       vat,
       total,
-      platform_fee:    +(base * 0.30).toFixed(2),
+      platform_fee:    +(base * 0.30).toFixed(2),   // split on the ex-VAT amount
       filmmaker_share: +(base * 0.70).toFixed(2),
       filmmaker_uid: film.filmmaker_uid || null,
       ref: ref || null,
