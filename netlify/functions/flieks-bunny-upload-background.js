@@ -45,13 +45,25 @@ function pipeToBunny(videoId, sourceUrl) {
       });
 
       let sent = 0, lastLog = Date.now();
+      const started = Date.now();
       src.on('data', c => {
         sent += c.length;
-        if (Date.now() - lastLog > 15000) {
+        if (Date.now() - lastLog > 5000) {
           lastLog = Date.now();
           console.log(`  ${(sent / 1048576).toFixed(1)}MB sent${
             size ? ` of ${(size / 1048576).toFixed(1)}MB` : ''}`);
         }
+      });
+      src.on('end', () => {
+        const secs = (Date.now() - started) / 1000;
+        console.log('source stream ended', {
+          bytesRead: sent,
+          mb: +(sent / 1048576).toFixed(1),
+          expectedMb: +(size / 1048576).toFixed(1),
+          complete: size ? sent === size : 'unknown',
+          seconds: +secs.toFixed(1),
+          mbPerSec: +(sent / 1048576 / secs).toFixed(1)
+        });
       });
 
       const up = https.request(
@@ -98,6 +110,25 @@ exports.handler = async event => {
     bunny_upload_ok: result.ok,
     bunny_upload_detail: String(result.detail).slice(0, 300),
     bunny_upload_finished_at: Date.now()
+  });
+
+  // Ask Bunny what it actually has. A 200 on the upload does not guarantee the
+  // bytes landed — that is exactly how the fetch endpoint misled us.
+  await new Promise(r => setTimeout(r, 3000));
+  const seen = await new Promise(resolve => {
+    https.get(`https://video.bunnycdn.com/library/${LIB}/videos/${videoId}`,
+      { headers: { 'AccessKey': BKEY, 'Accept': 'application/json' } }, res => {
+        let b = ''; res.on('data', c => b += c);
+        res.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve({}); } });
+      }).on('error', () => resolve({}));
+  });
+
+  console.log('Bunny reports', {
+    status: seen.status,
+    storageSize: seen.storageSize,
+    mb: seen.storageSize ? +(seen.storageSize / 1048576).toFixed(1) : 0,
+    length: seen.length,
+    encodeProgress: seen.encodeProgress
   });
 
   console.log(`upload ${result.ok ? 'succeeded' : 'FAILED'}: ${filmId} — ${result.detail}`);
