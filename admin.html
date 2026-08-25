@@ -292,9 +292,11 @@ function paintStreamState(id, d) {
   const el = document.getElementById('stream-' + id);
   const btn = document.getElementById('prep-' + id);
   if (!el) return;
+  const link = document.getElementById('link-' + id);
   if (d.state === 'ready') {
     el.innerHTML = '<span style="color:var(--green,#4ADE80)">● streaming</span>';
     if (btn) btn.style.display = 'none';
+    if (link) link.style.display = 'none';
   } else if (d.state === 'not started') {
     el.innerHTML = '<span style="color:var(--muted)">○ not prepared</span>';
     if (btn) btn.style.display = 'inline-block';
@@ -319,6 +321,62 @@ async function refreshOne(id) {
     });
     paintStreamState(id, await r.json());
   } catch {}
+}
+
+/* Bunny's own ingest has proved unreliable — their fetch endpoint accepts a job
+   and never retrieves the file, and a direct push is acknowledged but discarded.
+   Uploading through the Bunny dashboard works, so this simply lets us point a
+   film at a video that is already there. */
+async function linkBunny(filmId, title) {
+  const box = document.getElementById('stream-' + filmId);
+  if (box) box.innerHTML = '<span style="color:var(--muted)">loading library…</span>';
+
+  let items = [];
+  try {
+    const r = await fetch('/.netlify/functions/flieks-bunny', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, action: 'library' })
+    });
+    items = (await r.json()).items || [];
+  } catch { snack('Could not read the Bunny library.'); refreshOne(filmId); return; }
+
+  const usable = items.filter(v => v.mb > 0);
+  if (!usable.length) {
+    snack('No uploaded videos in the Bunny library yet.');
+    refreshOne(filmId);
+    return;
+  }
+
+  // Offer the closest title first — dashboard uploads usually keep the filename.
+  const t = (title || '').toLowerCase();
+  usable.sort((a, b) => {
+    const am = (a.title || '').toLowerCase().includes(t.slice(0, 6)) ? 0 : 1;
+    const bm = (b.title || '').toLowerCase().includes(t.slice(0, 6)) ? 0 : 1;
+    return am - bm;
+  });
+
+  const list = usable.map((v, i) =>
+    `${i + 1}. ${v.title} — ${v.mb}MB, ${v.state}`).join('\n');
+  const pick = prompt(
+    `Which Bunny video is "${title}"?\n\n${list}\n\nEnter a number:`, '1');
+  if (!pick) { refreshOne(filmId); return; }
+
+  const chosen = usable[parseInt(pick, 10) - 1];
+  if (!chosen) { snack('That was not one of the options.'); refreshOne(filmId); return; }
+
+  try {
+    const r = await fetch('/.netlify/functions/flieks-bunny', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: await auth.currentUser.getIdToken(),
+        filmId, action: 'link', bunnyId: chosen.id
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) { snack(d.message || 'Could not link that.'); refreshOne(filmId); return; }
+    snack(`Linked to ${chosen.title} (${d.mb}MB)`);
+    refreshOne(filmId);
+  } catch { snack('Could not link that.'); refreshOne(filmId); }
 }
 
 async function resetStream(id) {
@@ -378,6 +436,9 @@ function renderFilmsList(films) {
         </button>
         <button class="btn btn-sm" id="prep-${f.id}" style="display:none;background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="prepareStream('${f.id}')">
           Prepare
+        </button>
+        <button class="btn btn-sm" id="link-${f.id}" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="linkBunny('${f.id}','${(f.title||'').replace(/'/g,'')}')">
+          Link
         </button>
       </div>
     </div>
