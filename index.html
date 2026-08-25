@@ -1687,7 +1687,12 @@ async function playFilm(filmId) {
         : `${d.hoursLeft} hour${d.hoursLeft === 1 ? '' : 's'} left on this rental`);
     }
 
-    if (!d.url) { showSnack('This film is not available to play yet.'); return; }
+    if (!d.url) {
+      console.error('[play] no URL returned', d);
+      showSnack('This film is not available to play yet.');
+      return;
+    }
+    console.log('[play] source:', d.url);
     launchPlayer({ ...f, video_url: d.url }, d.type === 'own');
 
   } catch (e) {
