@@ -1,35 +1,30 @@
 /**
- * flieks-checkout — builds a signed PayFast payload.
+ * flieks-checkout — creates a Yoco checkout and returns the redirect URL.
  *
- * The browser sends only { filmId, type }. The price is read from the
- * database here, so it cannot be tampered with, and the payload is signed,
- * so PayFast will reject anything altered in transit.
+ * The browser sends only { filmId, type }. The price is read from the database
+ * here, so it cannot be tampered with in devtools.
  *
- * POST { token, filmId, type, giftTo?, giftMsg?, ref? }
- *   -> { action, fields, txId }
+ * POST { token, filmId, type, giftTo?, giftMsg?, ref?, returnUrl? }
+ *   -> { redirectUrl, txId }
  *
- * Needs these Netlify environment variables:
- *   PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY, PAYFAST_PASSPHRASE,
- *   PAYFAST_SANDBOX, FIREBASE_DB_URL, FIREBASE_DB_SECRET, FIREBASE_API_KEY
+ * Netlify environment variables:
+ *   YOCO_SECRET_KEY      sk_test_... while testing, sk_live_... in production
+ *   FIREBASE_DB_URL
+ *   FIREBASE_DB_SECRET
+ *   FIREBASE_API_KEY
  */
-const crypto = require('crypto');
-const https  = require('https');
+const https = require('https');
 
 const DB      = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET  = process.env.FIREBASE_DB_SECRET;
 const API_KEY = process.env.FIREBASE_API_KEY;
-/* Accept true/1/yes in any case. A stray capital or space here silently
-   posts sandbox credentials to the live endpoint, which is a baffling failure. */
-const SANDBOX = ['true', '1', 'yes', 'on']
-  .includes(String(process.env.PAYFAST_SANDBOX || '').trim().toLowerCase());
-const PF_HOST = SANDBOX ? 'https://sandbox.payfast.co.za/eng/process'
-                        : 'https://www.payfast.co.za/eng/process';
+const YOCO    = (process.env.YOCO_SECRET_KEY || '').trim();
 
 const VAT_RATE = 0.15;
 
 /* ── plumbing ─────────────────────────────────────────────────────────────── */
 
-function req(url, opts = {}, body = null) {
+function request(url, opts = {}, body = null) {
   return new Promise((res, rej) => {
     const r = https.request(url, opts, x => {
       let d = ''; x.on('data', c => d += c);
@@ -42,63 +37,31 @@ function req(url, opts = {}, body = null) {
 }
 
 const dbGet = async path => {
-  const r = await req(`${DB}/${path}.json?auth=${SECRET}`);
+  const r = await request(`${DB}/${path}.json?auth=${SECRET}`);
   return JSON.parse(r.body || 'null');
 };
 
 const dbPut = async (path, data) => {
   const b = JSON.stringify(data);
-  return req(`${DB}/${path}.json?auth=${SECRET}`, {
+  return request(`${DB}/${path}.json?auth=${SECRET}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) }
   }, b);
 };
 
 async function verifyToken(token) {
-  if (!API_KEY) {
-    throw new Error('FIREBASE_API_KEY is not set on this Netlify site. ' +
-      'Add it under Site configuration -> Environment variables, then redeploy.');
-  }
+  if (!API_KEY) throw new Error('FIREBASE_API_KEY is not set on this site.');
   const b = JSON.stringify({ idToken: token });
-  const r = await req(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${API_KEY}`, {
+  const r = await request(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) }
   }, b);
-
-  let d = {};
-  try { d = JSON.parse(r.body || '{}'); } catch {}
-
+  const d = JSON.parse(r.body || '{}');
   if (!d.users || !d.users[0]) {
-    // Google's own message is far more useful than a generic failure
-    const reason = (d.error && (d.error.message || d.error.status)) || r.body || 'no user returned';
-    console.error('token verification failed:', {
-      httpStatus: r.status,
-      googleSays: reason,
-      apiKeyLooksValid: /^AIza[\w-]{30,}$/.test(API_KEY),
-      apiKeyLength: API_KEY.length,
-      tokenLength: (token || '').length
-    });
+    const reason = (d.error && d.error.message) || 'no user returned';
     throw new Error('bad token: ' + reason);
   }
   return d.users[0];
-}
-
-/* ── signing ──────────────────────────────────────────────────────────────── */
-
-/* PayFast's backend uses PHP urlencode(). encodeURIComponent leaves
-   ! ' ( ) * ~ alone; PHP escapes them. Spaces become '+' in both. */
-function pfEncode(v) {
-  return encodeURIComponent(String(v))
-    .replace(/%20/g, '+')
-    .replace(/[!'()*~]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
-}
-
-function sign(fields, passphrase) {
-  const qs = Object.entries(fields)
-    .map(([k, v]) => `${k}=${pfEncode(v)}`)
-    .join('&');
-  const full = passphrase ? `${qs}&passphrase=${pfEncode(passphrase.trim())}` : qs;
-  return crypto.createHash('md5').update(full).digest('hex');
 }
 
 const fail = (code, message) => ({
@@ -113,18 +76,16 @@ exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
   try {
+    if (!YOCO) return fail(500, 'Payments are not configured yet.');
+
     const { token, filmId, type, giftTo, giftMsg, ref, returnUrl } =
       JSON.parse(event.body || '{}');
-
-    console.log('checkout:', { type, filmId, sandbox: SANDBOX, posting_to: PF_HOST,
-      merchant: process.env.PAYFAST_MERCHANT_ID });
 
     if (!token || !filmId || !['rent', 'own', 'gift'].includes(type)) {
       return fail(400, 'Missing or invalid request.');
     }
 
-    // "Who's it for" is a name. An email there looks like buyer data to
-    // PayFast and trips its same-account check with a baffling error.
+    // "Who's it for" is a name, not an email.
     if (type === 'gift' && giftTo && /\S+@\S+\.\S+/.test(giftTo)) {
       return fail(400, "Use their name, not an email — you'll get a code to send them.");
     }
@@ -135,16 +96,16 @@ exports.handler = async event => {
     if (!film) return fail(404, 'That film could not be found.');
     if (film.status !== 'live') return fail(403, 'That film is not on sale.');
 
-    /* The price comes from the database, never from the browser.
-       Listed prices are VAT-inclusive, so the VAT portion is extracted from
-       the total rather than added to it — the customer pays what they saw. */
+    /* Price comes from the database, never the browser. Listed prices are
+       VAT-inclusive, so VAT is extracted from the total rather than added. */
     const total = type === 'rent' ? Number(film.price_rent) : Number(film.price_own);
     if (!(total > 0)) return fail(400, 'That film has no price set.');
 
     const vat  = +(total - total / (1 + VAT_RATE)).toFixed(2);
     const base = +(total - vat).toFixed(2);
+    const cents = Math.round(total * 100);      // Yoco works in cents
 
-    /* Already owns it? Don't take their money twice. */
+    /* Don't charge someone twice for the same thing. */
     if (type !== 'gift') {
       const existing = await dbGet(`flieks_purchases/${user.localId}/${filmId}`);
       if (existing && existing.type === 'own') {
@@ -157,9 +118,9 @@ exports.handler = async event => {
 
     const txId = `fl-${type}-${user.localId.slice(0, 6)}-${Date.now().toString(36)}`;
     const origin = (returnUrl || 'https://4flieks.com').split('?')[0].replace(/\/$/, '');
+    const label = type === 'own' ? 'Own' : type === 'gift' ? 'Gift' : '48-hour rental';
 
-    /* Park the intent so the ITN knows what was bought even if PayFast
-       trims the custom fields. */
+    /* Park the intent before sending them off to pay. */
     await dbPut(`flieks_transactions/${txId}`, {
       uid: user.localId,
       email: user.email || '',
@@ -173,60 +134,77 @@ exports.handler = async event => {
       filmmaker_share: +(base * 0.70).toFixed(2),
       filmmaker_uid: film.filmmaker_uid || null,
       ref: ref || null,
-      gift_to:  type === 'gift' ? (giftTo  || '').slice(0, 80)  : null,
-      gift_msg: type === 'gift' ? (giftMsg || '').slice(0, 300) : null,
+      gift_to:  type === 'gift' ? String(giftTo  || '').slice(0, 80)  : null,
+      gift_msg: type === 'gift' ? String(giftMsg || '').slice(0, 300) : null,
+      gateway: 'yoco',
       status: 'pending',
       created_at: Date.now()
     });
 
-    const label = type === 'own' ? 'Own' : type === 'gift' ? 'Gift' : 'Rent';
-    const clean = s => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
+    /* Create the Yoco checkout. */
+    const payload = JSON.stringify({
+      amount: cents,
+      currency: 'ZAR',
+      successUrl: `${origin}/?payment=success&tx=${txId}`,
+      cancelUrl:  `${origin}/?payment=cancel`,
+      failureUrl: `${origin}/?payment=failed&tx=${txId}`,
+      // Comes straight back on the webhook, so the ITN knows what was bought.
+      metadata: {
+        txId,
+        filmId,
+        type,
+        uid: user.localId,
+        ref: ref || ''
+      },
+      lineItems: [{
+        displayName: `${film.title || filmId} — ${label}`,
+        quantity: 1,
+        pricingDetails: { price: cents }
+      }],
+      totalTaxAmount: Math.round(vat * 100),
+      subtotalAmount: Math.round(base * 100)
+    });
 
-    const fields = {
-      merchant_id:   process.env.PAYFAST_MERCHANT_ID,
-      merchant_key:  process.env.PAYFAST_MERCHANT_KEY,
-      // Carry the transaction id back. It lets the site show a gift code even if
-      // the sign-in session doesn't survive the round trip to PayFast.
-      return_url:    `${origin}/?payment=success&tx=${txId}`,
-      cancel_url:    `${origin}/?payment=cancel`,
-      notify_url:    `${origin}/.netlify/functions/payfast-itn`,
-      name_first:    clean((user.displayName || 'Viewer').split(' ')[0]) || 'Viewer',
-      email_address: user.email || '',
-      m_payment_id:  txId,
-      amount:        total.toFixed(2),
-      item_name:     clean(`FLIEKS: ${film.title || filmId} (${label})`).slice(0, 100),
-      custom_str1:   filmId,
-      custom_str2:   type,
-      custom_str3:   user.localId,
-      custom_str4:   ref || ''
-    };
+    const res = await request('https://payments.yoco.com/api/checkouts', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${YOCO}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        // Stops a retry after a network timeout creating a second charge.
+        'Idempotency-Key': txId
+      }
+    }, payload);
 
-    /* Normalise before signing so the bytes signed are the bytes posted.
-       A stray space on an env var otherwise means we sign one string and
-       submit another — a guaranteed mismatch, and a miserable one to find. */
-    for (const k of Object.keys(fields)) {
-      if (fields[k] === null || fields[k] === undefined) { delete fields[k]; continue; }
-      fields[k] = String(fields[k]).trim();
-      if (fields[k] === '') delete fields[k];
+    let checkout = {};
+    try { checkout = JSON.parse(res.body || '{}'); } catch {}
+
+    if (res.status >= 400 || !checkout.redirectUrl) {
+      console.error('Yoco checkout failed', {
+        status: res.status,
+        body: res.body,
+        mode: YOCO.startsWith('sk_test') ? 'test' : 'live'
+      });
+      return fail(502, checkout.message || 'Could not start checkout. Please try again.');
     }
 
-    const pass = process.env.PAYFAST_PASSPHRASE;
-    fields.signature = sign(fields, pass);
+    // Keep the checkout id so the webhook can be tied back to this transaction.
+    await request(`${DB}/flieks_transactions/${txId}.json?auth=${SECRET}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }
+    }, JSON.stringify({ checkout_id: checkout.id || null }));
 
-    console.log('signing:', {
-      passphraseSet: pass ? `yes, length ${pass.length}` : 'no',
-      merchant: fields.merchant_id,
-      stringSigned: Object.entries(fields)
-        .filter(([k]) => k !== 'signature')
-        .map(([k, v]) => `${k}=${pfEncode(v)}`).join('&')
-        + (pass ? '&passphrase=<set>' : ''),
-      signature: fields.signature
+    console.log('checkout created:', {
+      txId, type, filmId,
+      mode: YOCO.startsWith('sk_test') ? 'test' : 'live',
+      amount: `R${total.toFixed(2)}`,
+      checkoutId: checkout.id
     });
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: PF_HOST, fields, txId })
+      body: JSON.stringify({ redirectUrl: checkout.redirectUrl, txId })
     };
 
   } catch (e) {
