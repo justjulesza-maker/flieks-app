@@ -346,8 +346,9 @@ input,textarea{font-family:var(--fb)}
     <video id="flieks-video" playsinline controls
            poster=""
            x-webkit-airplay="allow"
-           controlsList="nodownload"
+           controlsList="nodownload noplaybackrate noremoteplayback"
            disablepictureinpicture="false"
+           oncontextmenu="return false"
            onerror="videoError()"
            ontimeupdate="updateProgress()"
            onended="videoEnded()">
@@ -476,6 +477,8 @@ input,textarea{font-family:var(--fb)}
 <!-- ================================================================
      FIREBASE + APP LOGIC
 ================================================================ -->
+<!-- HLS playback. Safari handles .m3u8 natively; everything else needs this. -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -942,6 +945,12 @@ function updateAvatars() {
    NAVIGATION
    ============================================================ */
 function nav(viewId, pushHistory = true) {
+  // Leaving the player? Stop the stream, or it keeps pulling data in the background.
+  if (viewId !== 'player' && typeof currentHls !== 'undefined' && currentHls) {
+    currentHls.destroy(); currentHls = null;
+    const v = document.getElementById('flieks-video');
+    if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + viewId).classList.add('active');
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('on', b.dataset.view === viewId));
@@ -1693,9 +1702,66 @@ function playFilmFree(filmId) {
   launchPlayer(f, false);
 }
 
+/* Adaptive streaming (.m3u8) needs hls.js everywhere except Safari, which
+   plays it natively. A plain MP4 still works, so films that haven't moved to
+   Bunny yet keep playing. */
+let currentHls = null;
+
+function attachSource(video, url) {
+  if (currentHls) { currentHls.destroy(); currentHls = null; }
+  if (!url) { video.removeAttribute('src'); video.load(); return; }
+
+  const isHls = /\.m3u8(\?|$)/i.test(url);
+
+  if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = url;                       // Safari, iOS
+    return;
+  }
+
+  if (isHls && window.Hls && Hls.isSupported()) {
+    const hls = new Hls({
+      capLevelToPlayerSize: true,          // don't pull 1080p into a phone-sized box
+      maxBufferLength: 30,                 // gentler on mobile data
+      startLevel: -1                       // let it pick from the first few seconds
+    });
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.ERROR, (_, data) => {
+      if (!data.fatal) return;
+      console.error('HLS error:', data.type, data.details);
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+      else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+      else { hls.destroy(); currentHls = null; showSnack('Playback failed. Please try again.'); }
+    });
+    currentHls = hls;
+    return;
+  }
+
+  if (isHls) { showSnack('This browser cannot play this film. Try Chrome or Safari.'); return; }
+
+  video.src = url;                          // plain MP4
+}
+
+/* Right-click "Save Video As" and Ctrl+S both hand over the file. Blocking them
+   stops the casual attempt — it is not real protection, and anyone who opens
+   devtools can still find the source. Proper protection means segmented HLS
+   delivery, where there is no single file to save. */
+function guardPlayer() {
+  const v = document.getElementById('flieks-video');
+  if (!v || v._guarded) return;
+  v._guarded = true;
+  v.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    const view = document.getElementById('view-player');
+    if (!view || !view.classList.contains('active')) return;
+    if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) e.preventDefault();
+  });
+}
+
 function launchPlayer(film, isOwned) {
+  guardPlayer();
   const video = document.getElementById('flieks-video');
-  video.src = film.video_url || '';
+  attachSource(video, film.video_url || '');
   video.poster = film.poster_url || '';
   document.getElementById('player-title').textContent = film.title;
   document.getElementById('player-maker').textContent = 'By ' + film.filmmaker;

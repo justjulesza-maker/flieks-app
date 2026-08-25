@@ -1077,6 +1077,16 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:6px">STREAMING</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+        Films stream best when they've been prepared for adaptive delivery — the quality
+        adjusts to each viewer's connection, which matters a great deal on mobile data.</p>
+      <div id="bunny-state" style="font-size:13px;color:var(--muted);margin-bottom:10px">Checking…</div>
+      <button class="btn btn-outline btn-sm" id="bunny-btn" onclick="prepareStreaming('${f.id}')"
+        style="display:none">PREPARE FOR STREAMING</button>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
       <p class="section-label" style="margin-bottom:6px">LINK PREVIEW IMAGE</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">
         The picture people see when your film's link is posted to WhatsApp, Instagram or X.
@@ -1134,6 +1144,7 @@ function openFilmDetail(filmId) {
   nav('film-detail');
   mountCastPanel(f);
   mountThemePicker(f);
+  checkStreaming(f.id);
 }
 
 /* ---- cast, links and QR ------------------------------------------------- */
@@ -1195,6 +1206,63 @@ function mountCastPanel(f) {
 
 /* Link preview images have to be small — WhatsApp gives up over about 300KB.
    Rather than ask filmmakers to understand that, resize before uploading. */
+/* Hands the film to Bunny Stream, which transcodes it for adaptive delivery.
+   The filmmaker still uploads to us exactly as before — this just moves it on. */
+async function checkStreaming(filmId) {
+  const box = document.getElementById('bunny-state');
+  const btn = document.getElementById('bunny-btn');
+  if (!box) return;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-bunny', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, action: 'status' })
+    });
+    const d = await r.json();
+
+    if (d.state === 'ready') {
+      box.innerHTML = '<span style="color:var(--green,#4ADE80)">Ready — streaming in adaptive quality</span>';
+      if (btn) btn.style.display = 'none';
+    } else if (d.state === 'not started') {
+      box.textContent = 'Not prepared yet. Viewers get a single-quality stream.';
+      if (btn) btn.style.display = 'inline-flex';
+    } else if (d.state === 'failed') {
+      box.innerHTML = '<span style="color:var(--red)">Preparation failed. Try again, or re-upload the film.</span>';
+      if (btn) { btn.style.display = 'inline-flex'; btn.textContent = 'TRY AGAIN'; }
+    } else {
+      const pct = d.progress != null ? ` — ${d.progress}%` : '';
+      box.innerHTML = `<span style="color:var(--accent,#F0A62E)">Preparing${pct}. This takes a few minutes.</span>`;
+      if (btn) btn.style.display = 'none';
+      setTimeout(() => checkStreaming(filmId), 8000);
+    }
+  } catch (e) {
+    box.textContent = 'Could not check streaming status.';
+  }
+}
+
+async function prepareStreaming(filmId) {
+  const box = document.getElementById('bunny-state');
+  const btn = document.getElementById('bunny-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'STARTING…'; }
+  try {
+    const r = await fetch('/.netlify/functions/flieks-bunny', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, action: 'ingest' })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      box.innerHTML = `<span style="color:var(--red)">${d.message || 'Could not start.'}</span>`;
+      if (btn) { btn.disabled = false; btn.textContent = 'TRY AGAIN'; }
+      return;
+    }
+    if (btn) btn.style.display = 'none';
+    box.innerHTML = '<span style="color:var(--accent,#F0A62E)">Preparing. This takes a few minutes.</span>';
+    setTimeout(() => checkStreaming(filmId), 5000);
+  } catch {
+    box.textContent = 'Could not reach the server.';
+    if (btn) { btn.disabled = false; btn.textContent = 'TRY AGAIN'; }
+  }
+}
+
 async function uploadOgImage(filmId, file) {
   if (!file) return;
   const msg = document.getElementById('og-msg');
