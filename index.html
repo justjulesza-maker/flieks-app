@@ -1718,11 +1718,8 @@ function attachSource(video, url) {
 
   const isHls = /\.m3u8(\?|$)/i.test(url);
 
-  if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = url;                       // Safari, iOS
-    return;
-  }
-
+  // hls.js first. Chrome answers "maybe" to canPlayType for HLS but cannot
+  // actually decode it, so trusting that check hands Chrome a dead file.
   if (isHls && window.Hls && Hls.isSupported()) {
     const hls = new Hls({
       capLevelToPlayerSize: true,          // don't pull 1080p into a phone-sized box
@@ -1731,6 +1728,9 @@ function attachSource(video, url) {
     });
     hls.loadSource(url);
     hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play().catch(e => console.warn('autoplay blocked:', e.name));
+    });
     hls.on(Hls.Events.ERROR, (_, data) => {
       if (!data.fatal) return;
       console.error('HLS error:', data.type, data.details);
@@ -1739,6 +1739,12 @@ function attachSource(video, url) {
       else { hls.destroy(); currentHls = null; showSnack('Playback failed. Please try again.'); }
     });
     currentHls = hls;
+    return;
+  }
+
+  // Safari and iOS play HLS natively and have no hls.js support.
+  if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = url;
     return;
   }
 
