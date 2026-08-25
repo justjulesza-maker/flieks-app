@@ -8,6 +8,7 @@
  * POST { filmSlug, castSlug } -> { name, role, film, clicks, trailerPlays, sales, share }
  */
 const https = require('https');
+const QRCode = require('qrcode');
 
 const DB     = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET = process.env.FIREBASE_DB_SECRET;
@@ -75,7 +76,22 @@ exports.handler = async event => {
 
     const sales = mine.sales || 0;
 
+    /* The QR is generated here rather than in the browser. Script CDNs get
+       blocked by extensions and corporate networks, and a blank square on a
+       page whose whole job is handing someone their link is not acceptable. */
+    const shareUrl = `https://4flieks.com/${film.slug || filmId}?a=${cSlug}`;
+    let qr = null;
+    try {
+      qr = await QRCode.toString(shareUrl, {
+        type: 'svg', errorCorrectionLevel: 'M', margin: 1, width: 160,
+        color: { dark: '#111111', light: '#FFFFFF' }
+      });
+    } catch (e) {
+      console.warn('QR generation failed:', e.message);
+    }
+
     return reply(200, {
+      qr,
       name: person.name || '',
       role: person.role || '',
       film: film.title || '',
