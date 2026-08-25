@@ -264,7 +264,75 @@ async function loadAllFilms() {
   allFilmsCache = [];
   snap.forEach(c => allFilmsCache.push({ id: c.key, ...c.val() }));
   allFilmsCache.sort((a,b) => (b.published_at||b.submitted_at||0) - (a.published_at||a.submitted_at||0));
+  console.log(`[admin] ${allFilmsCache.length} films at ${DB}films:`,
+    allFilmsCache.map(f => `${f.title} (${f.status}) — ${f.filmmaker || 'no filmmaker'}`));
   renderFilmsList(allFilmsCache);
+  loadStreamingStates();
+}
+
+/* Which films have been prepared for adaptive streaming. */
+async function loadStreamingStates() {
+  for (const f of allFilmsCache) {
+    const el = document.getElementById('stream-' + f.id);
+    if (!el) continue;
+    try {
+      const r = await fetch('/.netlify/functions/flieks-bunny', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId: f.id, action: 'status' })
+      });
+      const d = await r.json();
+      paintStreamState(f.id, d);
+    } catch { el.textContent = ''; }
+  }
+}
+
+function paintStreamState(id, d) {
+  const el = document.getElementById('stream-' + id);
+  const btn = document.getElementById('prep-' + id);
+  if (!el) return;
+  if (d.state === 'ready') {
+    el.innerHTML = '<span style="color:var(--green,#4ADE80)">● streaming</span>';
+    if (btn) btn.style.display = 'none';
+  } else if (d.state === 'not started') {
+    el.innerHTML = '<span style="color:var(--muted)">○ not prepared</span>';
+    if (btn) btn.style.display = 'inline-block';
+  } else if (d.state === 'failed') {
+    el.innerHTML = '<span style="color:var(--red,#E8462A)">● failed</span>';
+    if (btn) { btn.style.display = 'inline-block'; btn.textContent = 'Retry'; }
+  } else {
+    el.innerHTML = `<span style="color:var(--amber,#F5A623)">● preparing${
+      d.progress != null ? ' ' + d.progress + '%' : ''}</span>`;
+    if (btn) btn.style.display = 'none';
+    setTimeout(() => refreshOne(id), 8000);
+  }
+}
+
+async function refreshOne(id) {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-bunny', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId: id, action: 'status' })
+    });
+    paintStreamState(id, await r.json());
+  } catch {}
+}
+
+async function prepareStream(id) {
+  const btn = document.getElementById('prep-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+  try {
+    const r = await fetch('/.netlify/functions/flieks-bunny', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId: id, action: 'ingest' })
+    });
+    const d = await r.json();
+    if (!r.ok) { snack(d.message || 'Could not start.'); if (btn) { btn.disabled = false; btn.textContent = 'Prepare'; } return; }
+    snack('Sent to Bunny. Transcoding takes a few minutes.');
+    setTimeout(() => refreshOne(id), 5000);
+  } catch {
+    snack('Could not reach the server.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Prepare'; }
+  }
 }
 
 function renderFilmsList(films) {
@@ -279,10 +347,16 @@ function renderFilmsList(films) {
           <span class="tag ${statusTag[f.status]||'tag-m'}">${(f.status||'').toUpperCase()}</span>
         </div>
         <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
+        <p style="font-size:11px;margin-top:3px" id="stream-${f.id}">checking…</p>
       </div>
-      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-left:10px" onclick="toggleFilmStatus('${f.id}','${f.status}')">
-        ${f.status === 'live' ? 'Take Down' : 'Go Live'}
-      </button>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-left:10px">
+        <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="toggleFilmStatus('${f.id}','${f.status}')">
+          ${f.status === 'live' ? 'Take Down' : 'Go Live'}
+        </button>
+        <button class="btn btn-sm" id="prep-${f.id}" style="display:none;background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="prepareStream('${f.id}')">
+          Prepare
+        </button>
+      </div>
     </div>
   `).join('');
 }
