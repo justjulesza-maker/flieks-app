@@ -70,9 +70,20 @@ exports.handler = async event => {
 
     const now = Date.now();
 
+    /* The film's URL is only handed over once access is confirmed. It lives in
+       flieks_private, which no client can read — flieks_films is public so the
+       catalogue works signed out, and a URL in there is a URL anyone can take. */
+    async function videoUrl() {
+      const priv = await dbGet(`flieks_private/${filmId}`);
+      if (priv && priv.video_url) return priv.video_url;
+      // Fallback for films not yet migrated out of the public node.
+      const film = await dbGet(`flieks_films/${filmId}`);
+      return (film && film.video_url) || null;
+    }
+
     /* Owned outright — nothing to time. */
     if (p.type !== 'rent') {
-      return reply(200, { ok: true, type: p.type, expiresAt: null });
+      return reply(200, { ok: true, type: p.type, expiresAt: null, url: await videoUrl() });
     }
 
     /* First play: start the clock now. */
@@ -84,7 +95,8 @@ exports.handler = async event => {
       });
       console.log(`Rental started: ${user.localId} -> ${filmId}, ${RENTAL_HOURS}h`);
       return reply(200, {
-        ok: true, type: 'rent', expiresAt, hoursLeft: RENTAL_HOURS, justStarted: true
+        ok: true, type: 'rent', expiresAt, hoursLeft: RENTAL_HOURS, justStarted: true,
+        url: await videoUrl()
       });
     }
 
@@ -96,7 +108,8 @@ exports.handler = async event => {
     return reply(200, {
       ok: true, type: 'rent',
       expiresAt: p.expires_at,
-      hoursLeft: Math.max(0, Math.round((p.expires_at - now) / 3600e3))
+      hoursLeft: Math.max(0, Math.round((p.expires_at - now) / 3600e3)),
+      url: await videoUrl()
     });
 
   } catch (e) {

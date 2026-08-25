@@ -133,6 +133,9 @@ exports.handler = async event => {
     const uid    = tx.uid     || meta.uid;
     const ref    = tx.ref     || meta.ref || null;
     const gross  = (Number(payload.amount) || 0) / 100;   // cents back to rand
+    // Stamped on every record so test and live are distinguishable at a glance,
+    // rather than having to work it out from timestamps later.
+    const mode   = payload.mode || payload.processingMode || 'live';
 
     if (!filmId || !type || !uid) {
       console.error('missing details', { filmId, type, uid, txId, meta });
@@ -163,6 +166,7 @@ exports.handler = async event => {
         amount:     gross,
         ref,
         txId,
+        mode,
         claimedBy:  null,
         claimedAt:  null,
         createdAt:  now
@@ -194,6 +198,7 @@ exports.handler = async event => {
         transaction_id: payload.id || txId,
         amount: gross,
         ref,
+        mode,
         status: 'complete'
       });
       await fbIncrement(`flieks_films/${filmId}`, type === 'own' ? 'own_count' : 'rent_count');
@@ -206,11 +211,19 @@ exports.handler = async event => {
         status: 'complete',
         payment_id: payload.id || '',
         amount_paid: gross,
+        mode,
         completed_at: now
       });
     }
 
-    /* Attribution: which cast member's link earned this. */
+    /* Attribution: which cast member's link earned this.
+       Test payments still grant access so the flow can be checked end to end,
+       but they must not appear in anyone's sales figures. */
+    if (mode === 'test') {
+      console.log('test mode — access granted, stats not counted');
+      return { statusCode: 200, body: 'OK (test)' };
+    }
+
     if (ref) {
       const s = (await fbGet(`flieks_stats/${filmId}/refs/${ref}`)) || {};
       await fbPatch(`flieks_stats/${filmId}/refs/${ref}`, {
