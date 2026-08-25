@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your link — 4flieks</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;--border:#222;
+  --amber:#F5A623;--green:#4ADE80;--text:#F0EDE8;--muted:#888;--dim:#555;
+  --fb:'Archivo Black',sans-serif;--fn:'DM Sans',system-ui,sans-serif;
+  --fm:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--fn);
+  max-width:480px;margin:0 auto;padding:24px 20px 60px;min-height:100dvh}
+
+.brand{font-family:var(--fb);font-size:15px;margin-bottom:26px}
+.brand span{color:var(--amber)}
+
+.who{margin-bottom:22px}
+.who .eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.who h1{font-family:var(--fb);font-size:26px;line-height:1.1;margin-bottom:4px}
+.who p{font-size:14px;color:var(--muted)}
+.who p b{color:var(--amber);font-weight:400}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px 17px;margin-bottom:12px}
+.label{font-family:var(--fm);font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+
+.link{font-family:var(--fm);font-size:13px;color:var(--amber);word-break:break-all;
+  line-height:1.5;margin-bottom:13px}
+.btn{display:block;width:100%;border:0;border-radius:9px;padding:14px;
+  font-family:var(--fn);font-size:14px;font-weight:700;cursor:pointer;
+  background:var(--amber);color:#111;margin-bottom:8px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--border);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-bottom:12px}
+.num{background:var(--card);padding:15px 12px;text-align:center}
+.num .v{font-family:var(--fb);font-size:24px;line-height:1}
+.num .k{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);margin-top:6px}
+
+.earn{background:var(--card);border:1px solid var(--border);
+  border-left:3px solid var(--amber);border-radius:12px;padding:16px 17px;margin-bottom:12px}
+.earn .big{font-family:var(--fb);font-size:30px;color:var(--amber);line-height:1;margin-bottom:5px}
+.earn h3{font-size:14.5px;margin-bottom:5px;line-height:1.35}
+.earn p{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+.note{font-size:12px;color:var(--dim);line-height:1.55;margin-top:16px}
+.state{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px}
+canvas{display:block;margin:0 auto 12px;border-radius:8px;background:#fff;padding:8px}
+</style>
+</head>
+<body>
+
+<p class="brand">4<span>FLIEKS</span></p>
+<div id="app"><div class="state">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+
+/* The link a cast member was given carries both slugs: /me/<film>/<person> */
+function readPath() {
+  const parts = location.pathname.split('/').filter(Boolean);
+  const i = parts.indexOf('me');
+  if (i >= 0 && parts.length >= i + 3) return { filmSlug: parts[i+1], castSlug: parts[i+2] };
+  const q = new URLSearchParams(location.search);
+  return { filmSlug: q.get('f'), castSlug: q.get('a') };
+}
+
+async function load() {
+  const { filmSlug, castSlug } = readPath();
+  const app = document.getElementById('app');
+
+  if (!filmSlug || !castSlug) {
+    app.innerHTML = `<div class="state">This page needs the link the filmmaker sent you.</div>`;
+    return;
+  }
+
+  let d;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-cast-stats', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filmSlug, castSlug })
+    });
+    d = await r.json();
+    if (!r.ok) throw new Error(d.message || 'not found');
+  } catch (e) {
+    app.innerHTML = `<div class="state">Couldn't find that link. Check it with the filmmaker.</div>`;
+    return;
+  }
+
+  const url = `${location.origin}/${d.filmSlug}?a=${encodeURIComponent(castSlug)}`;
+  const conv = d.clicks ? ((d.sales / d.clicks) * 100).toFixed(0) : 0;
+
+  app.innerHTML = `
+    <div class="who">
+      <p class="eyebrow">Your link for</p>
+      <h1>${esc(d.film)}</h1>
+      <p>${esc(d.name)}${d.role ? ` · <b>${esc(d.role)}</b>` : ''}</p>
+    </div>
+
+    <div class="card">
+      <p class="label">Share this</p>
+      <p class="link">${esc(url)}</p>
+      <button class="btn" id="share">SEND IT</button>
+      <button class="btn ghost" id="copy">COPY LINK</button>
+      <canvas id="qr" width="150" height="150" style="margin-top:12px"></canvas>
+      <button class="btn ghost" id="dlqr">SAVE QR CODE</button>
+    </div>
+
+    <div class="nums">
+      <div class="num"><p class="v">${d.clicks}</p><p class="k">Opened</p></div>
+      <div class="num"><p class="v">${d.trailerPlays}</p><p class="k">Trailer</p></div>
+      <div class="num"><p class="v">${d.sales}</p><p class="k">Bought</p></div>
+    </div>
+
+    <div class="earn">
+      ${d.earned ? `<p class="big">R${d.earned.toFixed(2)}</p>` : ''}
+      <h3>${esc(d.share.headline)}</h3>
+      <p>${esc(d.share.detail)}</p>
+    </div>
+
+    ${d.clicks ? `<p class="note">${conv} out of every 100 people who open your link buy the film.
+      ${d.sales ? 'That is a real number, not an estimate — every sale here came through you.' : ''}</p>` : ''}
+
+    <p class="note">Numbers update as they happen. Anything about payment is between
+    you and the filmmaker — 4flieks measures, it doesn't pay.</p>`;
+
+  // share sheet on mobile, clipboard everywhere else
+  const text = `I'm in ${d.film}. Watch it here: ${url}`;
+  document.getElementById('share').onclick = async () => {
+    if (navigator.share) { try { await navigator.share({ text }); return; } catch {} }
+    await navigator.clipboard.writeText(text);
+    flash('share', 'COPIED');
+  };
+  document.getElementById('copy').onclick = async () => {
+    await navigator.clipboard.writeText(url);
+    flash('copy', 'COPIED');
+  };
+
+  if (window.QRCode) {
+    QRCode.toCanvas(document.getElementById('qr'), url,
+      { width: 150, margin: 1, color: { dark: '#111111', light: '#FFFFFF' } });
+  }
+  document.getElementById('dlqr').onclick = () => {
+    const a = document.createElement('a');
+    a.download = `${castSlug}-${d.filmSlug}.png`;
+    a.href = document.getElementById('qr').toDataURL();
+    a.click();
+  };
+}
+
+function flash(id, word) {
+  const b = document.getElementById(id);
+  const was = b.textContent;
+  b.textContent = word;
+  setTimeout(() => b.textContent = was, 1600);
+}
+
+load();
+</script>
+</body>
+</html>
