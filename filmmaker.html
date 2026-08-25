@@ -1344,9 +1344,11 @@ async function uploadReplacement(filmId) {
     });
     await task;
     const newUrl = await videoRef.getDownloadURL();
-    // Update DB — reset to review status, update video_url
+    // The film's URL goes to a private node. flieks_films is public so the
+    // catalogue works signed out, and anything in there can be read by anyone.
+    await db.ref(`${DB_PREFIX}private/${filmId}`).update({ video_url: newUrl });
     await db.ref(`${DB_PREFIX}films/${filmId}`).update({
-      video_url: newUrl,
+      video_url: null,
       status: 'review',
       submitted_at: Date.now(),
       published_at: null
@@ -1486,7 +1488,6 @@ async function submitFilm() {
       filmmaker: currentUser.displayName || '',
       filmmaker_uid: currentUser.uid,
       filmmaker_email: currentUser.email,
-      video_url: videoUrl,
       trailer_url: trailerUrl,
       poster_url: posterUrl,
       poster_bg: '#1A1A1A',
@@ -1498,6 +1499,7 @@ async function submitFilm() {
       submitted_at: Date.now(),
       published_at: null
     });
+    await db.ref(`${DB_PREFIX}private/${filmId}`).set({ video_url: videoUrl });
 
     // Notify admin
     await db.ref(`${DB_PREFIX}admin_queue`).push({

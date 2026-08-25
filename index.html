@@ -1678,12 +1678,12 @@ async function playFilm(filmId) {
         : `${d.hoursLeft} hour${d.hoursLeft === 1 ? '' : 's'} left on this rental`);
     }
 
-    launchPlayer(f, d.type === 'own');
+    if (!d.url) { showSnack('This film is not available to play yet.'); return; }
+    launchPlayer({ ...f, video_url: d.url }, d.type === 'own');
 
   } catch (e) {
     console.error('play failed:', e);
-    // Don't hold a paying viewer hostage to a network wobble
-    launchPlayer(f, purchase.type === 'own');
+    showSnack('Could not start playback. Check your connection and try again.');
   }
 }
 
