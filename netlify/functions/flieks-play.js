@@ -25,29 +25,22 @@ const BUNNY_TOKEN = (process.env.BUNNY_TOKEN_KEY || '').trim();
 const LINK_MINUTES = 240;     // a signed link lasts long enough to finish a film
 
 /**
- * Bunny token authentication.
+ * Bunny Stream token authentication.
  *
- * A directory token is used rather than a file token, because HLS playback
- * pulls a playlist plus many segment files — signing only the playlist would
- * leave every segment unplayable.
- *
- * token = base64url( sha256( key + path + expiry ) )
+ * Stream signs differently from Bunny's CDN pull zones: a hex SHA256 of
+ * key + videoId + expiry, covering every file under that video — playlist and
+ * segments alike. The pull-zone directory-token scheme does not apply here.
  */
 function signedBunnyUrl(videoId) {
-  if (!BUNNY_TOKEN) {
-    // No token key configured — unsigned URL, still works, just not protected.
-    return `https://${BUNNY_HOST}/${videoId}/playlist.m3u8`;
-  }
-  const path = `/${videoId}/`;
+  const base = `https://${BUNNY_HOST}/${videoId}/playlist.m3u8`;
+  if (!BUNNY_TOKEN) return base;      // token auth off — unsigned but playable
+
   const expires = Math.floor(Date.now() / 1000) + LINK_MINUTES * 60;
+  const token = crypto.createHash('sha256')
+    .update(BUNNY_TOKEN + videoId + expires)
+    .digest('hex');
 
-  const hash = crypto.createHash('sha256')
-    .update(BUNNY_TOKEN + path + expires)
-    .digest('base64')
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-  return `https://${BUNNY_HOST}/${videoId}/playlist.m3u8` +
-         `?token=${hash}&expires=${expires}&token_path=${encodeURIComponent(path)}`;
+  return `${base}?token=${token}&expires=${expires}`;
 }
 
 function req(url, opts = {}, body = null) {
@@ -108,7 +101,19 @@ exports.handler = async event => {
       const priv = await dbGet(`flieks_private/${filmId}`) || {};
 
       if (priv.bunny_id && BUNNY_HOST) {
-        return signedBunnyUrl(priv.bunny_id);
+        const url = signedBunnyUrl(priv.bunny_id);
+        console.log('serving Bunny', {
+          filmId,
+          bunnyId: priv.bunny_id,
+          host: BUNNY_HOST,
+          tokenAuth: BUNNY_TOKEN ? 'on' : 'off',
+          url
+        });
+        return url;
+      }
+
+      if (priv.bunny_id && !BUNNY_HOST) {
+        console.warn('BUNNY_CDN_HOSTNAME is not set — falling back to Firebase');
       }
       // Films not yet moved to Bunny still play from Firebase.
       if (priv.video_url) return priv.video_url;
