@@ -25,20 +25,27 @@ const BUNNY_TOKEN = (process.env.BUNNY_TOKEN_KEY || '').trim();
 const LINK_MINUTES = 240;     // a signed link lasts long enough to finish a film
 
 /**
- * Bunny Stream token authentication.
+ * Bunny CDN token authentication.
  *
- * Stream signs differently from Bunny's CDN pull zones: a hex SHA256 of
- * key + videoId + expiry, covering every file under that video — playlist and
- * segments alike. The pull-zone directory-token scheme does not apply here.
+ * Confirmed by testing every documented variant against the library: the path
+ * signed is the full file path, and the digest is base64url — not hex, and not
+ * a directory token.
+ *
+ *   token = base64url( sha256( key + "/videoId/playlist.m3u8" + expiry ) )
+ *
+ * Each segment is fetched with the same query string appended by hls.js, and
+ * Bunny accepts them under the playlist's token.
  */
 function signedBunnyUrl(videoId) {
-  const base = `https://${BUNNY_HOST}/${videoId}/playlist.m3u8`;
+  const path = `/${videoId}/playlist.m3u8`;
+  const base = `https://${BUNNY_HOST}${path}`;
   if (!BUNNY_TOKEN) return base;      // token auth off — unsigned but playable
 
   const expires = Math.floor(Date.now() / 1000) + LINK_MINUTES * 60;
   const token = crypto.createHash('sha256')
-    .update(BUNNY_TOKEN + videoId + expires)
-    .digest('hex');
+    .update(BUNNY_TOKEN + path + expires)
+    .digest('base64')
+    .replace(/\n/g, '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
   return `${base}?token=${token}&expires=${expires}`;
 }
