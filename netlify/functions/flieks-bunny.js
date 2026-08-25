@@ -109,7 +109,15 @@ exports.handler = async event => {
       const r = await bunny(`/videos/${priv.bunny_id}`, 'GET');
       let v = {};
       try { v = JSON.parse(r.body || '{}'); } catch {}
-      const state = STATUS[v.status] || 'unknown';
+      let state = STATUS[v.status] || 'unknown';
+      // Bunny reports "processing" even when the fetch never delivered anything.
+      // A video with no bytes several minutes after starting has stalled.
+      const started = priv.bunny_started_at || 0;
+      if (state !== 'ready' && state !== 'failed' &&
+          (v.storageSize === 0 || v.length === 0) &&
+          started && Date.now() - started > 3 * 60 * 1000) {
+        state = 'stalled';
+      }
       if (state === 'ready' && !priv.bunny_ready) {
         await dbPatch(`flieks_private/${filmId}`, { bunny_ready: true });
       }
@@ -117,8 +125,18 @@ exports.handler = async event => {
         state,
         progress: v.encodeProgress ?? null,
         length: v.length ?? null,
+        bytes: v.storageSize ?? null,
         bunnyId: priv.bunny_id
       });
+    }
+
+    /* ---- remove a failed or unwanted Bunny copy ---- */
+    if (action === 'reset') {
+      if (priv.bunny_id) await bunny(`/videos/${priv.bunny_id}`, 'DELETE');
+      await dbPatch(`flieks_private/${filmId}`, {
+        bunny_id: null, bunny_ready: null, bunny_started_at: null
+      });
+      return reply(200, { ok: true, message: 'Cleared. You can prepare it again.' });
     }
 
     /* ---- hand it to Bunny ---- */
@@ -140,9 +158,30 @@ exports.handler = async event => {
 
     // 2 — tell Bunny to go and fetch the file from Firebase
     const fetched = await bunny(`/videos/${created.guid}/fetch`, 'POST', { url: source });
-    if (fetched.status >= 400) {
-      console.error('Bunny fetch failed', fetched.status, fetched.body);
-      return reply(502, { message: 'Bunny could not download the file.' });
+    let fetchBody = {};
+    try { fetchBody = JSON.parse(fetched.body || '{}'); } catch {}
+
+    console.log('Bunny fetch response', {
+      httpStatus: fetched.status,
+      body: fetched.body,
+      sourceLength: source.length,
+      sourceHost: (source.split('/')[2] || '')
+    });
+
+    // Bunny answers 200 with success:false when it cannot reach the file,
+    // so the status code alone is not enough to tell whether it worked.
+    const fetchOk = fetched.status < 400 &&
+                    fetchBody.success !== false &&
+                    fetchBody.statusCode !== 400;
+
+    if (!fetchOk) {
+      // Don't leave an empty video object behind.
+      await bunny(`/videos/${created.guid}`, 'DELETE');
+      return reply(502, {
+        message: fetchBody.message || 'Bunny could not download the file.',
+        bunnySaid: fetched.body,
+        httpStatus: fetched.status
+      });
     }
 
     await dbPatch(`flieks_private/${filmId}`, {
