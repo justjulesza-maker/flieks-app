@@ -1122,6 +1122,36 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:6px">WHAT YOUR CAST EARNS</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+        We measure what each person brings in. What you share with them is your
+        decision — but they'll see it on their own page before they start posting,
+        so nobody is promoting on a misunderstanding.</p>
+
+      <div id="share-options" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+
+      <div id="share-custom" style="display:none;margin-bottom:12px">
+        <label style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">In your own words</label>
+        <textarea id="share-note" rows="2" maxlength="160"
+          placeholder="e.g. R10 a sale, paid at the end of the run"
+          style="width:100%;font:inherit;font-size:15px;padding:10px;border-radius:8px;resize:vertical;
+                 background:var(--card);border:1px solid var(--border);color:var(--text)"></textarea>
+      </div>
+
+      <div id="share-preview" style="font-size:12px;color:var(--muted);line-height:1.5;
+           background:var(--card);border:1px solid var(--border);border-radius:8px;
+           padding:11px 13px;margin-bottom:12px"></div>
+
+      <button class="btn btn-outline btn-sm" onclick="saveCastShare('${f.id}')">SAVE</button>
+      <span id="share-msg" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+
+      <p style="font-size:11px;color:var(--dim);margin-top:12px;line-height:1.5">
+        You pay your cast directly — we don't handle it. Most filmmakers on 4flieks
+        share 15–20% of what a person brings in, paid per sale rather than split
+        evenly, so the people who actually shift tickets see the difference.</p>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
       <div id="castPanel"></div>
     </div>
 
@@ -1143,6 +1173,7 @@ function openFilmDetail(filmId) {
   `;
   nav('film-detail');
   mountCastPanel(f);
+  mountShareOptions(f);
   mountThemePicker(f);
   checkStreaming(f.id);
 }
@@ -1190,6 +1221,112 @@ async function saveTheme(filmId, theme) {
   }
 }
 
+/* What the filmmaker shares with cast, and how it reads to them.
+   The platform measures; the filmmaker pays. Stating it up front is what turns
+   an actor from someone being used into someone with a stake. */
+const SHARE_OPTIONS = [
+  { id: 'pct20',   label: '20% of what they bring in',  hint: 'the going rate on 4flieks' },
+  { id: 'pct15',   label: '15% of what they bring in',  hint: '' },
+  { id: 'pct10',   label: '10% of what they bring in',  hint: '' },
+  { id: 'custom',  label: 'Something else',             hint: 'describe it in your own words' },
+  { id: 'none',    label: 'Nothing, for now',           hint: 'they still get their link and their numbers' }
+];
+
+let currentShare = { type: 'pct20', note: '' };
+
+function mountShareOptions(f) {
+  const box = document.getElementById('share-options');
+  if (!box) return;
+
+  const saved = (f.cast_share && f.cast_share.type) ? f.cast_share : { type: 'pct20', note: '' };
+  currentShare = { ...saved };
+
+  box.innerHTML = SHARE_OPTIONS.map(o => `
+    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+                  padding:10px 12px;border-radius:8px;border:1px solid var(--border);
+                  background:${o.id === currentShare.type ? 'var(--card)' : 'transparent'}"
+           data-opt="${o.id}">
+      <input type="radio" name="castshare" value="${o.id}"
+        ${o.id === currentShare.type ? 'checked' : ''}
+        style="margin-top:2px;accent-color:var(--accent,#F0A62E)">
+      <span>
+        <span style="font-size:14px;color:var(--text)">${o.label}</span>
+        ${o.hint ? `<span style="display:block;font-size:11px;color:var(--dim);margin-top:2px">${o.hint}</span>` : ''}
+      </span>
+    </label>`).join('');
+
+  box.querySelectorAll('input[name="castshare"]').forEach(r => {
+    r.addEventListener('change', () => {
+      currentShare.type = r.value;
+      box.querySelectorAll('label').forEach(l =>
+        l.style.background = l.dataset.opt === r.value ? 'var(--card)' : 'transparent');
+      document.getElementById('share-custom').style.display =
+        r.value === 'custom' ? 'block' : 'none';
+      renderSharePreview();
+    });
+  });
+
+  const note = document.getElementById('share-note');
+  if (note) {
+    note.value = currentShare.note || '';
+    note.addEventListener('input', () => { currentShare.note = note.value; renderSharePreview(); });
+  }
+  document.getElementById('share-custom').style.display =
+    currentShare.type === 'custom' ? 'block' : 'none';
+
+  renderSharePreview(f);
+}
+
+/* Shows the filmmaker the exact sentence their cast will read. */
+function shareSentence(share, priceOwn) {
+  const pct = { pct20: 20, pct15: 15, pct10: 10 }[share.type];
+  if (pct) {
+    const perSale = priceOwn ? ((priceOwn / 1.15) * (pct / 100)).toFixed(2) : null;
+    return `You earn ${pct}% of every sale that comes through your link` +
+           (perSale ? ` — about R${perSale} each.` : '.');
+  }
+  if (share.type === 'custom') {
+    return share.note ? share.note : 'The filmmaker will describe the arrangement here.';
+  }
+  return 'No revenue share on this film. You still get your own link and can see ' +
+         'exactly what it brings in.';
+}
+
+function renderSharePreview(f) {
+  const el = document.getElementById('share-preview');
+  if (!el) return;
+  const film = f || (myFilms || []).find(x => x.id === editingFilmId) || {};
+  el.innerHTML = `<span style="display:block;font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--dim);margin-bottom:5px">Your cast will see</span>
+    ${shareSentence(currentShare, Number(film.price_own) || 0)}`;
+}
+
+async function saveCastShare(filmId) {
+  const msg = document.getElementById('share-msg');
+  if (currentShare.type === 'custom' && !(currentShare.note || '').trim()) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Describe the arrangement first.';
+    return;
+  }
+  msg.style.color = 'var(--muted)';
+  msg.textContent = 'Saving…';
+  try {
+    await db.ref(`${DB_PREFIX}films/${filmId}/cast_share`).set({
+      type: currentShare.type,
+      note: currentShare.type === 'custom' ? currentShare.note.trim().slice(0, 160) : null,
+      updated_at: Date.now()
+    });
+    const film = (myFilms || []).find(x => x.id === filmId);
+    if (film) film.cast_share = { ...currentShare };
+    msg.style.color = 'var(--green,#4ADE80)';
+    msg.textContent = 'Saved. Your cast can see this.';
+    setTimeout(() => msg.textContent = '', 2600);
+  } catch (e) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Could not save that.';
+  }
+}
+
 function mountCastPanel(f) {
   const box = document.getElementById('castPanel');
   if (!window.FlieksCastPanel) {
@@ -1200,7 +1337,10 @@ function mountCastPanel(f) {
   FlieksCastPanel.mount('#castPanel', {
     filmId:   f.id,
     filmSlug: f.slug || f.id,
-    canEdit:  true
+    canEdit:  true,
+    // Each person also gets a page of their own — their link, their numbers,
+    // and what you've said they earn.
+    personalPage: slug => `${location.origin}/me/${f.slug || f.id}/${slug}`
   });
 }
 
