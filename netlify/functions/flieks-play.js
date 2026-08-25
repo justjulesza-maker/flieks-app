@@ -11,13 +11,44 @@
  *   -> { ok, type, expiresAt, hoursLeft }
  *   -> 403 if they have no access, or the rental has run out
  */
-const https = require('https');
+const https  = require('https');
+const crypto = require('crypto');
 
 const DB      = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET  = process.env.FIREBASE_DB_SECRET;
 const API_KEY = process.env.FIREBASE_API_KEY;
 
 const RENTAL_HOURS = 48;
+
+const BUNNY_HOST  = (process.env.BUNNY_CDN_HOSTNAME || '').trim().replace(/^https?:\/\//, '');
+const BUNNY_TOKEN = (process.env.BUNNY_TOKEN_KEY || '').trim();
+const LINK_MINUTES = 240;     // a signed link lasts long enough to finish a film
+
+/**
+ * Bunny token authentication.
+ *
+ * A directory token is used rather than a file token, because HLS playback
+ * pulls a playlist plus many segment files — signing only the playlist would
+ * leave every segment unplayable.
+ *
+ * token = base64url( sha256( key + path + expiry ) )
+ */
+function signedBunnyUrl(videoId) {
+  if (!BUNNY_TOKEN) {
+    // No token key configured — unsigned URL, still works, just not protected.
+    return `https://${BUNNY_HOST}/${videoId}/playlist.m3u8`;
+  }
+  const path = `/${videoId}/`;
+  const expires = Math.floor(Date.now() / 1000) + LINK_MINUTES * 60;
+
+  const hash = crypto.createHash('sha256')
+    .update(BUNNY_TOKEN + path + expires)
+    .digest('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+  return `https://${BUNNY_HOST}/${videoId}/playlist.m3u8` +
+         `?token=${hash}&expires=${expires}&token_path=${encodeURIComponent(path)}`;
+}
 
 function req(url, opts = {}, body = null) {
   return new Promise((res, rej) => {
@@ -70,13 +101,17 @@ exports.handler = async event => {
 
     const now = Date.now();
 
-    /* The film's URL is only handed over once access is confirmed. It lives in
-       flieks_private, which no client can read — flieks_films is public so the
-       catalogue works signed out, and a URL in there is a URL anyone can take. */
+    /* The film's URL is only handed over once access is confirmed, and it is
+       signed so it expires. flieks_films is public so the catalogue works
+       signed out — a playable URL in there is a URL anyone can take. */
     async function videoUrl() {
-      const priv = await dbGet(`flieks_private/${filmId}`);
-      if (priv && priv.video_url) return priv.video_url;
-      // Fallback for films not yet migrated out of the public node.
+      const priv = await dbGet(`flieks_private/${filmId}`) || {};
+
+      if (priv.bunny_id && BUNNY_HOST) {
+        return signedBunnyUrl(priv.bunny_id);
+      }
+      // Films not yet moved to Bunny still play from Firebase.
+      if (priv.video_url) return priv.video_url;
       const film = await dbGet(`flieks_films/${filmId}`);
       return (film && film.video_url) || null;
     }
