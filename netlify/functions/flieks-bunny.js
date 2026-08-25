@@ -130,6 +130,55 @@ exports.handler = async event => {
       });
     }
 
+    /* ---- point a film at a video already in the Bunny library ---- */
+    if (action === 'link') {
+      const { bunnyId } = JSON.parse(event.body || '{}');
+      if (!bunnyId || !/^[0-9a-f-]{30,40}$/i.test(bunnyId)) {
+        return reply(400, { message: 'That does not look like a Bunny video id.' });
+      }
+
+      // Check it exists and has actually got a file in it.
+      const r = await bunny(`/videos/${bunnyId}`, 'GET');
+      let v = {};
+      try { v = JSON.parse(r.body || '{}'); } catch {}
+      if (r.status >= 400 || !v.guid) {
+        return reply(404, { message: 'No video with that id in the library.' });
+      }
+      if (!v.storageSize) {
+        return reply(400, { message: 'That video has no file in it yet. Wait for the upload to finish.' });
+      }
+
+      await dbPatch(`flieks_private/${filmId}`, {
+        bunny_id: bunnyId,
+        bunny_ready: (STATUS[v.status] === 'ready'),
+        bunny_started_at: Date.now(),
+        bunny_linked_manually: true
+      });
+
+      console.log(`Linked ${filmId} -> ${bunnyId} (${STATUS[v.status]}, ${
+        (v.storageSize / 1048576).toFixed(1)}MB)`);
+      return reply(200, {
+        ok: true,
+        state: STATUS[v.status],
+        title: v.title || '',
+        mb: +(v.storageSize / 1048576).toFixed(1)
+      });
+    }
+
+    /* ---- list what is in the Bunny library, to make linking easier ---- */
+    if (action === 'library') {
+      const r = await bunny('/videos?itemsPerPage=100&orderBy=date', 'GET');
+      let d = {};
+      try { d = JSON.parse(r.body || '{}'); } catch {}
+      const items = (d.items || []).map(v => ({
+        id: v.guid,
+        title: v.title,
+        state: STATUS[v.status] || 'unknown',
+        mb: v.storageSize ? +(v.storageSize / 1048576).toFixed(1) : 0
+      }));
+      return reply(200, { items });
+    }
+
     /* ---- remove a failed or unwanted Bunny copy ---- */
     if (action === 'reset') {
       if (priv.bunny_id) await bunny(`/videos/${priv.bunny_id}`, 'DELETE');
