@@ -156,33 +156,25 @@ exports.handler = async event => {
       return reply(502, { message: 'Bunny would not accept the video.' });
     }
 
-    // 2 — tell Bunny to go and fetch the file from Firebase
-    const fetched = await bunny(`/videos/${created.guid}/fetch`, 'POST', { url: source });
-    let fetchBody = {};
-    try { fetchBody = JSON.parse(fetched.body || '{}'); } catch {}
+    // 2 — push the file to Bunny ourselves.
+    //
+    // Bunny's own fetch endpoint accepts the job and reports success, then
+    // never retrieves the file from Firebase — the video sits at zero bytes
+    // indefinitely. Streaming it through this function is slower but it is
+    // observable: if it fails, we see the reason here rather than waiting.
+    // Hand the transfer to a background function: this one is killed at 26
+    // seconds, and a film takes longer. Background functions get 15 minutes.
+    const origin = `https://${event.headers.host || '4flieks.com'}`;
+    const jobBody = JSON.stringify({ filmId, videoId: created.guid, source, secret: SECRET });
 
-    console.log('Bunny fetch response', {
-      httpStatus: fetched.status,
-      body: fetched.body,
-      sourceLength: source.length,
-      sourceHost: (source.split('/')[2] || '')
+    await new Promise(done => {
+      const r = https.request(`${origin}/.netlify/functions/flieks-bunny-upload-background`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(jobBody) }
+      }, res => { res.resume(); res.on('end', done); });
+      r.on('error', e => { console.error('could not start upload:', e.message); done(); });
+      r.write(jobBody); r.end();
     });
-
-    // Bunny answers 200 with success:false when it cannot reach the file,
-    // so the status code alone is not enough to tell whether it worked.
-    const fetchOk = fetched.status < 400 &&
-                    fetchBody.success !== false &&
-                    fetchBody.statusCode !== 400;
-
-    if (!fetchOk) {
-      // Don't leave an empty video object behind.
-      await bunny(`/videos/${created.guid}`, 'DELETE');
-      return reply(502, {
-        message: fetchBody.message || 'Bunny could not download the file.',
-        bunnySaid: fetched.body,
-        httpStatus: fetched.status
-      });
-    }
 
     await dbPatch(`flieks_private/${filmId}`, {
       bunny_id: created.guid,
