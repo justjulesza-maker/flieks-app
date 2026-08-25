@@ -343,12 +343,13 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-player" class="view">
   <div class="video-wrap">
-    <video id="flieks-video" playsinline controls
+    <video id="flieks-video" playsinline
            poster=""
            x-webkit-airplay="allow"
            controlsList="nodownload noplaybackrate noremoteplayback"
            disablepictureinpicture="false"
            oncontextmenu="return false"
+           onclick="togglePlay()"
            onerror="videoError()"
            ontimeupdate="updateProgress()"
            onended="videoEnded()">
@@ -1762,6 +1763,8 @@ function guardPlayer() {
   if (!v || v._guarded) return;
   v._guarded = true;
   v.addEventListener('contextmenu', e => e.preventDefault());
+  v.addEventListener('play', syncPlayIcon);
+  v.addEventListener('pause', syncPlayIcon);
   document.addEventListener('keydown', e => {
     const view = document.getElementById('view-player');
     if (!view || !view.classList.contains('active')) return;
@@ -1790,6 +1793,17 @@ function watchTrailer(filmId) {
   const f = allFilms.find(x => x.id === filmId) || currentFilm;
   if (!f || !f.trailer_url) { showSnack('Trailer not yet available'); return; }
   launchPlayer({ ...f, video_url: f.trailer_url }, false);
+}
+
+/* The video can be paused by tapping the picture, by the keyboard, or by the
+   system, so the button's icon follows the element rather than assuming. */
+function syncPlayIcon() {
+  const v = document.getElementById('flieks-video');
+  const icon = document.getElementById('play-icon');
+  if (!v || !icon) return;
+  icon.innerHTML = v.paused
+    ? '<polygon points="5,3 19,12 5,21"/>'
+    : '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
 }
 
 function togglePlay() {
