@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4flieks — for filmmakers</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --clay:#1C1512;
+  --bone:#F2EADA;
+  --sunset:#D85A2C;
+  --ochre:#D49A2C;
+  --smoke:#8B8177;
+  --line:rgba(242,234,218,.14);
+  --fb:'Archivo Black',sans-serif;
+  --fn:'DM Sans',system-ui,sans-serif;
+  --fm:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0D0A08;font-family:var(--fn);color:var(--bone);
+  padding:26px 16px 60px;-webkit-font-smoothing:antialiased}
+
+.sheet{max-width:820px;margin:0 auto;background:var(--clay);
+  padding:44px 46px 38px;position:relative;overflow:hidden}
+
+/* the perforated edge of a ticket stub, the brand's own device */
+.sheet::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;
+  background:repeating-linear-gradient(90deg,var(--sunset) 0 14px,transparent 14px 22px)}
+
+.top{display:flex;align-items:baseline;justify-content:space-between;
+  gap:20px;flex-wrap:wrap;margin-bottom:34px}
+.mark{font-family:var(--fb);font-size:19px;letter-spacing:-.01em}
+.mark em{color:var(--sunset);font-style:normal}
+.eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--smoke)}
+
+h1{font-family:var(--fb);font-size:38px;line-height:1.02;letter-spacing:-.02em;
+  margin-bottom:14px;max-width:15ch}
+h1 em{color:var(--ochre);font-style:normal}
+.stand{font-size:16px;line-height:1.55;color:#CFC5B6;max-width:56ch;margin-bottom:32px}
+
+/* ---------- the signature: a real attribution readout ---------- */
+.ledger{border:1px solid var(--line);margin-bottom:14px}
+.ledger .head{display:flex;justify-content:space-between;align-items:center;
+  padding:11px 16px;border-bottom:1px solid var(--line);background:rgba(242,234,218,.03)}
+.ledger .head p{font-family:var(--fm);font-size:9.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--smoke)}
+.ledger .head .film{color:var(--bone)}
+
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--fm);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--smoke);font-weight:400;text-align:right;padding:9px 16px 7px}
+th:first-child{text-align:left}
+td{padding:11px 16px;border-top:1px solid var(--line);text-align:right;
+  font-family:var(--fm);font-size:14px}
+td:first-child{text-align:left;font-family:var(--fn);font-size:14.5px;font-weight:700}
+td .role{display:block;font-family:var(--fm);font-size:9.5px;color:var(--smoke);
+  font-weight:400;margin-top:2px;letter-spacing:.04em}
+tr.total td{border-top:1px solid rgba(242,234,218,.3);color:var(--ochre);font-weight:700}
+tr.total td:first-child{font-family:var(--fm);font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--smoke);font-weight:400}
+.rev{color:var(--ochre)}
+.caption{font-size:12.5px;color:var(--smoke);line-height:1.5;margin-bottom:34px}
+
+/* ---------- how it works ---------- */
+.rule{height:1px;background:var(--line);margin:0 0 26px}
+.sect{font-family:var(--fm);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--sunset);margin-bottom:16px}
+
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);margin-bottom:32px}
+.step{background:var(--clay);padding:16px 15px 18px}
+.step .n{font-family:var(--fm);font-size:10px;color:var(--sunset);
+  letter-spacing:.1em;margin-bottom:9px}
+.step h3{font-family:var(--fb);font-size:13px;line-height:1.25;margin-bottom:6px}
+.step p{font-size:12.5px;line-height:1.5;color:#B6ACA0}
+
+/* ---------- terms ---------- */
+.cols{display:grid;grid-template-columns:1.15fr 1fr;gap:34px;margin-bottom:30px}
+.terms li{list-style:none;display:flex;gap:11px;margin-bottom:11px;
+  font-size:13.5px;line-height:1.5;color:#CFC5B6}
+.terms li b{color:var(--bone)}
+.tick{color:var(--sunset);flex-shrink:0;font-family:var(--fm);font-size:12px;padding-top:1px}
+
+.split{border:1px solid var(--line);padding:18px 20px}
+.split .big{font-family:var(--fb);font-size:44px;line-height:1;color:var(--ochre);
+  letter-spacing:-.02em}
+.split .big span{font-size:20px;color:var(--smoke)}
+.split .lab{font-family:var(--fm);font-size:9.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--smoke);margin:8px 0 14px}
+.split p{font-size:12.5px;line-height:1.55;color:#B6ACA0}
+
+/* ---------- close ---------- */
+.close{border-top:1px solid var(--line);padding-top:22px;
+  display:flex;justify-content:space-between;align-items:flex-end;gap:26px;flex-wrap:wrap}
+.close h4{font-family:var(--fb);font-size:16px;margin-bottom:7px}
+.close p{font-size:13px;color:#B6ACA0;line-height:1.5;max-width:44ch}
+.close a{color:var(--ochre);text-decoration:none;border-bottom:1px solid rgba(212,154,44,.4)}
+.stub{border:1px solid var(--line);padding:13px 17px;text-align:right;flex-shrink:0}
+.stub .k{font-family:var(--fm);font-size:9px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--smoke)}
+.stub .v{font-family:var(--fb);font-size:15px;margin-top:3px}
+
+@media(max-width:720px){
+  .sheet{padding:30px 22px 30px}
+  h1{font-size:29px}
+  .steps{grid-template-columns:1fr 1fr}
+  .cols{grid-template-columns:1fr;gap:26px}
+  th:nth-child(3),td:nth-child(3){display:none}
+}
+
+@media print{
+  body{background:#fff;padding:0}
+  .sheet{max-width:100%;padding:12mm 13mm;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:0}
+  h1{font-size:30px}
+  .stand{font-size:13.5px;margin-bottom:22px}
+  .steps{margin-bottom:22px}
+  td{padding:8px 14px}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="top">
+    <div class="mark">4<em>FLIEKS</em></div>
+    <div class="eyebrow">Direct distribution for South African film</div>
+  </div>
+
+  <h1>Your cast already sells your film. <em>Now you can see who.</em></h1>
+
+  <p class="stand">
+    Every filmmaker knows the cast is the marketing. They post, their people watch.
+    What nobody could ever do is measure it — so it never counted as distribution,
+    and nobody was ever paid for it. 4flieks gives every cast and crew member their
+    own link, and shows you exactly what each one brought in.
+  </p>
+
+  <div class="ledger">
+    <div class="head">
+      <p class="film">METAMORPH &nbsp;·&nbsp; Cameron Hadlow</p>
+      <p>First 14 days</p>
+    </div>
+    <table>
+      <tr>
+        <th>Who shared it</th><th>Clicks</th><th>Trailer</th><th>Bought</th><th>Earned</th>
+      </tr>
+      <tr>
+        <td>Thabo Rametsi<span class="role">lead · 19k following</span></td>
+        <td>412</td><td>197</td><td>63</td><td class="rev">R2 163</td>
+      </tr>
+      <tr>
+        <td>Aasiyah Shah<span class="role">supporting · 4k following</span></td>
+        <td>188</td><td>96</td><td>31</td><td class="rev">R1 064</td>
+      </tr>
+      <tr>
+        <td>Ethan Hazzard<span class="role">supporting · 2k following</span></td>
+        <td>74</td><td>38</td><td>9</td><td class="rev">R309</td>
+      </tr>
+      <tr>
+        <td>Louise Bruwer<span class="role">editor · link only</span></td>
+        <td>51</td><td>22</td><td>14</td><td class="rev">R480</td>
+      </tr>
+      <tr class="total">
+        <td>Your share, 70%</td>
+        <td>725</td><td>353</td><td>117</td><td>R4 016</td>
+      </tr>
+    </table>
+  </div>
+  <p class="caption">
+    An illustration of the readout, not a real film's figures. Note the editor:
+    smaller audience, better conversion. That is the sort of thing you only find
+    out by measuring.
+  </p>
+
+  <div class="rule"></div>
+  <p class="sect">How a release works</p>
+
+  <div class="steps">
+    <div class="step">
+      <p class="n">01</p>
+      <h3>Upload &amp; price</h3>
+      <p>Your film, poster and trailer. You set the rental and purchase prices.</p>
+    </div>
+    <div class="step">
+      <p class="n">02</p>
+      <h3>Add your people</h3>
+      <p>Cast and crew each get a link and a QR code. You choose who appears publicly.</p>
+    </div>
+    <div class="step">
+      <p class="n">03</p>
+      <h3>They post</h3>
+      <p>Their link opens on your film, with their name on it. Nothing to install.</p>
+    </div>
+    <div class="step">
+      <p class="n">04</p>
+      <h3>You watch it land</h3>
+      <p>Clicks, trailer plays and sales, per person, as they happen.</p>
+    </div>
+  </div>
+
+  <div class="cols">
+    <ul class="terms">
+      <li><span class="tick">→</span><span><b>You keep the copyright.</b> We never own your film, and we never ask to.</span></li>
+      <li><span class="tick">→</span><span><b>Non-exclusive.</b> Broadcasters, festivals, other platforms — all still open to you, at the same time.</span></li>
+      <li><span class="tick">→</span><span><b>You set the price.</b> Rental and purchase, your call.</span></li>
+      <li><span class="tick">→</span><span><b>Streaming only.</b> No downloads, no file anyone can pass around.</span></li>
+      <li><span class="tick">→</span><span><b>Leave on 30 days' notice.</b> Anyone who bought it keeps their copy; you keep earning on it.</span></li>
+    </ul>
+
+    <div class="split">
+      <p class="big">70<span>%</span></p>
+      <p class="lab">of net revenue, to you</p>
+      <p>We keep 30% for hosting, streaming, card fees and support. Paid out monthly
+      by EFT. Your sales and earnings are visible in the portal at any time — you
+      never have to ask us how the film is doing.</p>
+    </div>
+  </div>
+
+  <div class="close">
+    <div>
+      <h4>Bring us a film.</h4>
+      <p>Shorts and features, any South African language. Tell us what you have and
+      we'll get it up. <a href="mailto:filmmakers@4flieks.com">filmmakers@4flieks.com</a></p>
+    </div>
+    <div class="stub">
+      <p class="k">Watch now</p>
+      <p class="v">4flieks.com</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
