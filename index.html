@@ -1125,6 +1125,7 @@ function renderFilmDetail() {
       <p style="color:#999;font-size:14px;line-height:1.7">${f.synopsis||''}</p>
     </div>
     <div id="film-cast-wall"></div>
+    <div id="film-reviews"></div>
     ${purchased ? `
       <div style="padding:0 20px 14px">
         <div class="info-box green">
@@ -1203,6 +1204,7 @@ function renderFilmDetail() {
 
   if (window.FlieksThemes) FlieksThemes.apply(f.theme);
   renderCastWall(f);
+  renderReviews(f);
   if (window.FlieksSocial) FlieksSocial.bumpView(f.id);
 }
 
@@ -1519,6 +1521,298 @@ async function shareGiftCode(code) {
   const text = `I bought you a film on 4flieks. Unlock it at ${location.origin} with code ${code}`;
   if (navigator.share) { try { await navigator.share({ text }); } catch {} }
   else { await navigator.clipboard.writeText(text); showSnack('Copied'); }
+}
+
+/* ============================================================
+   REVIEWS
+   ============================================================ */
+let reviewFilm = null;
+
+function stars(n, size = 15, colour = 'var(--amber)') {
+  let out = '';
+  for (let i = 1; i <= 5; i++) {
+    out += `<svg viewBox="0 0 24 24" style="width:${size}px;height:${size}px;
+      fill:${i <= n ? colour : 'transparent'};stroke:${i <= n ? colour : 'var(--dim)'};
+      stroke-width:1.6;flex-shrink:0"><polygon points="12,2 15.1,8.6 22,9.5 17,14.3 18.3,21 12,17.8 5.7,21 7,14.3 2,9.5 8.9,8.6"/></svg>`;
+  }
+  return out;
+}
+
+function timeAgo(ms) {
+  const d = Math.floor((Date.now() - ms) / 86400000);
+  if (d < 1) return 'today';
+  if (d === 1) return 'yesterday';
+  if (d < 30) return `${d} days ago`;
+  if (d < 365) return `${Math.floor(d / 30)} months ago`;
+  return `${Math.floor(d / 365)} years ago`;
+}
+
+async function renderReviews(f) {
+  const box = document.getElementById('film-reviews');
+  if (!box) return;
+  reviewFilm = f;
+
+  let all = {};
+  try {
+    const snap = await db.ref(DB_PREFIX + 'reviews/' + f.id).once('value');
+    all = snap.val() || {};
+  } catch (e) { console.warn('reviews unavailable:', e); }
+
+  const list = Object.entries(all)
+    .map(([id, r]) => ({ id, ...r }))
+    .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+  const mine = currentUser ? list.find(r => r.id === currentUser.uid) : null;
+  const owned = userPurchases[f.id];
+  const isMaker = currentUser && f.filmmaker_uid === currentUser.uid;
+
+  const count = list.length;
+  const avg = count
+    ? (list.reduce((s, r) => s + (Number(r.rating) || 0), 0) / count)
+    : 0;
+
+  box.innerHTML = `
+    <div class="divider"></div>
+    <div style="padding:14px 20px 4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px">
+        <p class="section-label" style="margin:0">WHAT PEOPLE SAID</p>
+        ${count ? `<div style="display:flex;align-items:center;gap:7px">
+          <span style="display:flex;gap:1px">${stars(Math.round(avg), 13)}</span>
+          <span style="font-size:13px;color:var(--muted)">${avg.toFixed(1)} · ${count}</span>
+        </div>` : ''}
+      </div>
+
+      <div id="review-mine"></div>
+      <div id="review-list" style="display:flex;flex-direction:column;gap:14px;margin-top:4px"></div>
+    </div>`;
+
+  renderMyReview(f, mine, owned);
+
+  const listEl = document.getElementById('review-list');
+  const others = list.filter(r => !currentUser || r.id !== currentUser.uid);
+
+  if (!others.length) {
+    listEl.innerHTML = count
+      ? ''
+      : `<p style="font-size:13px;color:var(--dim);padding:2px 0 6px">
+           No reviews yet. If you have watched it, yours would be the first.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = others.map(r => reviewRow(r, isMaker)).join('');
+}
+
+function reviewRow(r, isMaker) {
+  const e = escHtml;
+  const hidden = r.hidden;
+
+  return `<div style="border-top:1px solid var(--border);padding-top:13px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap">
+      <span style="display:flex;gap:1px">${stars(r.rating, 13)}</span>
+      <span style="font-size:13px;font-weight:600;color:var(--text)">${e(r.name || 'A viewer')}</span>
+      <span style="font-size:11px;color:var(--dim)">${timeAgo(r.created_at || Date.now())}</span>
+      ${r.bought_type === 'own'
+        ? '<span style="font-size:10px;color:var(--green);border:1px solid var(--green);border-radius:99px;padding:1px 7px">bought it</span>'
+        : '<span style="font-size:10px;color:var(--dim);border:1px solid var(--border);border-radius:99px;padding:1px 7px">rented it</span>'}
+    </div>
+
+    ${hidden
+      ? `<p style="font-size:13px;color:var(--dim);font-style:italic;line-height:1.55">
+           This comment was hidden${r.hidden_by === 'reports' ? ' after being reported' : ' by the filmmaker'}.
+           The rating still counts.</p>`
+      : (r.body
+          ? `<p style="font-size:14px;color:#CFCAC4;line-height:1.6;white-space:pre-wrap">${e(r.body)}</p>`
+          : '')}
+
+    ${r.reply ? `
+      <div style="margin-top:10px;padding:10px 12px;background:var(--card);
+                  border-left:2px solid var(--amber);border-radius:0 8px 8px 0">
+        <p style="font-size:11px;color:var(--amber);margin-bottom:3px">${e(r.reply.by)} replied</p>
+        <p style="font-size:13px;color:#CFCAC4;line-height:1.55;white-space:pre-wrap">${e(r.reply.body)}</p>
+      </div>` : ''}
+
+    <div style="display:flex;gap:14px;margin-top:9px">
+      ${isMaker && !r.reply ? `<button onclick="replyToReview('${r.id}')"
+        style="font-size:11px;color:var(--amber);background:none;border:0;padding:0">Reply</button>` : ''}
+      ${isMaker && !hidden ? `<button onclick="hideReview('${r.id}')"
+        style="font-size:11px;color:var(--muted);background:none;border:0;padding:0">Hide comment</button>` : ''}
+      ${!isMaker && !hidden ? `<button onclick="reportReview('${r.id}')"
+        style="font-size:11px;color:var(--dim);background:none;border:0;padding:0">Report</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderMyReview(f, mine, owned) {
+  const box = document.getElementById('review-mine');
+  if (!box) return;
+
+  if (!currentUser) {
+    box.innerHTML = `<p style="font-size:13px;color:var(--dim);padding-bottom:8px">
+      <a href="#" onclick="nav('auth');return false" style="color:var(--amber)">Sign in</a>
+      to leave a review.</p>`;
+    return;
+  }
+
+  if (!owned) {
+    box.innerHTML = `<p style="font-size:13px;color:var(--dim);padding-bottom:8px">
+      Reviews come from people who have watched the film.</p>`;
+    return;
+  }
+
+  if (mine) {
+    box.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;
+                  padding:13px 14px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="display:flex;gap:1px">${stars(mine.rating, 13)}</span>
+            <span style="font-size:12px;color:var(--muted)">your review</span>
+          </div>
+          <div style="display:flex;gap:12px">
+            <button onclick="editReview()" style="font-size:11px;color:var(--amber);background:none;border:0;padding:0">Edit</button>
+            <button onclick="deleteReview()" style="font-size:11px;color:var(--dim);background:none;border:0;padding:0">Delete</button>
+          </div>
+        </div>
+        ${mine.body ? `<p style="font-size:13.5px;color:#CFCAC4;line-height:1.55;white-space:pre-wrap">${escHtml(mine.body)}</p>` : ''}
+        ${mine.reply ? `<div style="margin-top:9px;padding:9px 11px;background:var(--surface);
+          border-left:2px solid var(--amber);border-radius:0 7px 7px 0">
+          <p style="font-size:11px;color:var(--amber);margin-bottom:2px">${escHtml(mine.reply.by)} replied</p>
+          <p style="font-size:12.5px;color:#CFCAC4;line-height:1.5">${escHtml(mine.reply.body)}</p>
+        </div>` : ''}
+      </div>`;
+    return;
+  }
+
+  box.innerHTML = `<button class="btn btn-outline" onclick="editReview()"
+    style="margin-bottom:10px">RATE THIS FILM</button>`;
+}
+
+/* ---- writing one ---- */
+function editReview() {
+  const f = reviewFilm;
+  if (!f || !currentUser) return;
+
+  db.ref(DB_PREFIX + 'reviews/' + f.id + '/' + currentUser.uid).once('value').then(snap => {
+    const mine = snap.val() || {};
+    let picked = mine.rating || 0;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'review-modal';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);' +
+      'display:flex;align-items:flex-end;justify-content:center';
+    wrap.innerHTML = `
+      <div style="background:var(--surface);width:100%;max-width:480px;border-radius:18px 18px 0 0;
+                  padding:22px 20px calc(22px + env(safe-area-inset-bottom))">
+        <div style="width:38px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px"></div>
+        <p class="section-label">${mine.rating ? 'YOUR REVIEW' : 'RATE THIS FILM'}</p>
+        <p class="bbn" style="font-size:22px;color:var(--text);margin:4px 0 16px">${escHtml(f.title)}</p>
+
+        <div id="star-pick" style="display:flex;gap:6px;justify-content:center;margin-bottom:16px"></div>
+
+        <textarea id="review-body" rows="4" maxlength="900"
+          placeholder="What did you think? Optional — the rating is the important bit."
+          style="width:100%;font:inherit;font-size:16px;padding:12px;border-radius:8px;resize:vertical;
+                 background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:6px">${escHtml(mine.body || '')}</textarea>
+        <p id="review-err" style="font-size:12px;color:var(--red);min-height:1.2em;margin-bottom:8px"></p>
+
+        <button class="btn btn-amber" id="review-save">POST IT</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="closeReview()">CANCEL</button>
+        <p style="font-size:11px;color:var(--dim);margin-top:12px;text-align:center;line-height:1.5">
+          Your name will show. The filmmaker can reply.</p>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', e => { if (e.target === wrap) closeReview(); });
+
+    const pick = document.getElementById('star-pick');
+    const paint = () => {
+      pick.innerHTML = [1,2,3,4,5].map(i =>
+        `<button data-v="${i}" style="background:none;border:0;padding:2px;cursor:pointer;display:flex">
+          ${stars(i <= picked ? 5 : 0, 30).split('</svg>')[0]}</svg></button>`).join('');
+      pick.querySelectorAll('button').forEach(b =>
+        b.onclick = () => { picked = +b.dataset.v; paint(); });
+    };
+    paint();
+
+    document.getElementById('review-save').onclick = () => submitReview(picked);
+  });
+}
+
+function closeReview() {
+  const m = document.getElementById('review-modal');
+  if (m) m.remove();
+}
+
+async function submitReview(rating) {
+  const err = document.getElementById('review-err');
+  if (!(rating >= 1 && rating <= 5)) { err.textContent = 'Pick a rating first.'; return; }
+
+  const btn = document.getElementById('review-save');
+  btn.disabled = true; btn.textContent = 'POSTING…';
+
+  try {
+    const r = await fetch('/.netlify/functions/flieks-review', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: await currentUser.getIdToken(),
+        filmId: reviewFilm.id,
+        action: 'post',
+        rating,
+        body: document.getElementById('review-body').value
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.message || 'Could not post that.'; btn.disabled = false; btn.textContent = 'POST IT'; return; }
+    closeReview();
+    showSnack('Thanks — your review is up.');
+    renderReviews(reviewFilm);
+  } catch {
+    err.textContent = 'Could not reach the server.';
+    btn.disabled = false; btn.textContent = 'POST IT';
+  }
+}
+
+async function reviewAction(action, reviewId, extra) {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-review', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: await currentUser.getIdToken(),
+        filmId: reviewFilm.id, action, reviewId, ...(extra || {})
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) { showSnack(d.message || 'That did not work.'); return null; }
+    return d;
+  } catch { showSnack('Could not reach the server.'); return null; }
+}
+
+async function deleteReview() {
+  if (!confirm('Remove your review?')) return;
+  const d = await reviewAction('remove', currentUser.uid);
+  if (d) { showSnack('Review removed.'); renderReviews(reviewFilm); }
+}
+
+async function replyToReview(id) {
+  const body = prompt('Your reply — everyone will see it.');
+  if (!body || !body.trim()) return;
+  const d = await reviewAction('reply', id, { body });
+  if (d) { showSnack('Reply posted.'); renderReviews(reviewFilm); }
+}
+
+async function hideReview(id) {
+  const reason = prompt(
+    'Hiding removes the comment, but the star rating still counts toward your film\'s average.\n\n' +
+    'Why are you hiding it?');
+  if (reason === null) return;
+  const d = await reviewAction('hide', id, { reason });
+  if (d) { showSnack(d.note || 'Comment hidden.'); renderReviews(reviewFilm); }
+}
+
+async function reportReview(id) {
+  if (!currentUser) { showSnack('Sign in to report something'); return; }
+  if (!confirm('Report this comment for review?')) return;
+  const d = await reviewAction('report', id);
+  if (d) showSnack('Thanks — we will take a look.');
 }
 
 /* ============================================================
