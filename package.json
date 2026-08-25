@@ -1,0 +1,8 @@
+{
+  "name": "flieks-app",
+  "private": true,
+  "description": "Netlify serverless dependencies for 4flieks",
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

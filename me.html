@@ -55,7 +55,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fn);
 
 .note{font-size:12px;color:var(--dim);line-height:1.55;margin-top:16px}
 .state{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px}
-canvas{display:block;margin:0 auto 12px;border-radius:8px;background:#fff;padding:8px}
+#qr{background:#fff;border-radius:8px;padding:10px;margin-bottom:12px;display:flex;justify-content:center}
 </style>
 </head>
 <body>
@@ -63,20 +63,6 @@ canvas{display:block;margin:0 auto 12px;border-radius:8px;background:#fff;paddin
 <p class="brand">4<span>FLIEKS</span></p>
 <div id="app"><div class="state">Loading…</div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script>
-/* The QR library is the one thing here loaded from a CDN, so it is the one
-   thing that can quietly not arrive. Fall back to a second source rather than
-   leaving a blank square. */
-window.qrReady = new Promise(resolve => {
-  if (window.QRCode) return resolve(true);
-  const alt = document.createElement('script');
-  alt.src = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
-  alt.onload = () => resolve(!!window.QRCode);
-  alt.onerror = () => resolve(false);
-  document.head.appendChild(alt);
-});
-</script>
 <script>
 const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
 
@@ -126,8 +112,8 @@ async function load() {
       <p class="link">${esc(url)}</p>
       <button class="btn" id="share">SEND IT</button>
       <button class="btn ghost" id="copy">COPY LINK</button>
-      <canvas id="qr" width="150" height="150" style="margin-top:12px"></canvas>
-      <button class="btn ghost" id="dlqr">SAVE QR CODE</button>
+      <div id="qr" style="margin-top:12px"></div>
+      <button class="btn ghost" id="dlqr" style="display:none">SAVE QR CODE</button>
     </div>
 
     <div class="nums">
@@ -160,38 +146,31 @@ async function load() {
     flash('copy', 'COPIED');
   };
 
-  drawQr(url, castSlug, d.filmSlug);
+  drawQr(d.qr, castSlug, d.filmSlug);
 }
 
-async function drawQr(url, castSlug, filmSlug) {
-  const canvas = document.getElementById('qr');
+function drawQr(svg, castSlug, filmSlug) {
+  const box = document.getElementById('qr');
   const btn = document.getElementById('dlqr');
-  if (!canvas) return;
+  if (!box) return;
+  if (!svg) { box.style.display = 'none'; return; }
 
-  const ok = await window.qrReady;
-  if (!ok || !window.QRCode) {
-    canvas.style.display = 'none';
-    if (btn) btn.style.display = 'none';
-    console.warn('QR library did not load');
-    return;
+  box.innerHTML = svg;
+  const el = box.querySelector('svg');
+  if (el) { el.style.display = 'block'; el.style.margin = '0 auto'; el.style.borderRadius = '8px'; }
+
+  if (btn) {
+    btn.style.display = 'block';
+    btn.onclick = () => {
+      // SVG, so it stays sharp however large it gets printed
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const a = document.createElement('a');
+      a.download = `${castSlug}-${filmSlug}-qr.svg`;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    };
   }
-
-  QRCode.toCanvas(canvas, url,
-    { width: 150, margin: 1, color: { dark: '#111111', light: '#FFFFFF' } },
-    err => {
-      if (err) {
-        console.error('QR failed:', err);
-        canvas.style.display = 'none';
-        if (btn) btn.style.display = 'none';
-        return;
-      }
-      if (btn) btn.onclick = () => {
-        const a = document.createElement('a');
-        a.download = `${castSlug}-${filmSlug}-qr.png`;
-        a.href = canvas.toDataURL('image/png');
-        a.click();
-      };
-    });
 }
 
 function flash(id, word) {
