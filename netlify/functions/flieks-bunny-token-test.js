@@ -27,6 +27,45 @@ function variants(videoId, expires) {
   const dir  = `/${videoId}/`;
   const out = [];
 
+  // hls.js fetches /240p/video.m3u8 and the segments beneath it. A token that
+  // signs only playlist.m3u8 does not cover those, so the ones that matter are
+  // the directory variants — tested here against a sub-path, not the playlist.
+  const sub = `/${videoId}/240p/video.m3u8`;
+
+  out.push({
+    name: 'SUB-PATH · directory token, base64url, token_path',
+    url: `https://${HOST}${sub}?token=${b64url(sha(TOKEN + dir + expires))}` +
+         `&expires=${expires}&token_path=${encodeURIComponent(dir)}`
+  });
+
+  out.push({
+    name: 'SUB-PATH · directory token, base64url, raw token_path',
+    url: `https://${HOST}${sub}?token=${b64url(sha(TOKEN + dir + expires))}` +
+         `&expires=${expires}&token_path=${dir}`
+  });
+
+  out.push({
+    name: 'SUB-PATH · signed with token_path in hash',
+    url: `https://${HOST}${sub}?token=${b64url(sha(TOKEN + dir + expires + dir))}` +
+         `&expires=${expires}&token_path=${encodeURIComponent(dir)}`
+  });
+
+  out.push({
+    name: 'SUB-PATH · directory without trailing slash',
+    url: `https://${HOST}${sub}?token=${b64url(sha(TOKEN + `/${videoId}` + expires))}` +
+         `&expires=${expires}&token_path=${encodeURIComponent(`/${videoId}`)}`
+  });
+
+  out.push({
+    name: 'SUB-PATH · signed as its own file path',
+    url: `https://${HOST}${sub}?token=${b64url(sha(TOKEN + sub + expires))}&expires=${expires}`
+  });
+
+  out.push({
+    name: 'SUB-PATH · no token',
+    url: `https://${HOST}${sub}`
+  });
+
   // 1 — CDN directory token, base64url. The usual choice for HLS, because a
   //     file token would sign the playlist but none of its segments.
   out.push({
