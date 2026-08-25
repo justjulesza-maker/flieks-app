@@ -298,9 +298,11 @@ function paintStreamState(id, d) {
   } else if (d.state === 'not started') {
     el.innerHTML = '<span style="color:var(--muted)">○ not prepared</span>';
     if (btn) btn.style.display = 'inline-block';
-  } else if (d.state === 'failed') {
-    el.innerHTML = '<span style="color:var(--red,#E8462A)">● failed</span>';
-    if (btn) { btn.style.display = 'inline-block'; btn.textContent = 'Retry'; }
+  } else if (d.state === 'failed' || d.state === 'stalled') {
+    el.innerHTML = `<span style="color:var(--red,#E8462A)">● ${
+      d.state === 'stalled' ? 'no file received' : 'failed'}</span>`;
+    if (btn) { btn.style.display = 'inline-block'; btn.textContent = 'Reset & retry';
+               btn.onclick = () => resetStream(id); }
   } else {
     el.innerHTML = `<span style="color:var(--amber,#F5A623)">● preparing${
       d.progress != null ? ' ' + d.progress + '%' : ''}</span>`;
@@ -319,6 +321,19 @@ async function refreshOne(id) {
   } catch {}
 }
 
+async function resetStream(id) {
+  const btn = document.getElementById('prep-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = 'Clearing…'; }
+  try {
+    await fetch('/.netlify/functions/flieks-bunny', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId: id, action: 'reset' })
+    });
+    if (btn) { btn.disabled = false; btn.textContent = 'Prepare'; btn.onclick = () => prepareStream(id); }
+    refreshOne(id);
+  } catch { snack('Could not clear that.'); }
+}
+
 async function prepareStream(id) {
   const btn = document.getElementById('prep-' + id);
   if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
@@ -328,7 +343,13 @@ async function prepareStream(id) {
       body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId: id, action: 'ingest' })
     });
     const d = await r.json();
-    if (!r.ok) { snack(d.message || 'Could not start.'); if (btn) { btn.disabled = false; btn.textContent = 'Prepare'; } return; }
+    if (!r.ok) {
+      console.error('[bunny]', d);
+      snack(d.message || 'Could not start.');
+      if (d.bunnySaid) console.error('[bunny] said:', d.bunnySaid);
+      if (btn) { btn.disabled = false; btn.textContent = 'Prepare'; }
+      return;
+    }
     snack('Sent to Bunny. Transcoding takes a few minutes.');
     setTimeout(() => refreshOne(id), 5000);
   } catch {
