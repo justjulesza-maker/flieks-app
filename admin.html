@@ -260,12 +260,14 @@ async function rejectFilm(filmId, queueId) {
 
 /* ---- ALL FILMS ---- */
 async function loadAllFilms() {
-  const snap = await db.ref(DB+'films').once('value');
-  allFilmsCache = [];
-  snap.forEach(c => allFilmsCache.push({ id: c.key, ...c.val() }));
+  // Read over REST with a freshly minted token rather than through the SDK.
+  // The SDK caches aggressively and has been observed returning a stale,
+  // partial list here — one film where the database holds four.
+  const v = await readNode('films');
+  allFilmsCache = Object.entries(v).map(([id, f]) => ({ id, ...f }));
+
   allFilmsCache.sort((a,b) => (b.published_at||b.submitted_at||0) - (a.published_at||a.submitted_at||0));
-  console.log(`[admin] ${allFilmsCache.length} films at ${DB}films:`,
-    allFilmsCache.map(f => `${f.title} (${f.status}) — ${f.filmmaker || 'no filmmaker'}`));
+  console.log(`[admin] ${allFilmsCache.length} films loaded`);
   renderFilmsList(allFilmsCache);
   loadStreamingStates();
 }
@@ -468,13 +470,29 @@ async function markPayoutPaid(uid, payoutId) {
   loadPayouts();
 }
 
+/* Read a whole node over REST. The SDK caches and has been seen returning
+   stale, partial data — which on this page would mean wrong revenue figures. */
+async function readNode(path) {
+  try {
+    const token = await auth.currentUser.getIdToken(true);
+    const res = await fetch(
+      `https://flieks-app-default-rtdb.firebaseio.com/${DB}${path}.json?auth=${token}`);
+    return res.ok ? ((await res.json()) || {}) : {};
+  } catch (e) {
+    console.error(`[admin] could not read ${path}:`, e);
+    return {};
+  }
+}
+
 /* ---- STATS ---- */
 async function loadStats() {
-  const [filmsSnap, usersSnap, txSnap] = await Promise.all([
-    db.ref(DB+'films').once('value'),
-    db.ref(DB+'users').once('value'),
-    db.ref(DB+'transactions').once('value')
+  const [films, users, txs] = await Promise.all([
+    readNode('films'), readNode('users'), readNode('transactions')
   ]);
+  const filmsSnap = { forEach: fn => Object.values(films).forEach(v => fn({ val: () => v })) };
+  const usersSnap = { forEach: fn => Object.values(users).forEach(v => fn({ val: () => v })) };
+  const txSnap    = { forEach: fn => Object.values(txs).forEach(v => fn({ val: () => v })) };
+
   let totalFilms=0, liveFilms=0, totalViews=0, totalRevenue=0, totalUsers=0;
   filmsSnap.forEach(c => {
     const f = c.val();
