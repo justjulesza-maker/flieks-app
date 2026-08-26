@@ -470,6 +470,8 @@ function renderFilmsList(films) {
         <button class="btn btn-sm" id="link-${f.id}" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="linkBunny('${f.id}','${(f.title||'').replace(/'/g,'')}')">
           Link
         </button>
+        <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E)"
+          onclick="filmUpdate('${f.id}')">Update</button>
       </div>
     </div>
   `).join('');
@@ -609,6 +611,155 @@ async function loadPayouts() {
         MARK AS PAID
       </button>
     </div>`).join('')}`;
+}
+
+/* ============================================================
+   FILMMAKER UPDATES
+   Filmmakers forget the film is out there. A link on its own gets ignored;
+   a note with real numbers in it does not.
+   ============================================================ */
+async function filmUpdate(filmId) {
+  const wrap = document.createElement('div');
+  wrap.id = 'upd-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);' +
+    'display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
+  wrap.innerHTML = `<div style="background:var(--surface);border-radius:14px;padding:22px 20px;
+    max-width:560px;width:100%;max-height:90dvh;overflow:auto" id="upd-body">
+    <p style="color:var(--muted);font-size:14px">Pulling the numbers…</p></div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+
+  let d;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-results', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId })
+    });
+    d = await r.json();
+    if (!r.ok) throw new Error(d.message);
+  } catch (e) {
+    document.getElementById('upd-body').innerHTML =
+      `<p style="color:var(--red);font-size:14px">${e.message || 'Could not load that.'}</p>`;
+    return;
+  }
+
+  const film = allFilmsCache.find(f => f.id === filmId) || {};
+  const h = d.headline;
+  const top = d.people[0];
+  const reportUrl = film.results_key ? `${location.origin}/report/${film.results_key}` : '';
+
+  const message = writeUpdate(d, film, reportUrl);
+
+  document.getElementById('upd-body').innerHTML = `
+    <p class="section-label" style="margin-bottom:3px">UPDATE FOR ${(film.filmmaker || 'THE FILMMAKER').toUpperCase()}</p>
+    <p style="font-family:var(--fb);font-size:20px;color:var(--text);margin-bottom:14px">${d.film.title}</p>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);
+                border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:14px">
+      ${[['Paid', h.buyers], ['Opens', h.clicks], ['Rate', h.conversion + '%'],
+         ['Owed', 'R' + Number(d.filmmakerShare || 0).toFixed(0)]].map(([k, v]) => `
+        <div style="background:var(--card);padding:11px 8px;text-align:center">
+          <p style="font-size:16px;font-weight:700;color:var(--text)">${v}</p>
+          <p style="font-size:9.5px;color:var(--muted);margin-top:2px;letter-spacing:.08em">${k.toUpperCase()}</p>
+        </div>`).join('')}
+    </div>
+
+    <textarea id="upd-text" rows="13"
+      style="width:100%;font:inherit;font-size:13.5px;line-height:1.55;padding:13px;border-radius:9px;
+             background:var(--card);border:1px solid var(--border);color:var(--text);
+             resize:vertical;margin-bottom:10px">${message}</textarea>
+
+    <button class="btn btn-g" onclick="copyUpdate()">COPY MESSAGE</button>
+    <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-top:8px;width:100%"
+      onclick="mailUpdate('${(film.filmmaker_email || '').replace(/'/g,'')}','${(d.film.title || '').replace(/'/g,'')}')">
+      OPEN IN EMAIL</button>
+    ${!reportUrl ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E);margin-top:8px;width:100%"
+      onclick="makeReport('${filmId}')">CREATE A SHAREABLE REPORT FIRST</button>` : ''}
+    <button class="btn btn-sm" style="background:none;border:0;color:var(--muted);margin-top:10px;width:100%"
+      onclick="document.getElementById('upd-modal').remove()">CLOSE</button>`;
+}
+
+/* The numbers are the message. Everything else is just enough scaffolding to
+   make them readable, plus one thing the filmmaker could actually act on. */
+function writeUpdate(d, film, reportUrl) {
+  const h = d.headline;
+  const name = (film.filmmaker || '').split(' ')[0] || 'there';
+  const top = d.people[0];
+  const owed = Number(d.filmmakerShare || 0);
+  const L = [];
+
+  L.push(`Hi ${name}`);
+  L.push('');
+
+  if (!h.buyers) {
+    L.push(`Quick update on ${d.film.title}. It's live and ${h.clicks} ${h.clicks === 1 ? 'person has' : 'people have'} opened a link to it, but nobody has bought yet.`);
+    L.push('');
+    L.push(top
+      ? `Most of that traffic came through ${top.name}. Getting the rest of the cast posting is usually what turns opens into sales — each of them has their own link in the portal.`
+      : `The thing that moves the needle is cast links. Everyone in the film has their own in the portal, and we can see exactly who brings people in.`);
+  } else {
+    L.push(`Quick update on ${d.film.title}.`);
+    L.push('');
+    L.push(`${h.buyers} ${h.buyers === 1 ? 'person has' : 'people have'} paid to watch it${
+      h.clicks ? `, out of ${h.clicks} who opened a link — that's ${h.conversion}% converting` : ''}.`);
+    if (h.owned || h.rentals) {
+      L.push(`${h.owned} bought it outright${h.rentals ? `, ${h.rentals} rented` : ''}${
+        h.gifted ? `, ${h.gifted} bought it as a gift` : ''}.`);
+    }
+    if (h.ratingCount) {
+      L.push(`Rated ${Number(h.rating).toFixed(1)} out of 5 by ${h.ratingCount} ${h.ratingCount === 1 ? 'viewer' : 'viewers'}.`);
+    }
+    L.push('');
+    if (top && top.sales) {
+      L.push(`${top.name} has brought in the most — ${top.sales} ${top.sales === 1 ? 'sale' : 'sales'} from ${top.clicks} opens. Worth thanking them.`);
+    } else if (top) {
+      L.push(`${top.name} has driven the most traffic so far with ${top.clicks} opens.`);
+    }
+  }
+
+  if (owed >= 1) {
+    L.push('');
+    L.push(`You have R${owed.toFixed(2)} earned so far. You can request a payout from the portal once you're over the minimum — bank details go in there too.`);
+  }
+
+  if (reportUrl) {
+    L.push('');
+    L.push(`Full report, which you're welcome to share with funders or festivals:`);
+    L.push(reportUrl);
+  }
+
+  L.push('');
+  L.push(`Anything you need, just shout.`);
+  L.push('');
+  L.push(`Julian`);
+  return L.join('\n');
+}
+
+async function copyUpdate() {
+  await navigator.clipboard.writeText(document.getElementById('upd-text').value);
+  snack('Message copied.');
+}
+
+function mailUpdate(email, title) {
+  const body = encodeURIComponent(document.getElementById('upd-text').value);
+  const subject = encodeURIComponent(`${title} on 4flieks — how it's doing`);
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+}
+
+async function makeReport(filmId) {
+  const key = [...crypto.getRandomValues(new Uint8Array(16))]
+    .map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 24);
+  try {
+    await db.ref(DB + 'result_keys/' + key).set(filmId);
+    await db.ref(DB + 'films/' + filmId).update({
+      results_public: true, results_key: key, results_show_revenue: true
+    });
+    const f = allFilmsCache.find(x => x.id === filmId);
+    if (f) Object.assign(f, { results_public: true, results_key: key });
+    snack('Report created.');
+    document.getElementById('upd-modal').remove();
+    filmUpdate(filmId);
+  } catch { snack('Could not create that.'); }
 }
 
 async function copyBank(json) {
