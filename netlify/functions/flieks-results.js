@@ -26,6 +26,23 @@ function get(path) {
   });
 }
 
+async function verifyToken(token) {
+  const API_KEY = process.env.FIREBASE_API_KEY;
+  if (!API_KEY) throw new Error('FIREBASE_API_KEY is not set.');
+  const body = JSON.stringify({ idToken: token });
+  const res = await new Promise((resolve, reject) => {
+    const r = https.request(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${API_KEY}`,
+      { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+      x => { let d = ''; x.on('data', c => d += c); x.on('end', () => resolve(d)); });
+    r.on('error', reject); r.write(body); r.end();
+  });
+  const d = JSON.parse(res || '{}');
+  if (!d.users || !d.users[0]) throw new Error('bad token');
+  return d.users[0];
+}
+
 const reply = (code, obj) => ({
   statusCode: code,
   headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
@@ -38,20 +55,36 @@ exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
   try {
-    const { key } = JSON.parse(event.body || '{}');
-    if (!key || !/^[a-z0-9]{10,40}$/i.test(key)) {
-      return reply(400, { message: 'Bad link.' });
+    const { key, token, filmId: askedFor } = JSON.parse(event.body || '{}');
+
+    let filmId = null;
+    let viaAdmin = false;
+
+    if (token && askedFor) {
+      // Admin and the film's own filmmaker can see the figures without a
+      // share key — they are entitled to them whether a report is public or not.
+      const user = await verifyToken(token);
+      const profile = await get(`flieks_users/${user.localId}`) || {};
+      const f = await get(`flieks_films/${askedFor}`);
+      const allowed = profile.role === 'admin' || (f && f.filmmaker_uid === user.localId);
+      if (!allowed) return reply(403, { message: 'Not your film.' });
+      filmId = askedFor;
+      viaAdmin = true;
+    } else {
+      if (!key || !/^[a-z0-9]{10,40}$/i.test(key)) {
+        return reply(400, { message: 'Bad link.' });
+      }
+      filmId = await get(`flieks_result_keys/${key}`);
+      if (!filmId) return reply(404, { message: 'That link is no longer active.' });
     }
 
-    const filmId = await get(`flieks_result_keys/${key}`);
-    if (!filmId) return reply(404, { message: 'That link is no longer active.' });
-
     const film = await get(`flieks_films/${filmId}`);
-    if (!film || !film.results_public) {
+    if (!film) return reply(404, { message: 'No such film.' });
+    if (!viaAdmin && !film.results_public) {
       return reply(404, { message: 'That link is no longer active.' });
     }
 
-    const showMoney = film.results_show_revenue !== false;
+    const showMoney = viaAdmin || film.results_show_revenue !== false;
 
     const [stats, cast, txs, reviews] = await Promise.all([
       get(`flieks_stats/${filmId}`),
@@ -141,6 +174,11 @@ exports.handler = async event => {
         lastSale: sales.length ? sales[sales.length - 1].at : null
       },
       timeline,
+      filmmakerShare: showMoney
+        ? money(Object.values(txs || {}).reduce((sum, t) =>
+            (t && t.film_id === filmId && t.status === 'complete' && t.mode !== 'test')
+              ? sum + Number(t.filmmaker_share || 0) : sum, 0))
+        : null,
       people: people.slice(0, 12),
       reviews: reviewList
     });
