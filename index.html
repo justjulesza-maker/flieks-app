@@ -2240,7 +2240,17 @@ function shareFilm() {
   if (navigator.share) { navigator.share({ title: 'FLIEKS', url: window.location.href }); }
   else { navigator.clipboard.writeText(window.location.href); showSnack('Link copied!'); }
 }
-function rateFilm() { showSnack('Rating coming soon!'); }
+function rateFilm() {
+  // Reviews replaced this — send them to the real thing rather than a promise.
+  const f = currentFilm;
+  if (!f) return;
+  nav('film-detail');
+  setTimeout(() => {
+    const box = document.getElementById('film-reviews');
+    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (currentUser && userPurchases[f.id]) editReview();
+  }, 250);
+}
 
 /* ============================================================
    SEARCH
@@ -2464,14 +2474,10 @@ async function loadProfile() {
         <span style="font-size:14px;color:var(--text)">Filmmaker Portal</span>
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
       </a>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showSnack('Settings coming soon')">
-        <span style="font-size:14px;color:var(--text)">Settings</span>
+      <a href="/help" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;text-decoration:none">
+        <span style="font-size:14px;color:var(--text)">Help &amp; support</span>
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showSnack('Support coming soon')">
-        <span style="font-size:14px;color:var(--text)">Help &amp; Support</span>
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
+      </a>
     </div>
     <button class="btn btn-outline" onclick="signOut()" style="margin-top:20px">SIGN OUT</button>`;
   renderMyGifts();

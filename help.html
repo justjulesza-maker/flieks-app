@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Help — 4flieks</title>
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/brand/png/apple-touch-icon.png">
+<script>
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('flieks_mode'); } catch (e) {}
+  var mode = saved || (window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-mode', mode);
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;--border:#222;
+  --amber:#F5A623;--amber-fill:#F5A623;--on-amber:#0A0A0A;
+  --green:#4ADE80;--red:#E8462A;
+  --text:#F0EDE8;--muted:#888;--dim:#555;
+  --fb:'Archivo Black',sans-serif;--fn:'DM Sans',system-ui,sans-serif;
+  --fm:'JetBrains Mono',monospace;
+}
+html[data-mode="light"]{
+  --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;--border:#E2DACB;
+  --amber:#B3660A;--amber-fill:#A55C08;--on-amber:#F5F1E8;
+  --green:#2E7D32;--red:#C13718;
+  --text:#1C1512;--muted:#6B6259;--dim:#8F877D;
+  color-scheme:light;
+}
+html[data-mode="dark"]{color-scheme:dark}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--fn);
+  max-width:480px;margin:0 auto;padding:22px 20px 70px;min-height:100dvh}
+
+.logo-dark,.logo-light{display:block}
+html[data-mode="light"] .logo-dark{display:none}
+html[data-mode="dark"] .logo-light{display:none}
+html:not([data-mode="light"]) .logo-light{display:none}
+
+.back{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);
+  text-decoration:none;margin-bottom:20px}
+h1{font-family:var(--fb);font-size:25px;line-height:1.15;margin-bottom:6px}
+.lede{font-size:14px;color:var(--muted);line-height:1.55;margin-bottom:24px}
+
+.label{font-family:var(--fm);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);margin:24px 0 10px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:11px;
+  padding:14px 15px;margin-bottom:10px}
+
+.item{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.item h3{font-size:14.5px;font-weight:700;margin-bottom:2px}
+.item p{font-size:12.5px;color:var(--muted);line-height:1.5}
+.pill{font-size:10px;letter-spacing:.06em;padding:3px 9px;border-radius:99px;
+  white-space:nowrap;flex-shrink:0}
+.ok{color:var(--green);border:1px solid var(--green)}
+.gone{color:var(--dim);border:1px solid var(--border)}
+
+details{background:var(--card);border:1px solid var(--border);border-radius:11px;
+  margin-bottom:8px;overflow:hidden}
+summary{padding:14px 15px;font-size:14.5px;font-weight:600;cursor:pointer;
+  list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'+';font-family:var(--fm);color:var(--muted);font-size:17px;flex-shrink:0}
+details[open] summary::after{content:'−'}
+details p{padding:0 15px 14px;font-size:13.5px;color:var(--muted);line-height:1.6}
+details p + p{padding-top:0}
+details a{color:var(--amber)}
+
+.btn{display:block;width:100%;border:0;border-radius:9px;padding:14px;
+  font-family:var(--fn);font-size:14px;font-weight:700;cursor:pointer;
+  background:var(--amber-fill);color:var(--on-amber);margin-bottom:8px;text-align:center}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+input,textarea,select{width:100%;font:inherit;font-size:16px;padding:12px;border-radius:9px;
+  background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:11px}
+textarea{resize:vertical}
+label{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:5px}
+.msg{font-size:13px;min-height:1.3em;margin-bottom:8px;line-height:1.5}
+.state{padding:30px 0;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<a class="back" href="/">&larr; Back to films</a>
+
+<img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x"
+     alt="4flieks" style="height:32px;width:auto;margin-bottom:20px">
+<img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x"
+     alt="" style="height:32px;width:auto;margin-bottom:20px">
+
+<h1>Need a hand?</h1>
+<p class="lede">Most things sort themselves out below. If not, there is a form at the
+bottom that goes straight to us.</p>
+
+<div id="mine"></div>
+
+<p class="label">Common questions</p>
+
+<details>
+  <summary>I paid but the film will not play</summary>
+  <p>First check the list above — if the film is there and marked active, try reloading
+  the page. Playback needs a working connection, and switching between wifi and mobile
+  data mid-film can interrupt it.</p>
+  <p>If the film is not in that list, the payment may not have come through. Check for a
+  confirmation from Yoco. If you were charged and it is not here, tell us below and we
+  will sort it out the same day.</p>
+</details>
+
+<details>
+  <summary>My rental has run out</summary>
+  <p>Rentals last 48 hours from the first time you press play — not from when you paid.
+  Once that window closes the film stops being available.</p>
+  <p>You can rent it again, or buy it outright, which never expires.</p>
+</details>
+
+<details>
+  <summary>Can I download a film?</summary>
+  <p>No. Films stream only. That is at the filmmakers' request — an independent film that
+  gets passed around as a file is a film nobody gets paid for.</p>
+  <p>Buying a film gives you permanent access to stream it whenever you like.</p>
+</details>
+
+<details>
+  <summary>I was sent a gift code</summary>
+  <p>Open the film the code is for, sign in or create an account, and enter the code in the
+  box marked <b>Got a gift code?</b> on the film's page.</p>
+  <p>A code works once, for whoever uses it first. If it says it has already been used and
+  you have not used it, tell us below.</p>
+</details>
+
+<details>
+  <summary>Can I get a refund?</summary>
+  <p>Yes, if you have not started watching, or if the film would not play because of a
+  fault on our side. Once a rental clock has started or a purchased film has been played,
+  we cannot refund it — the film has been supplied.</p>
+  <p>The full policy is at <a href="/refunds">4flieks.com/refunds</a>. Ask below and we
+  will reply within two working days.</p>
+</details>
+
+<details>
+  <summary>Watching on a TV</summary>
+  <p>On an iPhone or iPad, use AirPlay from the player. On Android or a laptop with Chrome,
+  use Cast. Both appear in the player's own controls while a film is playing.</p>
+</details>
+
+<details>
+  <summary>I am a filmmaker and want to release a film</summary>
+  <p>Apply through the <a href="/filmmaker">filmmaker portal</a>. You keep the copyright,
+  the arrangement is non-exclusive, and you get 70% of net revenue.</p>
+</details>
+
+<p class="label">Still stuck</p>
+<div class="card" id="form-box">
+  <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:14px">
+    Tell us what happened. We reply within two working days, usually sooner.</p>
+
+  <label>Your email</label>
+  <input id="s-email" type="email" placeholder="so we can reply" autocomplete="email">
+
+  <label>What is it about</label>
+  <select id="s-topic">
+    <option>A film will not play</option>
+    <option>I was charged but have no access</option>
+    <option>A gift code problem</option>
+    <option>A refund</option>
+    <option>Something about my account</option>
+    <option>Something else</option>
+  </select>
+
+  <label>What happened</label>
+  <textarea id="s-body" rows="5" maxlength="1500"
+    placeholder="Which film, and what went wrong."></textarea>
+
+  <p class="msg" id="s-msg"></p>
+  <button class="btn" id="s-send" onclick="sendTicket()">SEND IT</button>
+  <p style="font-size:11px;color:var(--dim);line-height:1.5;text-align:center;margin-top:6px">
+    Or email <a href="mailto:support@4flieks.com" style="color:var(--muted)">support@4flieks.com</a> directly.</p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+});
+const auth = firebase.auth(), db = firebase.database();
+const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+
+let me = null;
+
+/* Answering the question before it gets asked. Most support here is "I paid
+   and cannot watch", and the answer is usually visible in someone's own
+   purchases — an expired rental, or a payment that never landed. */
+auth.onAuthStateChanged(async user => {
+  me = user;
+  const box = document.getElementById('mine');
+  const emailField = document.getElementById('s-email');
+
+  if (!user) {
+    box.innerHTML = `<div class="card"><p style="font-size:13.5px;color:var(--muted);line-height:1.55">
+      <a href="/" style="color:var(--amber)">Sign in</a> and we can show you what you have
+      bought and whether it is still active.</p></div>`;
+    return;
+  }
+
+  if (emailField && !emailField.value) emailField.value = user.email || '';
+  box.innerHTML = `<div class="state">Checking your films…</div>`;
+
+  let purchases = {}, films = {};
+  try {
+    const token = await user.getIdToken(true);
+    const base = 'https://flieks-app-default-rtdb.firebaseio.com';
+    [purchases, films] = await Promise.all([
+      fetch(`${base}/flieks_purchases/${user.uid}.json?auth=${token}`).then(r => r.json()),
+      fetch(`${base}/flieks_films.json?auth=${token}`).then(r => r.json())
+    ]);
+  } catch (e) {
+    box.innerHTML = '';
+    return;
+  }
+
+  const rows = Object.entries(purchases || {});
+  if (!rows.length) {
+    box.innerHTML = `<div class="card"><p style="font-size:13.5px;color:var(--muted);line-height:1.55">
+      You have not bought anything yet. If you were charged and this looks wrong,
+      say so in the form below and include roughly when you paid.</p></div>`;
+    return;
+  }
+
+  const now = Date.now();
+  box.innerHTML = `<p class="label" style="margin-top:0">What you have</p>` +
+    rows.map(([id, p]) => {
+      const film = (films && films[id]) || {};
+      const title = film.title || id;
+      let state, note;
+
+      if (p.type === 'own') {
+        state = `<span class="pill ok">yours</span>`;
+        note = 'Bought outright. It does not expire.';
+      } else if (!p.expires_at) {
+        state = `<span class="pill ok">not started</span>`;
+        note = 'Your 48 hours begin the first time you press play.';
+      } else if (p.expires_at > now) {
+        const h = Math.max(1, Math.round((p.expires_at - now) / 3600000));
+        state = `<span class="pill ok">${h}h left</span>`;
+        note = `Rental ends ${new Date(p.expires_at).toLocaleString('en-ZA',
+          { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}.`;
+      } else {
+        state = `<span class="pill gone">ended</span>`;
+        note = `This rental ran out on ${new Date(p.expires_at).toLocaleDateString('en-ZA',
+          { day:'numeric', month:'long' })}. You can rent it again or buy it outright.`;
+      }
+
+      return `<div class="card"><div class="item">
+        <div><h3>${esc(title)}</h3><p>${note}</p></div>${state}
+      </div></div>`;
+    }).join('');
+});
+
+async function sendTicket() {
+  const btn = document.getElementById('s-send');
+  const msg = document.getElementById('s-msg');
+  const email = document.getElementById('s-email').value.trim();
+  const topic = document.getElementById('s-topic').value;
+  const body = document.getElementById('s-body').value.trim();
+
+  msg.style.color = 'var(--red)';
+  if (!/\S+@\S+\.\S+/.test(email)) { msg.textContent = 'We need an email to reply to.'; return; }
+  if (body.length < 10) { msg.textContent = 'Tell us a little more about what happened.'; return; }
+
+  btn.disabled = true; btn.textContent = 'SENDING…';
+  msg.style.color = 'var(--muted)';
+  msg.textContent = '';
+
+  try {
+    const payload = { email, topic, body };
+    if (me) payload.token = await me.getIdToken();
+
+    const r = await fetch('/.netlify/functions/flieks-support', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message || 'Could not send that.');
+
+    document.getElementById('form-box').innerHTML = `
+      <p style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:7px">Got it.</p>
+      <p style="font-size:13.5px;color:var(--muted);line-height:1.6">
+        We have your message and will reply to <b>${esc(email)}</b> within two working days,
+        usually sooner. Your reference is <b style="font-family:var(--fm)">${esc(d.ref || '')}</b>.</p>`;
+  } catch (e) {
+    msg.style.color = 'var(--red)';
+    msg.innerHTML = `${esc(e.message)} You can email us directly at
+      <a href="mailto:support@4flieks.com" style="color:var(--amber)">support@4flieks.com</a>.`;
+    btn.disabled = false; btn.textContent = 'SEND IT';
+  }
+}
+</script>
+</body>
+</html>
