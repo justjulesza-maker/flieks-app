@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 220" width="640" height="220" role="img" aria-label="4flieks">
+  <defs>
+    
+    <mask id="ticket-mask-rev" maskUnits="userSpaceOnUse">
+      <rect width="640" height="220" rx="14" ry="14" fill="white"></rect>
+      <circle cx="472" cy="0" r="14" fill="black"></circle>
+      <circle cx="472" cy="220" r="14" fill="black"></circle>
+    </mask>
+  </defs>
+
+  <g mask="url(#ticket-mask-rev)">
+    <rect width="640" height="220" rx="14" ry="14" fill="#F2EADA"></rect>
+  </g>
+
+  <line x1="472" y1="22" x2="472" y2="198" stroke="#C9BC9B" stroke-width="2" stroke-dasharray="6,6"></line>
+
+  <text class="mono" x="32" y="44" font-size="13" font-weight="700" letter-spacing="3" fill="#D85A2C">ADMIT ONE · SA SHORTS</text>
+  <text class="display" x="32" y="148" font-size="96" letter-spacing="-4">
+    <tspan fill="#D85A2C">4</tspan><tspan fill="#1C1512">FLIEKS</tspan>
+  </text>
+  <text class="mono" x="32" y="188" font-size="13" font-weight="500" letter-spacing="3" fill="#6B5A4E">NO · 4F-26-001 / JHB</text>
+
+  <text class="mono" x="556" y="56" font-size="11" font-weight="500" letter-spacing="2.5" fill="#6B5A4E" text-anchor="middle">STUB</text>
+  <text class="display" x="556" y="128" font-size="44" letter-spacing="-2" fill="#1C1512" text-anchor="middle">4F</text>
+  <text class="mono" x="556" y="160" font-size="11" font-weight="500" letter-spacing="2.5" fill="#D85A2C" text-anchor="middle">26 · 001</text>
+</svg>

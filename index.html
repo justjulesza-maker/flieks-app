@@ -37,6 +37,15 @@
   --fb:'Archivo Black',sans-serif;
 }
 
+/* ---------- logo follows the mode ----------
+   The two logos carry their own backgrounds — a dark ticket and a bone one —
+   so this is a swap, not a recolour. */
+.logo-dark,.logo-light{display:block}
+html[data-mode="light"] .logo-dark{display:none}
+html[data-mode="dark"]  .logo-light{display:none}
+html:not([data-mode="light"]) .logo-light{display:none}
+
+
 /* ---------- daylight ----------
    Warm rather than white — a stark white page next to film posters looks
    clinical, and the bone tone carries the brand across both modes. The amber
@@ -282,7 +291,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-home" class="view active">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
     <div class="topbar-right">
       <button id="mode-toggle" onclick="toggleMode()" aria-label="Switch between day and night"
         style="background:none;border:0;padding:4px;display:flex;align-items:center;cursor:pointer"></button>
@@ -323,7 +332,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-search" class="view">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
   </div>
   <div style="padding:16px 20px">
     <input class="input" id="search-input" placeholder="Search films, filmmakers…" oninput="doSearch(this.value)" autocomplete="off">
@@ -439,7 +448,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-library" class="view">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
     <span style="font-size:14px;color:var(--muted)">My Library</span>
   </div>
   <div style="padding:16px 20px">
@@ -458,7 +467,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-profile" class="view">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
   </div>
   <div id="profile-content" style="padding:20px"></div>
 </div>
@@ -474,7 +483,7 @@ input,textarea{font-family:var(--fb)}
     </button>
   </div>
   <div style="padding:20px 20px 0;text-align:center;margin-bottom:24px">
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:64px;width:auto;display:block;margin:0 auto">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:64px;width:auto;display:block;margin:0 auto"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:64px;width:auto;display:block;margin:0 auto">
     <p style="color:var(--muted);font-size:14px;margin-top:4px">SA Short Films</p>
   </div>
   <div style="padding:0 20px">
@@ -2403,7 +2412,7 @@ async function loadProfile() {
   if (!currentUser) {
     el.innerHTML = `
       <div style="text-align:center;padding:30px 0">
-        <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:60px;width:auto;display:block;margin:0 auto 8px">
+        <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:60px;width:auto;display:block;margin:0 auto 8px"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:60px;width:auto;display:block;margin:0 auto 8px">
         <p style="color:var(--muted);margin-bottom:24px">Sign in to access your films and profile</p>
         <button class="btn btn-amber" onclick="nav('auth')" style="margin-bottom:12px">SIGN IN</button>
         <button class="btn btn-outline" onclick="switchAuthTab('register');nav('auth')">CREATE ACCOUNT</button>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="4flieks">
+  <defs>
+    
+    <mask id="mark-mask" maskUnits="userSpaceOnUse">
+      <rect width="200" height="200" rx="18" ry="18" fill="white"></rect>
+      <circle cx="0" cy="100" r="10" fill="black"></circle>
+      <circle cx="200" cy="100" r="10" fill="black"></circle>
+    </mask>
+  </defs>
+
+  <g mask="url(#mark-mask)">
+    <rect width="200" height="200" rx="18" ry="18" fill="#1C1512"></rect>
+  </g>
+
+  
+  <text class="display" x="100" y="120" font-size="92" letter-spacing="-3" fill="#F2EADA" text-anchor="middle">
+    <tspan fill="#D85A2C">4</tspan><tspan>F</tspan>
+  </text>
+  
+  <text class="mono" x="100" y="156" font-size="12" font-weight="700" letter-spacing="4" fill="#D49A2C" text-anchor="middle">FLIEKS</text>
+</svg>

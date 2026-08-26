@@ -31,6 +31,15 @@
   --fb:'Archivo Black',sans-serif;
 }
 
+/* ---------- logo follows the mode ----------
+   The two logos carry their own backgrounds — a dark ticket and a bone one —
+   so this is a swap, not a recolour. */
+.logo-dark,.logo-light{display:block}
+html[data-mode="light"] .logo-dark{display:none}
+html[data-mode="dark"]  .logo-light{display:none}
+html:not([data-mode="light"]) .logo-light{display:none}
+
+
 /* ---------- daylight ---------- */
 html[data-mode="light"]{
   --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;
@@ -130,7 +139,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
 ================================================================ -->
 <div id="view-auth" class="view active" style="padding-bottom:40px">
   <div style="padding:40px 20px 0;text-align:center;margin-bottom:32px">
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:70px;width:auto;display:block;margin:0 auto">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:70px;width:auto;display:block;margin:0 auto"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:70px;width:auto;display:block;margin:0 auto">
     <p style="color:var(--muted);font-size:14px;margin-top:4px;letter-spacing:1px">FILMMAKER PORTAL</p>
   </div>
   <div style="padding:0 20px">
@@ -166,7 +175,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
 ================================================================ -->
 <div id="view-dashboard" class="view">
   <div class="topbar">
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <span style="font-size:14px;color:var(--muted)"><span style="font-family:var(--fn);font-size:14px;font-weight:400;color:var(--muted)">Filmmaker</span></span>
   </div>
   <div style="padding:14px 20px 0">
@@ -197,7 +206,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
 ================================================================ -->
 <div id="view-films" class="view">
   <div class="topbar">
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <button class="btn btn-amber btn-sm" onclick="nav('upload')">+ Upload</button>
   </div>
   <div style="padding:14px 20px" id="my-films-list">
@@ -214,7 +223,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
       Back
     </button>
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
   <div style="padding:14px 20px">
@@ -333,7 +342,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
       My Films
     </button>
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
   <div id="film-detail-fm" style="padding:14px 20px"></div>
@@ -344,7 +353,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
 ================================================================ -->
 <div id="view-payouts" class="view">
   <div class="topbar">
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
   </div>
   <div id="payouts-content" style="padding:14px 20px"></div>
 </div>
@@ -897,8 +906,7 @@ function showPendingState(profile) {
   authView.classList.add('active');
   authView.innerHTML = `
     <div style="padding:40px 22px;max-width:460px;margin:0 auto;text-align:center">
-      <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"
-           style="height:54px;width:auto;display:block;margin:0 auto 26px">
+      <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:54px;width:auto;display:block;margin:0 auto 26px"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:54px;width:auto;display:block;margin:0 auto 26px">
       <h2 style="font-size:22px;color:var(--text);margin-bottom:10px">
         ${applied ? 'Application received' : 'Filmmaker access'}</h2>
       <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px">
@@ -1916,7 +1924,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
       Film Stats
     </button>
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
   <div style="padding:14px;max-width:480px;margin:0 auto">
@@ -2088,7 +2096,7 @@ async function saveFilmEdit() {
     <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
       <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>Back
     </button>
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
   <div style="padding:14px">
@@ -2205,7 +2213,7 @@ async function saveFilmEdit(){
     <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
       <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>Back
     </button>
-    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block">
+    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
   <div style="padding:14px">
