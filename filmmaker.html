@@ -1151,6 +1151,15 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:6px">RELEASE REPORT</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+        A page you can send a funder, festival or broadcaster — what the film earned,
+        who brought the audience, and what people said. Every viewer on it paid,
+        which is a stronger claim than a view count.</p>
+      <div id="report-state"></div>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
       <p class="section-label" style="margin-bottom:6px">WHAT YOUR CAST EARNS</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
         We measure what each person brings in. What you share with them is your
@@ -1202,6 +1211,7 @@ function openFilmDetail(filmId) {
   `;
   nav('film-detail');
   mountCastPanel(f);
+  mountReport(f);
   mountShareOptions(f);
   mountThemePicker(f);
   checkStreaming(f.id);
@@ -1262,6 +1272,86 @@ const SHARE_OPTIONS = [
 ];
 
 let currentShare = { type: 'pct20', note: '' };
+
+/* ============================================================
+   RELEASE REPORT
+   ============================================================ */
+function mountReport(f) {
+  const box = document.getElementById('report-state');
+  if (!box) return;
+
+  const on = !!f.results_public;
+  const url = f.results_key ? `${location.origin}/report/${f.results_key}` : '';
+
+  box.innerHTML = on ? `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:9px;
+                padding:11px 13px;margin-bottom:10px">
+      <p style="font-family:ui-monospace,monospace;font-size:12px;color:var(--accent,#F0A62E);
+                word-break:break-all;line-height:1.5">${url}</p>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="copyReport('${url}')">COPY LINK</button>
+    <button class="btn btn-outline btn-sm" style="margin-left:6px"
+      onclick="window.open('${url}','_blank')">OPEN</button>
+
+    <label style="display:flex;align-items:flex-start;gap:9px;margin:14px 0 10px;cursor:pointer">
+      <input type="checkbox" id="report-money" ${f.results_show_revenue !== false ? 'checked' : ''}
+        onchange="setReportMoney('${f.id}', this.checked)"
+        style="margin-top:3px;accent-color:var(--accent,#F0A62E)">
+      <span style="font-size:13px;color:var(--text)">Include what the film earned
+        <span style="display:block;font-size:11px;color:var(--dim);margin-top:2px">
+          Turn this off if you would rather a funder saw the audience but not the money.</span></span>
+    </label>
+
+    <button class="btn btn-outline btn-sm" style="border:0;color:var(--muted);padding-left:0"
+      onclick="stopReport('${f.id}')">Turn the report off</button>
+    <p style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5">
+      Anyone with this link can see the report. Turning it off breaks the link for good.</p>`
+  : `<button class="btn btn-outline btn-sm" onclick="startReport('${f.id}')">CREATE A SHAREABLE REPORT</button>`;
+}
+
+async function startReport(filmId) {
+  // Long and random: the link is the only thing standing between a competitor
+  // and this film's numbers.
+  const key = [...crypto.getRandomValues(new Uint8Array(16))]
+    .map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 24);
+  try {
+    await db.ref(`${DB_PREFIX}result_keys/${key}`).set(filmId);
+    await db.ref(`${DB_PREFIX}films/${filmId}`).update({
+      results_public: true, results_key: key, results_show_revenue: true
+    });
+    const film = myFilms.find(x => x.id === filmId);
+    if (film) Object.assign(film, { results_public: true, results_key: key, results_show_revenue: true });
+    mountReport(film || { id: filmId, results_public: true, results_key: key });
+    snack('Report is live. Share the link.');
+  } catch { snack('Could not create that.'); }
+}
+
+async function stopReport(filmId) {
+  const film = myFilms.find(x => x.id === filmId) || {};
+  if (!confirm('Turn the report off? The link stops working and cannot be brought back — ' +
+               'you would get a new one.')) return;
+  try {
+    if (film.results_key) await db.ref(`${DB_PREFIX}result_keys/${film.results_key}`).remove();
+    await db.ref(`${DB_PREFIX}films/${filmId}`).update({ results_public: false, results_key: null });
+    Object.assign(film, { results_public: false, results_key: null });
+    mountReport(film);
+    snack('Report turned off.');
+  } catch { snack('Could not do that.'); }
+}
+
+async function setReportMoney(filmId, show) {
+  try {
+    await db.ref(`${DB_PREFIX}films/${filmId}/results_show_revenue`).set(!!show);
+    const film = myFilms.find(x => x.id === filmId);
+    if (film) film.results_show_revenue = !!show;
+    snack(show ? 'Revenue will show on the report.' : 'Revenue hidden from the report.');
+  } catch { snack('Could not save that.'); }
+}
+
+async function copyReport(url) {
+  await navigator.clipboard.writeText(url);
+  snack('Link copied.');
+}
 
 /* ============================================================
    GETTING PAID

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Release report — 4flieks</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F0E6;
+  --ink:#17110E;
+  --ink-2:#5E564D;
+  --ink-3:#948C82;
+  --rule:#D9D1C2;
+  --sunset:#C2501F;
+  --ochre:#A87515;
+  --fb:'Archivo Black',sans-serif;
+  --fn:'DM Sans',system-ui,sans-serif;
+  --fm:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8E2D4;color:var(--ink);font-family:var(--fn);
+  padding:28px 16px 70px;-webkit-font-smoothing:antialiased}
+.sheet{max-width:840px;margin:0 auto;background:var(--paper);padding:46px 52px 40px;
+  box-shadow:0 1px 3px rgba(23,17,14,.08),0 12px 40px rgba(23,17,14,.09)}
+
+/* the perforation from the ticket — a ticket is proof of payment, which is
+   the whole argument this page makes */
+.sheet{position:relative}
+.sheet::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;
+  background:repeating-linear-gradient(90deg,var(--sunset) 0 15px,transparent 15px 24px)}
+
+.masthead{display:flex;justify-content:space-between;align-items:baseline;
+  gap:20px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:30px}
+.mark{font-family:var(--fb);font-size:15px}
+.mark em{color:var(--sunset);font-style:normal}
+.docref{font-family:var(--fm);font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ink-3);text-align:right;line-height:1.7}
+
+/* ---------- the claim ---------- */
+.claim{font-family:var(--fb);font-size:33px;line-height:1.14;letter-spacing:-.015em;
+  margin-bottom:16px;max-width:20ch}
+.claim .n{color:var(--sunset)}
+.subclaim{font-size:14.5px;line-height:1.6;color:var(--ink-2);max-width:58ch;margin-bottom:32px}
+
+/* ---------- ledger figures, not cards ---------- */
+.ledger{border-top:2px solid var(--ink);margin-bottom:30px}
+.lrow{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:baseline;
+  padding:11px 0;border-bottom:1px solid var(--rule)}
+.lrow dt{font-family:var(--fm);font-size:10.5px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--ink-2)}
+.lrow dd{font-family:var(--fm);font-size:19px;font-weight:700;letter-spacing:-.01em}
+.lrow dd small{font-size:11px;font-weight:400;color:var(--ink-3);letter-spacing:.06em;margin-left:6px}
+.lrow.tall dd{font-size:25px;color:var(--sunset)}
+
+h2{font-family:var(--fm);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--sunset);margin:0 0 14px;padding-top:4px}
+
+/* ---------- release curve ---------- */
+.curve{border:1px solid var(--rule);background:#FBF8F1;padding:16px 18px 12px;margin-bottom:30px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:96px;margin-bottom:8px}
+.bar{flex:1;background:var(--sunset);min-height:2px;opacity:.85}
+.bar:hover{opacity:1}
+.curve .ends{display:flex;justify-content:space-between;font-family:var(--fm);
+  font-size:9.5px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase}
+
+/* ---------- who sold it ---------- */
+table{width:100%;border-collapse:collapse;margin-bottom:8px}
+th{font-family:var(--fm);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:400;text-align:right;padding:0 0 8px}
+th:first-child{text-align:left}
+td{padding:10px 0;border-top:1px solid var(--rule);text-align:right;
+  font-family:var(--fm);font-size:14px}
+td:first-child{text-align:left;font-family:var(--fn);font-size:14.5px;font-weight:700}
+td .role{display:block;font-family:var(--fm);font-size:9.5px;color:var(--ink-3);
+  font-weight:400;letter-spacing:.05em;margin-top:2px}
+td.rev{color:var(--ochre);font-weight:700}
+.note{font-size:12px;color:var(--ink-3);line-height:1.55;margin-bottom:30px}
+
+/* ---------- what people said ---------- */
+.quotes{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:30px}
+.quote{border-left:2px solid var(--ochre);padding:2px 0 2px 14px}
+.quote p{font-size:13.5px;line-height:1.6;color:var(--ink);margin-bottom:6px}
+.quote cite{font-family:var(--fm);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);font-style:normal}
+
+footer{border-top:1px solid var(--rule);padding-top:18px;font-size:11.5px;
+  color:var(--ink-3);line-height:1.6;display:flex;justify-content:space-between;
+  gap:20px;flex-wrap:wrap}
+footer a{color:var(--ochre)}
+.state{padding:70px 20px;text-align:center;color:var(--ink-2);font-size:15px}
+
+@media(max-width:700px){
+  .sheet{padding:30px 22px 30px}
+  .claim{font-size:25px}
+  .quotes{grid-template-columns:1fr}
+  th:nth-child(3),td:nth-child(3){display:none}
+}
+@media print{
+  body{background:#fff;padding:0}
+  .sheet{box-shadow:none;max-width:100%;padding:14mm 15mm;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:0}
+  .claim{font-size:26px}
+}
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet"><div class="state">Loading…</div></div>
+
+<script>
+const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+
+/* Spelling the figure out makes it read as a statement rather than a metric.
+   "Three hundred and twelve people paid" is a claim; "312" is a number on a
+   dashboard, and a funder has seen a thousand of those. */
+const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten',
+  'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+
+function inWords(n) {
+  n = Math.floor(Number(n) || 0);
+  if (n < 20) return ONES[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+  if (n < 1000) {
+    const r = n % 100;
+    return ONES[Math.floor(n / 100)] + ' hundred' + (r ? ' and ' + inWords(r) : '');
+  }
+  if (n < 1000000) {
+    const r = n % 1000;
+    return inWords(Math.floor(n / 1000)) + ' thousand' + (r ? (r < 100 ? ' and ' : ' ') + inWords(r) : '');
+  }
+  return n.toLocaleString('en-ZA');
+}
+
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const rand = n => 'R' + Number(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const day = ms => ms ? new Date(ms).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+async function load() {
+  const key = location.pathname.split('/').filter(Boolean).pop() ||
+              new URLSearchParams(location.search).get('k');
+  const sheet = document.getElementById('sheet');
+
+  if (!key) { sheet.innerHTML = `<div class="state">This report needs its link.</div>`; return; }
+
+  let d;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-results', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    d = await r.json();
+    if (!r.ok) throw new Error(d.message);
+  } catch (e) {
+    sheet.innerHTML = `<div class="state">${esc(e.message || 'This report is not available.')}</div>`;
+    return;
+  }
+
+  const f = d.film, h = d.headline;
+  const buyers = h.buyers;
+
+  const max = Math.max(1, ...d.timeline.map(t => t.sales));
+  const runDays = d.timeline.length;
+
+  sheet.innerHTML = `
+    <div class="masthead">
+      <p class="mark">4<em>FLIEKS</em></p>
+      <p class="docref">Release report<br>${esc(day(h.firstSale) || '')}${
+        h.lastSale && h.lastSale !== h.firstSale ? ' &ndash; ' + esc(day(h.lastSale)) : ''}</p>
+    </div>
+
+    <h1 class="claim">${buyers
+      ? `<span class="n">${cap(inWords(buyers))}</span> ${buyers === 1 ? 'person' : 'people'}
+         paid to watch ${esc(f.title)}.`
+      : `${esc(f.title)} is released and waiting for its audience.`}</h1>
+
+    <p class="subclaim">
+      ${esc(f.title)}${f.filmmaker ? `, written and directed by ${esc(f.filmmaker)}` : ''}${
+        f.minutes ? `, ${f.minutes} minutes` : ''}${f.language ? `, in ${esc(f.language)}` : ''}.
+      Released directly to audiences on 4flieks, where every viewer is a paying one —
+      no free plays, no inflated view counts. These figures come from the transaction
+      record, not an estimate.</p>
+
+    <h2>The numbers</h2>
+    <dl class="ledger">
+      <div class="lrow tall"><dt>Paying viewers</dt><dd>${buyers}</dd></div>
+      <div class="lrow"><dt>Bought outright</dt><dd>${h.owned}</dd></div>
+      <div class="lrow"><dt>Rented</dt><dd>${h.rentals}</dd></div>
+      ${h.gifted ? `<div class="lrow"><dt>Bought as a gift</dt><dd>${h.gifted}</dd></div>` : ''}
+      <div class="lrow"><dt>Link opens</dt><dd>${h.clicks}</dd></div>
+      <div class="lrow"><dt>Trailer plays</dt><dd>${h.trailers}</dd></div>
+      <div class="lrow"><dt>Opened &rarr; paid</dt><dd>${h.conversion}<small>%</small></dd></div>
+      ${h.ratingCount ? `<div class="lrow"><dt>Viewer rating</dt>
+        <dd>${Number(h.rating).toFixed(1)}<small>out of 5 · ${h.ratingCount} ratings</small></dd></div>` : ''}
+      ${d.showMoney ? `<div class="lrow"><dt>Gross revenue</dt><dd>${rand(h.revenue)}</dd></div>` : ''}
+    </dl>
+
+    ${runDays > 1 ? `
+      <h2>How the release ran</h2>
+      <div class="curve">
+        <div class="bars">
+          ${d.timeline.map(t => `<div class="bar" style="height:${Math.max(2, t.sales / max * 96)}px"
+            title="${t.date}: ${t.sales} sale${t.sales === 1 ? '' : 's'}"></div>`).join('')}
+        </div>
+        <div class="ends">
+          <span>${esc(d.timeline[0].date)}</span>
+          <span>${runDays} days</span>
+          <span>${esc(d.timeline[runDays - 1].date)}</span>
+        </div>
+      </div>` : ''}
+
+    ${d.people.length ? `
+      <h2>Who brought the audience</h2>
+      <table>
+        <tr><th>Cast &amp; crew</th><th>Opens</th><th>Trailer</th><th>Paid</th><th>Rate</th>
+          ${d.showMoney ? '<th>Revenue</th>' : ''}</tr>
+        ${d.people.map(p => `<tr>
+          <td>${esc(p.name)}${p.role ? `<span class="role">${esc(p.role)}</span>` : ''}</td>
+          <td>${p.clicks}</td><td>${p.trailerPlays}</td><td>${p.sales}</td>
+          <td>${p.conversion}%</td>
+          ${d.showMoney ? `<td class="rev">${rand(p.revenue)}</td>` : ''}
+        </tr>`).join('')}
+      </table>
+      <p class="note">Every sale on this platform is attributed to the person whose link
+      brought the viewer. This is measured, not modelled.</p>` : ''}
+
+    ${d.reviews.length ? `
+      <h2>What viewers said</h2>
+      <div class="quotes">
+        ${d.reviews.map(r => `<div class="quote">
+          <p>${esc(r.body)}</p>
+          <cite>${esc(r.name)} &middot; ${r.rating}/5</cite>
+        </div>`).join('')}
+      </div>` : ''}
+
+    <footer>
+      <span>Generated by 4flieks &middot; figures drawn from the transaction record${
+        h.lastSale ? ` as at ${esc(day(h.lastSale))}` : ''}</span>
+      <span><a href="https://4flieks.com">4flieks.com</a></span>
+    </footer>`;
+}
+
+load();
+</script>
+</body>
+</html>
