@@ -113,14 +113,21 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}">
     .replace(/<meta\s+(?:property|name)="(?:og:|twitter:|description)[^"]*"[^>]*>/gi, '')
     .replace(/<\/head>/i, tags + '\n</head>');
 
-  return new Response(html, {
-    status: response.status,
-    headers: {
-      ...Object.fromEntries(response.headers),
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'public, max-age=300'
-    }
-  });
+  /* Build the headers fresh rather than copying the original's.
+     The body has been rewritten, so content-length and content-encoding from
+     the upstream response now describe something that no longer exists —
+     browsers shrug at that, stricter scrapers report a bad response. */
+  const headers = new Headers();
+  for (const [k, v] of response.headers) {
+    const key = k.toLowerCase();
+    if (key === 'content-length' || key === 'content-encoding' ||
+        key === 'transfer-encoding' || key === 'content-type') continue;
+    headers.set(k, v);
+  }
+  headers.set('content-type', 'text/html; charset=utf-8');
+  headers.set('cache-control', 'public, max-age=300');
+
+  return new Response(html, { status: 200, statusText: 'OK', headers });
 };
 
 export const config = { path: '/*' };
