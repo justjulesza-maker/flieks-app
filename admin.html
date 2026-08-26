@@ -11,6 +11,16 @@
 <link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
 <title>4flieks Admin</title>
+<script>
+/* Same preference the viewer app uses, read before first paint. */
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('flieks_mode'); } catch (e) {}
+  var mode = saved || (window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-mode', mode);
+})();
+</script>
 <style>
 :root{
   --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;
@@ -20,6 +30,17 @@
   --fn:'DM Sans',system-ui,sans-serif;
   --fb:'Archivo Black',sans-serif;
 }
+
+/* ---------- daylight ---------- */
+html[data-mode="light"]{
+  --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;
+  --border:#E2DACB;--border2:#D5CBB8;
+  --amber:#B3660A;--accent:#B3660A;--red:#C13718;--green:#2E7D32;
+  --text:#1C1512;--muted:#6B6259;--dim:#8F877D;
+  color-scheme:light;
+}
+html[data-mode="dark"]{ color-scheme:dark; }
+
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;max-width:600px;margin:0 auto;padding-bottom:80px}
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}

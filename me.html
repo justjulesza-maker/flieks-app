@@ -6,6 +6,16 @@
 <title>Your link — 4flieks</title>
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script>
+/* Same preference the viewer app uses, read before first paint. */
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('flieks_mode'); } catch (e) {}
+  var mode = saved || (window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-mode', mode);
+})();
+</script>
 <style>
 :root{
   --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;--border:#222;
@@ -13,6 +23,17 @@
   --fb:'Archivo Black',sans-serif;--fn:'DM Sans',system-ui,sans-serif;
   --fm:'JetBrains Mono',monospace;
 }
+
+/* ---------- daylight ---------- */
+html[data-mode="light"]{
+  --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;
+  --border:#E2DACB;--border2:#D5CBB8;
+  --amber:#B3660A;--accent:#B3660A;--red:#C13718;--green:#2E7D32;
+  --text:#1C1512;--muted:#6B6259;--dim:#8F877D;
+  color-scheme:light;
+}
+html[data-mode="dark"]{ color-scheme:dark; }
+
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-family:var(--fn);
   max-width:480px;margin:0 auto;padding:24px 20px 60px;min-height:100dvh}
