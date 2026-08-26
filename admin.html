@@ -551,36 +551,95 @@ async function rejectFilmmaker(uid, appId) {
 
 /* ---- PAYOUTS ---- */
 async function loadPayouts() {
-  const snap = await db.ref(DB+'payouts').once('value');
-  const pending = [];
-  snap.forEach(userNode => {
-    userNode.forEach(p => {
-      if (p.val().status === 'pending') pending.push({ id: p.key, uid: userNode.key, ...p.val() });
-    });
-  });
   const el = document.getElementById('payouts-list');
-  if (!pending.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No pending payouts.</p>`; return; }
-  el.innerHTML = pending.map(p => `
+  el.innerHTML = '<div class="spinner"></div>';
+
+  let payouts = [];
+  try {
+    const r = await fetch('/.netlify/functions/flieks-payout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action: 'list' })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message);
+    payouts = d.payouts || [];
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--red);font-size:14px">Could not load payouts. ${e.message || ''}</p>`;
+    return;
+  }
+
+  if (!payouts.length) {
+    el.innerHTML = `<p style="color:var(--muted);font-size:14px">Nothing waiting to be paid.</p>`;
+    return;
+  }
+
+  const total = payouts.reduce((s, p) => s + p.amount, 0);
+
+  el.innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+      ${payouts.length} request${payouts.length === 1 ? '' : 's'} ·
+      <b style="color:var(--text)">R${total.toFixed(2)}</b> to pay</p>
+    ${payouts.map(p => `
     <div class="card">
-      <div class="row" style="margin-bottom:8px">
+      <div class="row" style="margin-bottom:10px">
         <div>
-          <p style="font-size:14px;font-weight:700;color:var(--green)">R${(p.amount||0).toFixed(2)}</p>
-          <p style="font-size:12px;color:var(--muted)">${p.filmmaker_name} · ${p.filmmaker_email}</p>
-          <p style="font-size:12px;color:var(--dim)">${new Date(p.requested_at).toLocaleDateString('en-ZA')}</p>
+          <p style="font-size:18px;font-weight:700;color:var(--green)">R${p.amount.toFixed(2)}</p>
+          <p style="font-size:13px;color:var(--text)">${p.name || 'Unnamed'}</p>
+          <p style="font-size:12px;color:var(--muted)">${p.email || ''}</p>
+          <p style="font-size:11px;color:var(--dim)">
+            ${p.sales} sale${p.sales === 1 ? '' : 's'} ·
+            requested ${new Date(p.requested_at).toLocaleDateString('en-ZA')}</p>
         </div>
         <span class="tag tag-a">PENDING</span>
       </div>
-      <button class="btn btn-g" onclick="markPayoutPaid('${p.uid}','${p.id}')">MARK AS PAID</button>
-    </div>
-  `).join('');
+
+      ${p.bank ? `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;
+                    padding:11px 12px;margin-bottom:10px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.7">
+          <div>${p.bank.holder}</div>
+          <div>${p.bank.bank} · ${p.bank.account_type || ''}</div>
+          <div>Acc ${p.bank.account_number}</div>
+          <div>Branch ${p.bank.branch_code}</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-bottom:8px"
+          onclick='copyBank(${JSON.stringify(JSON.stringify(p.bank))})'>COPY DETAILS</button>`
+      : `<p style="font-size:12px;color:var(--red);margin-bottom:10px">No bank details on file.</p>`}
+
+      <button class="btn btn-g" onclick="settlePayout('${p.uid}','${p.id}','${(p.name||'').replace(/'/g,'')}',${p.amount})">
+        MARK AS PAID
+      </button>
+    </div>`).join('')}`;
 }
 
-async function markPayoutPaid(uid, payoutId) {
-  await db.ref(DB+'payouts/'+uid+'/'+payoutId).update({ status: 'paid', paid_at: Date.now() });
-  // Mark transactions as paid out
-  snack('Payout marked as paid.');
-  loadPayouts();
+async function copyBank(json) {
+  const b = JSON.parse(json);
+  const text = `${b.holder}\n${b.bank}\nAccount: ${b.account_number}\nBranch: ${b.branch_code}\n${b.account_type || ''}`;
+  await navigator.clipboard.writeText(text);
+  snack('Bank details copied.');
 }
+
+async function settlePayout(uid, payoutId, name, amount) {
+  const ref = prompt(
+    `Confirm you have paid R${amount.toFixed(2)} to ${name}.\n\n` +
+    `This marks those sales as settled so they cannot be paid again.\n\n` +
+    `Your EFT reference (optional):`);
+  if (ref === null) return;
+
+  try {
+    const r = await fetch('/.netlify/functions/flieks-payout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: await auth.currentUser.getIdToken(),
+        action: 'settle', uid, payoutId, reference: ref
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) { snack(d.message || 'Could not do that.'); return; }
+    snack('Marked as paid.');
+    loadPayouts();
+  } catch { snack('Could not reach the server.'); }
+}
+
 
 /* Read a whole node over REST. The SDK caches and has been seen returning
    stale, partial data — which on this page would mean wrong revenue figures. */

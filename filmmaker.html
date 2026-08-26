@@ -990,7 +990,7 @@ async function loadDashboard() {
   // Update stats
   const grid = document.getElementById('stats-grid');
   grid.innerHTML = `
-    <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Earned</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--amber)">R${totalEarned.toFixed(2)}</p><p style="font-size:10px;color:var(--green);margin-top:2px">70% revenue share</p></div>
+    <div class="stat-card" onclick="openEarnings()" style="cursor:pointer"><p class="section-label" style="margin-bottom:4px">Total Earned</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--amber)">R${totalEarned.toFixed(2)}</p><p style="font-size:10px;color:var(--amber);margin-top:2px">Tap to get paid →</p></div>
     <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Views</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">${totalViews >= 1000 ? (totalViews/1000).toFixed(1)+'k' : totalViews}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Across all films</p></div>
     <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Films Owned</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">${totalOwned}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">By viewers</p></div>
     <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Live Films</p><p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">${liveCount}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Published</p></div>
@@ -1262,6 +1262,165 @@ const SHARE_OPTIONS = [
 ];
 
 let currentShare = { type: 'pct20', note: '' };
+
+/* ============================================================
+   GETTING PAID
+   ============================================================ */
+async function openEarnings() {
+  const wrap = document.createElement('div');
+  wrap.id = 'earn-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);' +
+    'display:flex;align-items:flex-end;justify-content:center;overflow:auto';
+  wrap.innerHTML = `
+    <div style="background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;
+                padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:92dvh;overflow:auto">
+      <div style="width:38px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px"></div>
+      <div id="earn-body"><p style="color:var(--muted);font-size:14px">Working it out…</p></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+  loadEarnings();
+}
+
+function closeEarnings() {
+  const m = document.getElementById('earn-modal');
+  if (m) m.remove();
+}
+
+async function payoutCall(action, extra) {
+  const r = await fetch('/.netlify/functions/flieks-payout', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...(extra || {}) })
+  });
+  const d = await r.json();
+  return { ok: r.ok, d };
+}
+
+async function loadEarnings() {
+  const box = document.getElementById('earn-body');
+  if (!box) return;
+
+  const { ok, d } = await payoutCall('statement');
+  if (!ok) { box.innerHTML = `<p style="color:var(--red);font-size:14px">${d.message || 'Could not load that.'}</p>`; return; }
+
+  const rand = n => 'R' + Number(n).toFixed(2);
+
+  box.innerHTML = `
+    <p class="section-label">YOUR MONEY</p>
+    <p class="bbn" style="font-family:var(--fb);font-size:38px;color:var(--amber);line-height:1;margin:6px 0 3px">
+      ${rand(d.available)}</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:18px">
+      ready to pay out${d.sales ? ` · from ${d.sales} sale${d.sales === 1 ? '' : 's'}` : ''}</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);
+                border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px">
+      <div style="background:var(--card);padding:12px;text-align:center">
+        <p style="font-size:16px;font-weight:700;color:var(--text)">${rand(d.earned)}</p>
+        <p style="font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.08em">EARNED</p></div>
+      <div style="background:var(--card);padding:12px;text-align:center">
+        <p style="font-size:16px;font-weight:700;color:var(--text)">${rand(d.paid)}</p>
+        <p style="font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.08em">PAID</p></div>
+      <div style="background:var(--card);padding:12px;text-align:center">
+        <p style="font-size:16px;font-weight:700;color:var(--text)">${rand(d.awaiting)}</p>
+        <p style="font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.08em">REQUESTED</p></div>
+    </div>
+
+    ${!d.hasBank ? `
+      <div style="border:1px solid var(--accent,#F0A62E);border-radius:10px;padding:14px;margin-bottom:14px">
+        <p style="font-size:13px;color:var(--text);margin-bottom:9px">
+          We need your bank details before we can pay you.</p>
+        <button class="btn btn-outline btn-sm" onclick="showBankForm()">ADD BANK DETAILS</button>
+      </div>` : ''}
+
+    ${d.hasBank ? (d.canRequest
+      ? `<button class="btn btn-amber" onclick="requestPayout()">REQUEST ${rand(d.available)}</button>
+         <button class="btn btn-outline" style="margin-top:8px" onclick="showBankForm()">CHANGE BANK DETAILS</button>`
+      : `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+           <p style="font-size:13px;color:var(--muted);line-height:1.5">
+             Payouts start at ${rand(d.minimum)}. You are ${rand(Math.max(0, d.minimum - d.available))} away.</p>
+         </div>
+         <button class="btn btn-outline" onclick="showBankForm()">CHANGE BANK DETAILS</button>`) : ''}
+
+    <div id="bank-form" style="display:none;margin-top:14px"></div>
+
+    ${d.lines && d.lines.length ? `
+      <p class="section-label" style="margin:20px 0 8px">EVERY SALE</p>
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        ${d.lines.slice(0, 60).map((l, i) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
+                      padding:11px 13px;${i ? 'border-top:1px solid var(--border)' : ''}">
+            <div style="min-width:0">
+              <p style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.film}</p>
+              <p style="font-size:11px;color:var(--dim)">${l.type} · ${new Date(l.at).toLocaleDateString('en-ZA')}</p>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <p style="font-size:13px;color:var(--text)">${rand(l.yours)}</p>
+              <p style="font-size:10px;color:${
+                l.state === 'paid' ? 'var(--green,#4ADE80)' :
+                l.state === 'requested' ? 'var(--accent,#F0A62E)' : 'var(--dim)'}">${l.state}</p>
+            </div>
+          </div>`).join('')}
+      </div>` : `<p style="font-size:13px;color:var(--dim);margin-top:18px">
+        No sales yet. Once people start buying, every one shows up here.</p>`}
+
+    <button class="btn btn-outline" style="margin-top:14px;border:0;color:var(--muted)"
+      onclick="closeEarnings()">CLOSE</button>
+
+    <p style="font-size:11px;color:var(--dim);margin-top:14px;line-height:1.5;text-align:center">
+      Paid by EFT, usually within a few working days of requesting.</p>`;
+}
+
+function showBankForm() {
+  const box = document.getElementById('bank-form');
+  if (!box) return;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px">
+      <p class="section-label" style="margin-bottom:10px">WHERE TO SEND IT</p>
+      ${[['holder','Account holder','e.g. C Hadlow'],
+         ['bank','Bank','e.g. FNB'],
+         ['account_number','Account number',''],
+         ['branch_code','Branch code','']].map(([k, label, ph]) => `
+        <label style="display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+               color:var(--muted);margin-bottom:5px">${label}</label>
+        <input id="bank-${k}" placeholder="${ph}" autocomplete="off"
+          style="width:100%;font:inherit;font-size:16px;padding:11px;border-radius:8px;
+                 background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:11px">`).join('')}
+      <label style="display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+             color:var(--muted);margin-bottom:5px">Account type</label>
+      <select id="bank-account_type"
+        style="width:100%;font:inherit;font-size:16px;padding:11px;border-radius:8px;
+               background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:12px">
+        <option value="Cheque">Cheque / Current</option>
+        <option value="Savings">Savings</option>
+        <option value="Transmission">Transmission</option>
+      </select>
+      <p id="bank-msg" style="font-size:12px;color:var(--red);min-height:1.2em;margin-bottom:8px"></p>
+      <button class="btn btn-amber btn-sm" onclick="saveBank()">SAVE</button>
+    </div>`;
+}
+
+async function saveBank() {
+  const msg = document.getElementById('bank-msg');
+  const bank = {};
+  ['holder','bank','account_number','branch_code','account_type'].forEach(k => {
+    bank[k] = (document.getElementById('bank-' + k) || {}).value || '';
+  });
+  msg.style.color = 'var(--muted)';
+  msg.textContent = 'Saving…';
+  const { ok, d } = await payoutCall('bank', { bank });
+  if (!ok) { msg.style.color = 'var(--red)'; msg.textContent = d.message || 'Could not save that.'; return; }
+  msg.style.color = 'var(--green,#4ADE80)';
+  msg.textContent = 'Saved.';
+  setTimeout(loadEarnings, 700);
+}
+
+async function requestPayout() {
+  const { ok, d } = await payoutCall('request');
+  if (!ok) { snack(d.message || 'Could not request that.'); return; }
+  snack(`Requested R${d.amount.toFixed(2)}. We'll pay it out shortly.`);
+  loadEarnings();
+}
 
 function mountShareOptions(f) {
   const box = document.getElementById('share-options');
