@@ -42,6 +42,7 @@ html:not([data-mode="light"]) .logo-light{display:none}
 
 /* ---------- daylight ---------- */
 html[data-mode="light"]{
+  --toast-bg:#1C1512;--toast-text:#F5F1E8;
   --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;
   --border:#E2DACB;--border2:#D5CBB8;
   --amber:#B3660A;--accent:#B3660A;--red:#C13718;--green:#2E7D32;
@@ -102,7 +103,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
 .progress-upload-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .3s;width:0%}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
 @keyframes spin{to{transform:rotate(360deg)}}
-#snackbar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#222;border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
+#snackbar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:var(--toast-bg);border:1px solid var(--border);color:var(--toast-text);padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
 #snackbar.show{opacity:1}
 .auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
 .auth-tab{flex:1;padding:12px;text-align:center;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}

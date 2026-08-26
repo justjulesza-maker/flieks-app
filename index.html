@@ -33,18 +33,11 @@
   --amber:#F5A623;--red:#E8462A;--green:#4CAF50;
   --text:#F0EDE8;--muted:#888;--dim:#555;
   --scrim:rgba(0,0,0,.8);
+  --toast-bg:#2A2A2A;--toast-text:#F0EDE8;--toast-edge:#3A3A3A;
+  --amber-fill:#F5A623;--on-amber:#0A0A0A;
   --fn:'DM Sans',system-ui,sans-serif;
   --fb:'Archivo Black',sans-serif;
 }
-
-/* ---------- logo follows the mode ----------
-   The two logos carry their own backgrounds — a dark ticket and a bone one —
-   so this is a swap, not a recolour. */
-.logo-dark,.logo-light{display:block}
-html[data-mode="light"] .logo-dark{display:none}
-html[data-mode="dark"]  .logo-light{display:none}
-html:not([data-mode="light"]) .logo-light{display:none}
-
 
 /* ---------- daylight ----------
    Warm rather than white — a stark white page next to film posters looks
@@ -56,6 +49,10 @@ html[data-mode="light"]{
   --amber:#B3660A;--red:#C13718;--green:#2E7D32;
   --text:#1C1512;--muted:#6B6259;--dim:#8F877D;
   --scrim:rgba(28,21,18,.55);
+  --toast-bg:#1C1512;--toast-text:#F5F1E8;--toast-edge:#332822;
+  /* Solid fills need a deeper tone than the accent so light text on them
+     passes contrast — 4.51:1 rather than 3.86:1. */
+  --amber-fill:#A55C08;--on-amber:#F5F1E8;
   color-scheme:light;
 }
 html[data-mode="dark"]{ color-scheme:dark; }
@@ -90,7 +87,7 @@ input,textarea{font-family:var(--fb)}
 .topbar-logo{display:flex;align-items:center;height:40px}.topbar-logo img{height:40px;width:auto}
 .topbar-right{display:flex;gap:14px;align-items:center}
 .topbar-right svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8;cursor:pointer}
-.avatar{width:34px;height:34px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0A0A0A;cursor:pointer;flex-shrink:0}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--amber-fill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--on-amber);cursor:pointer;flex-shrink:0}
 
 /* ===================== BOTTOM NAV ===================== */
 .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:68px;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:50}
@@ -116,7 +113,7 @@ input,textarea{font-family:var(--fb)}
 /* ===================== BUTTONS ===================== */
 .btn{display:block;width:100%;padding:15px;border:none;border-radius:12px;font-family:var(--fn);font-size:18px;letter-spacing:2px;cursor:pointer;text-align:center;transition:opacity .15s,transform .1s}
 .btn:active{opacity:.85;transform:scale(.99)}
-.btn-amber{background:var(--amber);color:#0A0A0A}
+.btn-amber{background:var(--amber-fill);color:var(--on-amber)}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--fb);font-size:14px;font-weight:500;letter-spacing:0}
 .btn-red{background:var(--red);color:#fff}
 .btn-sm{padding:9px 18px;width:auto;font-size:18px;border-radius:8px;display:inline-block}
@@ -154,7 +151,7 @@ input,textarea{font-family:var(--fb)}
 .cats{display:flex;gap:7px;overflow-x:auto;padding:0 20px 4px;scrollbar-width:none}
 .cats::-webkit-scrollbar{display:none}
 .cat{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:var(--card);transition:all .2s}
-.cat.on{background:var(--amber);border-color:var(--amber);color:#0A0A0A;font-weight:700}
+.cat.on{background:var(--amber-fill);border-color:var(--amber);color:var(--on-amber);font-weight:700}
 
 /* ===================== FILM DETAIL ===================== */
 .film-poster-lg{height:240px;position:relative;display:flex;align-items:flex-end;padding:20px;border-radius:16px;overflow:hidden;border:1px solid var(--border);margin:0 20px 16px}
@@ -171,7 +168,7 @@ input,textarea{font-family:var(--fb)}
 .stat p:last-child{font-size:10px;color:var(--muted);margin:0}
 
 /* ===================== CHECKOUT ===================== */
-.summary-box{background:#111;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+.summary-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
 .summary-row{display:flex;justify-content:space-between;margin-bottom:8px}
 .pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .pay-opt{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:border-color .2s}
@@ -237,7 +234,13 @@ input,textarea{font-family:var(--fb)}
 .auth-tab.on{color:var(--amber);border-bottom-color:var(--amber)}
 
 /* ===================== SNACKBAR ===================== */
-#snackbar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#222;border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
+/* A toast reads best against the opposite of the page, so it stays legible
+   whichever mode is on — dark bar on a light page, light bar on a dark one. */
+#snackbar{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);
+  background:var(--toast-bg);color:var(--toast-text);border:1px solid var(--toast-edge);
+  padding:11px 20px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;
+  transition:opacity .3s;pointer-events:none;max-width:90vw;
+  box-shadow:0 6px 24px rgba(0,0,0,.28);text-align:center;line-height:1.4}
 #snackbar.show{opacity:1}
 
 /* ===================== SPINNER ===================== */
@@ -291,7 +294,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-home" class="view active">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
     <div class="topbar-right">
       <button id="mode-toggle" onclick="toggleMode()" aria-label="Switch between day and night"
         style="background:none;border:0;padding:4px;display:flex;align-items:center;cursor:pointer"></button>
@@ -332,7 +335,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-search" class="view">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
   </div>
   <div style="padding:16px 20px">
     <input class="input" id="search-input" placeholder="Search films, filmmakers…" oninput="doSearch(this.value)" autocomplete="off">
@@ -448,7 +451,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-library" class="view">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
     <span style="font-size:14px;color:var(--muted)">My Library</span>
   </div>
   <div style="padding:16px 20px">
@@ -467,7 +470,7 @@ input,textarea{font-family:var(--fb)}
 ================================================================ -->
 <div id="view-profile" class="view">
   <div class="topbar">
-    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"></a>
   </div>
   <div id="profile-content" style="padding:20px"></div>
 </div>
@@ -483,7 +486,7 @@ input,textarea{font-family:var(--fb)}
     </button>
   </div>
   <div style="padding:20px 20px 0;text-align:center;margin-bottom:24px">
-    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:64px;width:auto;display:block;margin:0 auto"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:64px;width:auto;display:block;margin:0 auto">
+    <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:64px;width:auto;display:block;margin:0 auto">
     <p style="color:var(--muted);font-size:14px;margin-top:4px">SA Short Films</p>
   </div>
   <div style="padding:0 20px">
@@ -2412,7 +2415,7 @@ async function loadProfile() {
   if (!currentUser) {
     el.innerHTML = `
       <div style="text-align:center;padding:30px 0">
-        <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:60px;width:auto;display:block;margin:0 auto 8px"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:60px;width:auto;display:block;margin:0 auto 8px">
+        <img src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:60px;width:auto;display:block;margin:0 auto 8px">
         <p style="color:var(--muted);margin-bottom:24px">Sign in to access your films and profile</p>
         <button class="btn btn-amber" onclick="nav('auth')" style="margin-bottom:12px">SIGN IN</button>
         <button class="btn btn-outline" onclick="switchAuthTab('register');nav('auth')">CREATE ACCOUNT</button>
@@ -2425,7 +2428,7 @@ async function loadProfile() {
   const rentedCount = Object.values(userPurchases).filter(p => p.type === 'rent').length;
   el.innerHTML = `
     <div style="text-align:center;padding:20px 0 28px">
-      <div style="width:72px;height:72px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#0A0A0A;margin:0 auto 12px">${initials}</div>
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:var(--on-amber);margin:0 auto 12px">${initials}</div>
       <p style="font-size:18px;font-weight:600;color:var(--text)">${currentUser.displayName || 'Viewer'}</p>
       <p style="font-size:14px;color:var(--muted);margin-top:2px">${currentUser.email}</p>
     </div>
