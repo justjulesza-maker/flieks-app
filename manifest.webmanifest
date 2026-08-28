@@ -1,0 +1,62 @@
+{
+  "name": "4flieks — South African Short Films",
+  "short_name": "4flieks",
+  "description": "Watch and own stories from the next generation of South African filmmakers.",
+  "start_url": "/?source=installed",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0A0A0A",
+  "theme_color": "#1C1512",
+  "lang": "en-ZA",
+  "dir": "ltr",
+  "categories": ["entertainment", "video"],
+  "icons": [
+    {
+      "src": "/brand/png/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/png/mark-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/png/mark-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/png/mark-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/png/mark-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/brand/png/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My library",
+      "short_name": "Library",
+      "description": "Films you have bought or rented",
+      "url": "/?view=library"
+    },
+    {
+      "name": "Search films",
+      "short_name": "Search",
+      "url": "/?view=search"
+    }
+  ]
+}

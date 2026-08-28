@@ -13,6 +13,7 @@
 /*.js            /:splat.js         200
 /*.css           /:splat.css        200
 /*.json          /:splat.json       200
+/manifest.webmanifest  /manifest.webmanifest  200
 
 /f/*             /index.html        200
 /*               /index.html        200

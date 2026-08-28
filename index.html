@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="4flieks">
 <meta name="theme-color" content="#1C1512">
 <meta name="description" content="4flieks — South African short films. Watch and own stories from the next generation of SA filmmakers.">
 <title>4flieks — SA Short Films</title>
@@ -969,6 +972,7 @@ auth.onAuthStateChanged(async user => {
   } catch (e) { console.warn('view refresh failed:', e); }
   if (user) {
     await loadUserPurchases();
+    maybeOfferInstall();
   }
   // Handle return from PayFast
   const urlParams = new URLSearchParams(window.location.search);
@@ -1575,6 +1579,80 @@ async function shareGiftCode(code) {
   if (navigator.share) { try { await navigator.share({ text }); } catch {} }
   else { await navigator.clipboard.writeText(text); showSnack('Copied'); }
 }
+
+/* ============================================================
+   ADD TO HOME SCREEN
+   The whole model is someone tapping a cast member's link, so an app store
+   install between the link and the film would cost more than it gains. This
+   gets the icon on the home screen without any of that.
+   ============================================================ */
+let installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  installPrompt = e;
+  maybeOfferInstall();
+});
+
+function installed() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true;
+}
+
+/* Only after someone has actually bought something. Asking a first-time
+   visitor to install anything is how you lose them. */
+function maybeOfferInstall() {
+  if (installed()) return;
+  if (!currentUser || !Object.keys(userPurchases || {}).length) return;
+  try { if (localStorage.getItem('flieks_install_asked')) return; } catch {}
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) &&
+                !/crios|fxios/i.test(navigator.userAgent);
+  if (!installPrompt && !isIOS) return;
+
+  const bar = document.createElement('div');
+  bar.id = 'install-bar';
+  bar.style.cssText = `position:fixed;left:12px;right:12px;bottom:82px;z-index:800;
+    max-width:456px;margin:0 auto;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:14px 15px;box-shadow:0 8px 30px rgba(0,0,0,.35);
+    display:flex;gap:12px;align-items:center`;
+  bar.innerHTML = `
+    <img src="/brand/png/mark-128.png" alt="" style="width:38px;height:38px;border-radius:9px;flex-shrink:0">
+    <div style="flex:1;min-width:0">
+      <p style="font-size:13.5px;font-weight:700;color:var(--text)">Keep 4flieks on your home screen</p>
+      <p style="font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:1px">${
+        isIOS && !installPrompt
+          ? 'Tap Share, then Add to Home Screen.'
+          : 'Opens full screen, no app store needed.'}</p>
+    </div>
+    ${installPrompt
+      ? `<button id="install-yes" class="btn btn-amber" style="width:auto;padding:9px 15px;font-size:12.5px;margin:0;flex-shrink:0">ADD</button>`
+      : ''}
+    <button id="install-no" aria-label="Dismiss"
+      style="background:none;border:0;color:var(--dim);font-size:20px;padding:0 3px;flex-shrink:0;cursor:pointer">×</button>`;
+  document.body.appendChild(bar);
+
+  const done = () => {
+    try { localStorage.setItem('flieks_install_asked', '1'); } catch {}
+    bar.remove();
+  };
+  document.getElementById('install-no').onclick = done;
+
+  const yes = document.getElementById('install-yes');
+  if (yes) yes.onclick = async () => {
+    done();
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    try { await installPrompt.userChoice; } catch {}
+    installPrompt = null;
+  };
+}
+
+window.addEventListener('appinstalled', () => {
+  try { localStorage.setItem('flieks_install_asked', '1'); } catch {}
+  const bar = document.getElementById('install-bar');
+  if (bar) bar.remove();
+});
 
 /* ============================================================
    DAY / NIGHT
@@ -2601,6 +2679,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const { filmId } = await FlieksSocial.readLink();
       if (filmId && allFilms.some(f => f.id === filmId)) openFilm(filmId);
+
+      // Home-screen shortcuts land here
+      const want = new URLSearchParams(location.search).get('view');
+      if (want && ['library', 'search', 'profile'].includes(want)) {
+        history.replaceState({}, '', '/');
+        nav(want);
+      }
     } catch (e) { console.error('[flieks] link handling failed:', e); }
   }
 });
