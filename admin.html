@@ -94,6 +94,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 <nav class="bnav" id="bnav" style="display:none">
   <button class="nb on" data-v="queue" onclick="nav('queue')">📥 QUEUE</button>
   <button class="nb" data-v="films" onclick="nav('films')">🎬 FILMS</button>
+  <button class="nb" data-v="cast" onclick="nav('cast')">🎭 CAST</button>
   <button class="nb" data-v="users" onclick="nav('users')">👥 USERS</button>
   <button class="nb" data-v="payouts" onclick="nav('payouts')">💰 PAYOUTS</button>
   <button class="nb" data-v="stats" onclick="nav('stats')">📊 STATS</button>
@@ -126,6 +127,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
     <input class="input" id="film-search" placeholder="Search…" style="width:160px;padding:7px 10px" oninput="searchFilms(this.value)">
   </div>
   <div id="all-films-list"><div class="spinner"></div></div>
+</div>
+
+<!-- CAST -->
+<div id="view-cast" class="view">
+  <div class="row" style="margin-bottom:6px">
+    <p class="sl" style="margin:0">CAST &amp; CREW LINKS</p>
+    <input class="input" id="cast-search" placeholder="Name or film…" style="width:170px;padding:7px 10px" oninput="filterCast(this.value)">
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+    Every person on every film, with the link to send them. Send the personal page —
+    it has their sharing link, their QR code and their numbers on it, so they have a
+    reason to come back.</p>
+  <div id="cast-list"><div class="spinner"></div></div>
 </div>
 
 <!-- USERS -->
@@ -205,6 +219,7 @@ function nav(v) {
   window.scrollTo(0,0);
   if (v === 'queue') loadQueue();
   if (v === 'films') loadAllFilms();
+  if (v === 'cast') loadAllCast();
   if (v === 'users') loadUsers();
   if (v === 'payouts') loadPayouts();
   if (v === 'stats') loadStats();
@@ -291,6 +306,116 @@ async function rejectFilm(filmId, queueId) {
 }
 
 /* ---- ALL FILMS ---- */
+/* ============================================================
+   CAST LINKS
+   Every person on every film, in one place, because someone always asks
+   "what's my link again" and it should take five seconds to answer.
+   ============================================================ */
+let castRows = [];
+
+async function loadAllCast() {
+  const el = document.getElementById('cast-list');
+  el.innerHTML = '<div class="spinner"></div>';
+
+  // Over REST rather than the SDK — it has returned partial cast lists before.
+  let films = {}, cast = {}, stats = {};
+  try {
+    const token = await auth.currentUser.getIdToken(true);
+    const base = 'https://flieks-app-default-rtdb.firebaseio.com';
+    [films, cast, stats] = await Promise.all([
+      fetch(`${base}/${DB}films.json?auth=${token}`).then(r => r.json()),
+      fetch(`${base}/${DB}cast.json?auth=${token}`).then(r => r.json()),
+      fetch(`${base}/${DB}stats.json?auth=${token}`).then(r => r.json())
+    ]);
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--red);font-size:14px">Could not load that.</p>`;
+    return;
+  }
+
+  castRows = [];
+  Object.entries(cast || {}).forEach(([filmId, people]) => {
+    const film = (films && films[filmId]) || {};
+    const slug = film.slug || filmId;
+    Object.entries(people || {}).forEach(([personSlug, person]) => {
+      const s = (((stats || {})[filmId] || {}).refs || {})[personSlug] || {};
+      castRows.push({
+        filmId, filmTitle: film.title || filmId, filmSlug: slug,
+        slug: personSlug,
+        name: person.name || personSlug,
+        role: person.role || '',
+        hidden: !!person.hidden,
+        clicks: s.clicks || 0,
+        sales: s.sales || 0,
+        share: `${location.origin}/${slug}?a=${personSlug}`,
+        page: `${location.origin}/me/${slug}/${personSlug}`
+      });
+    });
+  });
+
+  castRows.sort((a, b) =>
+    a.filmTitle.localeCompare(b.filmTitle) || (b.sales - a.sales) || a.name.localeCompare(b.name));
+
+  renderCast(castRows);
+}
+
+function renderCast(rows) {
+  const el = document.getElementById('cast-list');
+  if (!rows.length) {
+    el.innerHTML = `<p style="color:var(--muted);font-size:14px">
+      No cast added to any film yet.</p>`;
+    return;
+  }
+
+  let out = '', lastFilm = null;
+  rows.forEach(r => {
+    if (r.filmTitle !== lastFilm) {
+      lastFilm = r.filmTitle;
+      out += `<p class="sl" style="margin:18px 0 8px">${r.filmTitle}</p>`;
+    }
+    out += `<div class="card" style="padding:13px 14px">
+      <div class="row" style="margin-bottom:9px;align-items:flex-start">
+        <div style="min-width:0">
+          <p style="font-size:15px;font-weight:700;color:var(--text)">${r.name}</p>
+          <p style="font-size:12px;color:var(--muted)">
+            ${r.role || 'crew'} · <span style="font-family:ui-monospace,monospace">?a=${r.slug}</span>
+            ${r.hidden ? ' · <span style="color:var(--dim)">link only</span>' : ''}</p>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <p style="font-size:15px;font-weight:700;color:${r.sales ? 'var(--green)' : 'var(--muted)'}">${r.sales}</p>
+          <p style="font-size:10px;color:var(--muted);letter-spacing:.08em">SOLD</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E)"
+          onclick="copyText('${r.page}','Their page copied — send this one')">THEIR PAGE</button>
+        <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--muted)"
+          onclick="copyText('${r.share}','Sharing link copied')">SHARING LINK</button>
+        <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--muted)"
+          onclick="window.open('${r.page}','_blank')">OPEN</button>
+      </div>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;font-family:ui-monospace,monospace;word-break:break-all">${r.page}</p>
+    </div>`;
+  });
+  el.innerHTML = out;
+}
+
+function filterCast(q) {
+  q = (q || '').toLowerCase().trim();
+  if (!q) return renderCast(castRows);
+  renderCast(castRows.filter(r =>
+    r.name.toLowerCase().includes(q) ||
+    r.filmTitle.toLowerCase().includes(q) ||
+    r.slug.includes(q) ||
+    (r.role || '').toLowerCase().includes(q)));
+}
+
+async function copyText(text, note) {
+  try {
+    await navigator.clipboard.writeText(text);
+    snack(note || 'Copied.');
+  } catch { snack('Could not copy that.'); }
+}
+
 async function loadAllFilms() {
   // Read over REST with a freshly minted token rather than through the SDK.
   // The SDK caches aggressively and has been observed returning a stale,
