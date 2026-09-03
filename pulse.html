@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pulse — 4flieks</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var s=null;try{s=localStorage.getItem('flieks_mode')}catch(e){}
+document.documentElement.setAttribute('data-mode', s||'dark');})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;--border:#222;
+  --amber:#F5A623;--green:#4ADE80;--red:#E8462A;--blue:#5AA9E6;
+  --text:#F0EDE8;--muted:#888;--dim:#555;
+  --fb:'Archivo Black',sans-serif;--fn:'DM Sans',system-ui,sans-serif;
+  --fm:'JetBrains Mono',monospace;
+}
+html[data-mode="light"]{
+  --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;--border:#E2DACB;
+  --amber:#B3660A;--green:#2E7D32;--red:#C13718;--blue:#1F6FA8;
+  --text:#1C1512;--muted:#6B6259;--dim:#8F877D;color-scheme:light;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--fn);
+  padding:18px 16px 60px;max-width:1000px;margin:0 auto;font-size:14px}
+
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;
+  flex-wrap:wrap;margin-bottom:18px}
+.top h1{font-family:var(--fb);font-size:19px}
+.top h1 span{color:var(--amber)}
+.live{font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);display:flex;align-items:center;gap:7px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.alert{border-radius:11px;padding:14px 16px;margin-bottom:16px;
+  border:1px solid var(--red);background:rgba(232,70,42,.08)}
+.alert h3{font-size:14.5px;font-weight:700;color:var(--red);margin-bottom:5px}
+.alert p{font-size:13px;color:var(--text);line-height:1.55;margin-bottom:8px}
+.alert .row{font-family:var(--fm);font-size:12px;color:var(--muted);
+  padding:6px 0;border-top:1px solid var(--border)}
+.alert.ok{border-color:var(--border);background:transparent}
+.alert.ok h3{color:var(--green)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+  gap:1px;background:var(--border);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin-bottom:18px}
+.cell{background:var(--card);padding:15px 14px}
+.cell .v{font-family:var(--fb);font-size:26px;line-height:1;letter-spacing:-.02em}
+.cell .k{font-family:var(--fm);font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted);margin-top:6px}
+.cell .d{font-size:11px;margin-top:4px;color:var(--dim)}
+.cell .d.up{color:var(--green)}
+
+h2{font-family:var(--fm);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);margin:22px 0 10px}
+
+.feed{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ev{display:flex;gap:12px;align-items:center;padding:11px 14px;
+  border-bottom:1px solid var(--border);background:var(--card)}
+.ev:last-child{border-bottom:0}
+.ev.fresh{animation:flash 2.5s ease-out}
+@keyframes flash{0%{background:rgba(74,222,128,.18)}100%{background:var(--card)}}
+.ev .ico{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-size:12px;flex-shrink:0}
+.ev .body{flex:1;min-width:0}
+.ev .body p{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .body small{font-size:11px;color:var(--muted)}
+.ev .amt{font-family:var(--fm);font-size:13px;flex-shrink:0}
+.ev .when{font-family:var(--fm);font-size:10.5px;color:var(--dim);flex-shrink:0;width:52px;text-align:right}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:right;font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);font-weight:400;padding:0 10px 8px 0}
+th:first-child{text-align:left}
+td{text-align:right;padding:9px 10px 9px 0;border-top:1px solid var(--border);
+  font-family:var(--fm)}
+td:first-child{text-align:left;font-family:var(--fn);font-weight:600}
+td small{display:block;font-family:var(--fm);font-size:10px;color:var(--dim);font-weight:400}
+.bar{height:3px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--amber)}
+
+.gate{padding:60px 20px;text-align:center;color:var(--muted)}
+.muted{color:var(--muted);font-size:13px;padding:14px 0}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>4<span>flieks</span> pulse</h1>
+  <p class="live"><span class="dot"></span><span id="ticker">connecting</span></p>
+</div>
+
+<div id="app"><div class="gate">Checking your account…</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+});
+const auth = firebase.auth();
+const BASE = 'https://flieks-app-default-rtdb.firebaseio.com';
+const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const rand = n => 'R' + Number(n || 0).toFixed(0);
+
+let seen = new Set();      // events already shown, so only new ones flash
+let first = true;
+
+/* Read over REST with a fresh token. The SDK caches, and a dashboard showing
+   yesterday's numbers during a launch is worse than no dashboard. */
+async function pull(path) {
+  const token = await auth.currentUser.getIdToken();
+  const r = await fetch(`${BASE}/flieks_${path}.json?auth=${token}`);
+  return r.ok ? ((await r.json()) || {}) : {};
+}
+
+const ago = ms => {
+  const m = Math.floor((Date.now() - ms) / 60000);
+  if (m < 1) return 'now';
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h';
+  return Math.floor(h / 24) + 'd';
+};
+
+const startOfToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); };
+
+async function refresh() {
+  document.getElementById('ticker').textContent = 'refreshing';
+
+  let films, txs, users, purchases, stats;
+  try {
+    [films, txs, users, stats] = await Promise.all([
+      pull('films'), pull('transactions'), pull('users'), pull('stats')
+    ]);
+  } catch (e) {
+    document.getElementById('ticker').textContent = 'connection lost';
+    return;
+  }
+
+  const now = Date.now(), today = startOfToday(), yest = today - 86400000;
+  const live = t => t && t.mode !== 'test';
+
+  const all = Object.entries(txs).map(([id, t]) => ({ id, ...t })).filter(t => live(t));
+  const done = all.filter(t => t.status === 'complete');
+
+  const todaySales = done.filter(t => (t.completed_at || t.created_at) >= today);
+  const yestSales  = done.filter(t => {
+    const at = t.completed_at || t.created_at;
+    return at >= yest && at < today;
+  });
+
+  const money = a => a.reduce((s, t) => s + Number(t.total || 0), 0);
+  const newUsers = Object.values(users).filter(u => (u.created_at || 0) >= today).length;
+
+  /* ---- what is broken right now ----
+     A payment that never completed means someone was charged and got nothing.
+     During a launch this is the only number that genuinely matters. */
+  const stuck = all.filter(t =>
+    t.status === 'pending' && (now - (t.created_at || 0)) > 10 * 60 * 1000);
+
+  const alertHtml = stuck.length
+    ? `<div class="alert">
+         <h3>${stuck.length} payment${stuck.length === 1 ? '' : 's'} may not have gone through</h3>
+         <p>These were started more than ten minutes ago and never completed. If the person
+         was charged, they have no access. Check the Yoco dashboard against these, and the
+         webhook log.</p>
+         ${stuck.slice(0, 6).map(t => `<div class="row">
+           ${esc(t.film_title || t.film_id || '?')} · ${esc(t.type || '')} ·
+           ${esc(t.email || t.uid || '')} · ${ago(t.created_at)} ago</div>`).join('')}
+       </div>`
+    : `<div class="alert ok"><h3>Everything is landing</h3>
+         <p style="margin:0">No payments stuck between checkout and access.</p></div>`;
+
+  /* ---- the day so far ---- */
+  const delta = (a, b) => {
+    if (!b) return a ? `<span class="d up">first today</span>` : '';
+    const pct = Math.round((a - b) / b * 100);
+    return `<span class="d ${pct >= 0 ? 'up' : ''}">${pct >= 0 ? '+' : ''}${pct}% on yesterday</span>`;
+  };
+
+  const cells = `
+    <div class="grid">
+      <div class="cell"><p class="v" style="color:var(--green)">${todaySales.length}</p>
+        <p class="k">Sales today</p>${delta(todaySales.length, yestSales.length)}</div>
+      <div class="cell"><p class="v">${rand(money(todaySales))}</p>
+        <p class="k">Taken today</p>${delta(money(todaySales), money(yestSales))}</div>
+      <div class="cell"><p class="v">${newUsers}</p><p class="k">New accounts</p></div>
+      <div class="cell"><p class="v">${done.length}</p><p class="k">Sales all time</p></div>
+      <div class="cell"><p class="v">${rand(money(done))}</p><p class="k">Taken all time</p></div>
+      <div class="cell"><p class="v">${Object.keys(users).length}</p><p class="k">Accounts</p></div>
+    </div>`;
+
+  /* ---- per film: where people fall out ---- */
+  const rows = Object.entries(films)
+    .filter(([, f]) => f.status === 'live')
+    .map(([id, f]) => {
+      const st = stats[id] || {};
+      const refs = st.refs || {};
+      const clicks = Object.values(refs).reduce((s, r) => s + (r.clicks || 0), 0) || st.clicks || 0;
+      const trailers = Object.values(refs).reduce((s, r) => s + (r.trailerPlays || 0), 0) || st.trailerPlays || 0;
+      const sold = done.filter(t => t.film_id === id).length;
+      return { title: f.title || id, clicks, trailers, sold,
+               conv: clicks ? (sold / clicks * 100) : 0 };
+    })
+    .sort((a, b) => b.sold - a.sold || b.clicks - a.clicks);
+
+  const funnel = rows.length ? `
+    <h2>Each film, and where people stop</h2>
+    <table>
+      <tr><th>Film</th><th>Opened</th><th>Trailer</th><th>Bought</th><th>Rate</th></tr>
+      ${rows.map(r => `<tr>
+        <td>${esc(r.title)}
+          <div class="bar"><i style="width:${Math.min(100, r.conv * 4)}%"></i></div></td>
+        <td>${r.clicks}</td><td>${r.trailers}</td>
+        <td style="color:${r.sold ? 'var(--green)' : 'var(--muted)'}">${r.sold}</td>
+        <td>${r.conv.toFixed(1)}%</td>
+      </tr>`).join('')}
+    </table>` : '';
+
+  /* ---- who is actually selling ---- */
+  const people = [];
+  Object.entries(stats).forEach(([filmId, st]) => {
+    const title = (films[filmId] || {}).title || filmId;
+    Object.entries(st.refs || {}).forEach(([slug, r]) => {
+      if (!r.clicks) return;
+      people.push({ slug, title, clicks: r.clicks || 0, sales: r.sales || 0,
+                    conv: r.clicks ? (r.sales || 0) / r.clicks * 100 : 0 });
+    });
+  });
+  people.sort((a, b) => b.sales - a.sales || b.clicks - a.clicks);
+
+  const cast = people.length ? `
+    <h2>Who is bringing people in</h2>
+    <table>
+      <tr><th>Cast member</th><th>Opened</th><th>Bought</th><th>Rate</th></tr>
+      ${people.slice(0, 12).map(p => `<tr>
+        <td>${esc(p.slug)}<small>${esc(p.title)}</small></td>
+        <td>${p.clicks}</td>
+        <td style="color:${p.sales ? 'var(--green)' : 'var(--muted)'}">${p.sales}</td>
+        <td>${p.conv.toFixed(1)}%</td>
+      </tr>`).join('')}
+    </table>` : '';
+
+  /* ---- the feed ---- */
+  const events = [];
+  done.forEach(t => events.push({
+    kind: t.type === 'gift' ? 'gift' : 'sale',
+    at: t.completed_at || t.created_at,
+    id: 'tx-' + t.id,
+    text: `${t.film_title || t.film_id} ${t.type === 'gift' ? 'gifted' : t.type === 'own' ? 'bought' : 'rented'}`,
+    sub: t.ref ? `via ${t.ref}` : 'direct',
+    amt: rand(t.total)
+  }));
+  Object.entries(users).forEach(([uid, u]) => {
+    if (!u.created_at) return;
+    events.push({ kind: 'signup', at: u.created_at, id: 'u-' + uid,
+      text: `${u.name || 'Someone'} signed up`, sub: u.email || '', amt: '' });
+  });
+  events.sort((a, b) => b.at - a.at);
+
+  const icon = { sale: ['🎟', 'var(--green)'], gift: ['🎁', 'var(--amber)'], signup: ['👤', 'var(--blue)'] };
+  const feed = `
+    <h2>As it happens</h2>
+    <div class="feed">
+      ${events.slice(0, 25).map(e => {
+        const isNew = !first && !seen.has(e.id);
+        seen.add(e.id);
+        const [ico, col] = icon[e.kind];
+        return `<div class="ev${isNew ? ' fresh' : ''}">
+          <span class="ico" style="background:${col}22">${ico}</span>
+          <span class="body"><p>${esc(e.text)}</p><small>${esc(e.sub)}</small></span>
+          <span class="amt" style="color:${col}">${e.amt}</span>
+          <span class="when">${ago(e.at)}</span>
+        </div>`;
+      }).join('') || '<p class="muted" style="padding:16px">Nothing yet today.</p>'}
+    </div>`;
+
+  document.getElementById('app').innerHTML = alertHtml + cells + funnel + cast + feed;
+  first = false;
+  document.getElementById('ticker').textContent =
+    'updated ' + new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+}
+
+auth.onAuthStateChanged(async user => {
+  const app = document.getElementById('app');
+  if (!user) {
+    app.innerHTML = `<div class="gate">
+      <p style="margin-bottom:14px">Sign in on 4flieks first, then come back.</p>
+      <a href="/" style="color:var(--amber)">Go to 4flieks</a></div>`;
+    return;
+  }
+  try {
+    const token = await user.getIdToken(true);
+    const me = await fetch(`${BASE}/flieks_users/${user.uid}.json?auth=${token}`).then(r => r.json());
+    if (!me || me.role !== 'admin') {
+      app.innerHTML = `<div class="gate">This is an admin screen.</div>`;
+      return;
+    }
+  } catch {
+    app.innerHTML = `<div class="gate">Could not check your account.</div>`;
+    return;
+  }
+
+  await refresh();
+  // Often enough to feel live during a launch, rarely enough not to hammer the
+  // database. Pauses when the tab is hidden.
+  setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+});
+</script>
+</body>
+</html>
