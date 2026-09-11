@@ -652,24 +652,33 @@ function styles() {
   .fcp-msg{font-size:13px;opacity:.7}
   .fcp-msg.bad{color:#E5484D;opacity:1}
   .fcp-msg.ok{color:#2E9E6B;opacity:1}
-  .fcp-empty{opacity:.6;font-size:14px;padding:14px 0}
+  .fcp-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.fcp-segb{background:none;border:0;padding:8px 18px;font:inherit;font-size:13px;
+  color:var(--muted);cursor:pointer}
+.fcp-segb.on{background:var(--accent,#F0A62E);color:#111;font-weight:700}
+.fcp-group{display:flex;align-items:center;gap:9px;font-family:ui-monospace,monospace;
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+  margin:16px 0 9px;padding-top:14px;border-top:1px solid var(--border)}
+.fcp-group:first-child{margin-top:0;padding-top:0;border-top:0}
+.fcp-group span{background:var(--card);border:1px solid var(--border);border-radius:99px;
+  padding:1px 8px;font-size:10px;letter-spacing:0}
+.fcp-empty{opacity:.6;font-size:14px;padding:14px 0}
   .fcp-count{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.55}`;
   document.head.appendChild(s);
 }
 
 function render() {
-  const rows = Object.entries(state.cast).sort((a,b) => (a[1].order??99)-(b[1].order??99));
-  state.el.innerHTML = `
-    <div class="fcp-head">
-      <h3 style="margin:0">Cast &amp; crew</h3>
-      <span class="fcp-count">${rows.length} ${rows.length===1?'person':'people'}</span>
-    </div>
-    <p class="fcp-hint">Everyone here gets their own link and QR code — cast, crew, anyone
-    helping push the film. Sales through their link are recorded against them.
-    Choose separately who appears on the public film page.</p>
-    <div id="fcpList">${rows.length ? rows.map(([slug,c]) => {
-      const url = linkFor(slug);
-      return `<div class="fcp-row">
+  const all = Object.entries(state.cast);
+  // Anything added before the cast/crew switch existed counts as cast.
+  const cast = all.filter(([,c]) => (c.kind || 'cast') === 'cast')
+                  .sort((a,b) => (a[1].order??99)-(b[1].order??99));
+  const crew = all.filter(([,c]) => c.kind === 'crew')
+                  .sort((a,b) => (a[1].name||'').localeCompare(b[1].name||''));
+  const rows = all;
+
+  const person = ([slug,c]) => {
+    const url = linkFor(slug);
+    return `<div class="fcp-row">
         <img class="fcp-face" src="${esc(c.photoUrl||'')}" alt="">
         <div>
           <div class="fcp-name">${esc(c.name)}<span class="fcp-pill ${c.hidden ? 'off' : 'on'}">${
@@ -690,8 +699,25 @@ function render() {
           <button class="fcp-b danger" data-del="${esc(slug)}">Remove</button>` : ''}
         </div>
       </div>`;
-    }).join('') : '<p class="fcp-empty">No cast added yet. Add the first person below.</p>'}</div>
-    ${state.canEdit ? '<button class="fcp-b primary" id="fcpAdd" style="margin-top:14px">Add cast member</button>' : ''}
+    };
+
+  const group = (title, list, blank) => `
+    <p class="fcp-group">${title}<span>${list.length}</span></p>
+    ${list.length ? list.map(person).join('') : `<p class="fcp-empty">${blank}</p>`}`;
+
+  state.el.innerHTML = `
+    <div class="fcp-head">
+      <h3 style="margin:0">Cast &amp; crew</h3>
+      <span class="fcp-count">${rows.length} ${rows.length===1?'person':'people'}</span>
+    </div>
+    <p class="fcp-hint">Everyone here gets their own link and QR code — cast, crew, anyone
+    helping push the film. Sales through their link are recorded against them.
+    Choose separately who appears on the public film page.</p>
+    <div id="fcpList">
+      ${group('Cast', cast, 'Nobody added yet.')}
+      ${group('Crew', crew, 'No crew yet. Editors and DOPs often convert better than leads — smaller audience, but it trusts them.')}
+    </div>
+    ${state.canEdit ? '<button class="fcp-b primary" id="fcpAdd" style="margin-top:14px">Add someone</button>' : ''}
     <div id="fcpEditor"></div>`;
 
   state.el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => {
@@ -725,17 +751,27 @@ function form(slug) {
   const ed = state.el.querySelector('#fcpEditor');
   ed.innerHTML = `
   <div class="fcp-form">
-    <h4 style="margin:0 0 14px">${slug ? 'Edit ' + esc(c.name) : 'New cast member'}</h4>
+    <h4 style="margin:0 0 12px">${slug ? 'Edit ' + esc(c.name) : 'Add someone'}</h4>
+
+    <div class="fcp-seg" style="margin-bottom:14px">
+      <button type="button" class="fcp-segb${(c.kind || 'cast') === 'cast' ? ' on' : ''}"
+        data-kind="cast">Cast</button>
+      <button type="button" class="fcp-segb${c.kind === 'crew' ? ' on' : ''}"
+        data-kind="crew">Crew</button>
+    </div>
+
     <div class="fcp-grid two">
       <div class="fcp-f"><label>Name</label><input id="fcpName" value="${esc(c.name)}"></div>
-      <div class="fcp-f"><label>Character</label><input id="fcpRole" value="${esc(c.role)}"></div>
+      <div class="fcp-f"><label id="fcpRoleLab">${c.kind === 'crew' ? 'Job' : 'Character'}</label>
+        <input id="fcpRole" value="${esc(c.role)}"
+          placeholder="${c.kind === 'crew' ? 'e.g. Director of Photography' : 'who they play'}"></div>
     </div>
     <div class="fcp-grid three" style="margin-top:12px">
       <div class="fcp-f"><label>Link name</label>
         <input id="fcpSlug" value="${esc(slug||'')}" ${slug?'disabled':''}>
         <div class="note">${slug ? "Can't change — links already shared would break."
                                  : 'Fills in from their name.'}</div></div>
-      <div class="fcp-f"><label>Billing order</label>
+      <div class="fcp-f" id="fcpOrderWrap"><label>Billing order</label>
         <input id="fcpOrder" type="number" value="${c.order ?? Object.keys(state.cast).length+1}"></div>
       <div class="fcp-f"><label>Following</label>
         <input id="fcpReach" value="${esc(c.reach)}" placeholder="120k"></div>
@@ -747,8 +783,8 @@ function form(slug) {
     <label class="fcp-check" style="margin-top:14px">
       <input type="checkbox" id="fcpShow" ${c.hidden ? '' : 'checked'}>
       <span class="lab"><b>Show them on the film's page</b>
-        Leave this off for crew and anyone who'd rather not be listed publicly.
-        They still get their own link and QR either way.</span>
+        <span id="fcpShowNote">Leave this off for anyone who'd rather not be listed
+        publicly. They still get their own link and QR either way.</span></span>
     </label>
     <div class="fcp-grid two" style="margin-top:12px">
       <div class="fcp-f"><label>Instagram</label><input id="fcpIg" value="${esc(c.instagram)}" placeholder="https://instagram.com/…"></div>
@@ -757,7 +793,7 @@ function form(slug) {
       <div class="fcp-f"><label>YouTube</label><input id="fcpYt" value="${esc(c.youtube)}"></div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
-      <button class="fcp-b primary" id="fcpSave">${slug?'Save':'Add to cast'}</button>
+      <button class="fcp-b primary" id="fcpSave">${slug?'Save':'Add them'}</button>
       <button class="fcp-b" id="fcpCancel">Cancel</button>
       <span class="fcp-msg" id="fcpMsg"></span>
     </div>
@@ -766,6 +802,20 @@ function form(slug) {
 
   const $ = s => ed.querySelector(s);
   if (!slug) $('#fcpName').oninput = () => $('#fcpSlug').value = slugify($('#fcpName').value);
+
+  /* Cast and crew need different words. An editor does not play a character,
+     and billing order is meaningless for them. */
+  let kind = c.kind || 'cast';
+  const paintKind = () => {
+    ed.querySelectorAll('.fcp-segb').forEach(b =>
+      b.classList.toggle('on', b.dataset.kind === kind));
+    const lab = $('#fcpRoleLab'), role = $('#fcpRole'), order = $('#fcpOrderWrap');
+    if (lab) lab.textContent = kind === 'crew' ? 'Job' : 'Character';
+    if (role) role.placeholder = kind === 'crew' ? 'e.g. Director of Photography' : 'who they play';
+    if (order) order.style.visibility = kind === 'crew' ? 'hidden' : 'visible';
+  };
+  ed.querySelectorAll('.fcp-segb').forEach(b => b.onclick = () => { kind = b.dataset.kind; paintKind(); });
+  paintKind();
   $('#fcpCancel').onclick = () => ed.innerHTML = '';
   uploader($('#fcpDrop'), `flieks_cast/${state.filmId}/${slug || 'new-'+Date.now()}`,
            u => $('#fcpPhoto').value = u);
@@ -780,6 +830,7 @@ function form(slug) {
     try {
       await db().ref(`flieks_cast/${state.filmId}/${key}`).update({
         name: $('#fcpName').value.trim(), role: $('#fcpRole').value.trim(),
+        kind,
         order: +$('#fcpOrder').value || 99, reach: $('#fcpReach').value.trim(),
         hidden: !$('#fcpShow').checked,
         photoUrl: $('#fcpPhoto').value.trim(),
