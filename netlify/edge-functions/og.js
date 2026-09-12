@@ -87,29 +87,6 @@ export default async (request, context) => {
   }
   const maker = film.filmmaker ? ` — a film by ${film.filmmaker}` : '';
 
-  const tags = `
-<meta property="og:site_name" content="4flieks">
-<meta property="og:type" content="video.movie">
-<meta property="og:url" content="${esc(url.origin + '/' + path)}">
-<meta property="og:title" content="${esc(title + maker)}">
-<meta property="og:description" content="${esc(desc)}">
-${image ? `<meta property="og:image" content="${esc(image)}">
-<meta property="og:image:alt" content="${esc(
-  film.filmmaker ? `${title} — a film by ${film.filmmaker}` : `Poster for ${title}`)}">
-<meta property="og:image:width" content="${wideImage ? 1200 : 1080}">
-<meta property="og:image:height" content="${wideImage ? 630 : 1920}">` : ''}
-<meta property="og:locale" content="en_ZA">
-<meta name="twitter:card" content="${wideImage ? 'summary_large_image' : 'summary'}">
-<meta name="twitter:title" content="${esc(title)}">
-<meta name="twitter:description" content="${esc(desc)}">
-${image ? `<meta name="twitter:image" content="${esc(image)}">
-<meta name="twitter:image:alt" content="${esc(title)}">` : ''}
-<meta name="description" content="${esc(desc)}">
-<link rel="canonical" href="${esc(url.origin + '/' + path)}">
-<title>${esc(title)}${mins ? ' · ' + mins : ''} · 4flieks</title>
-<script type="application/ld+json">${JSON.stringify(ld)}</script>
-`.trim();
-
   /* ---------- structured data ----------
      Google renders ratings, runtime and price directly in results for a film
      that declares them properly. Ours come from people who actually paid,
@@ -178,6 +155,29 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}">
   <p>Watch ${esc(title)} on 4flieks — South African independent film, streaming
   ${film.price_rent ? `from R${esc(film.price_rent)}` : ''}.</p>
 </div>`;
+
+  const tags = `
+<meta property="og:site_name" content="4flieks">
+<meta property="og:type" content="video.movie">
+<meta property="og:url" content="${esc(url.origin + '/' + path)}">
+<meta property="og:title" content="${esc(title + maker)}">
+<meta property="og:description" content="${esc(desc)}">
+${image ? `<meta property="og:image" content="${esc(image)}">
+<meta property="og:image:alt" content="${esc(
+  film.filmmaker ? `${title} — a film by ${film.filmmaker}` : `Poster for ${title}`)}">
+<meta property="og:image:width" content="${wideImage ? 1200 : 1080}">
+<meta property="og:image:height" content="${wideImage ? 630 : 1920}">` : ''}
+<meta property="og:locale" content="en_ZA">
+<meta name="twitter:card" content="${wideImage ? 'summary_large_image' : 'summary'}">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(desc)}">
+${image ? `<meta name="twitter:image" content="${esc(image)}">
+<meta name="twitter:image:alt" content="${esc(title)}">` : ''}
+<meta name="description" content="${esc(desc)}">
+<link rel="canonical" href="${esc(url.origin + '/' + path)}">
+<title>${esc(title)}${mins ? ' · ' + mins : ''} · 4flieks</title>
+<script type="application/ld+json">${JSON.stringify(ld)}</script>
+`.trim();
 
   let html = await response.text();
 
