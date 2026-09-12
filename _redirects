@@ -6,6 +6,8 @@
 /attribution     /attribution.html  200
 /terms           /terms.html        200
 /help            /help.html         200
+/sitemap.xml     /.netlify/functions/sitemap  200
+/robots.txt      /robots.txt        200
 /me/*            /me.html           200
 /report/*        /results.html      200
 /privacy         /terms.html#privacy 302

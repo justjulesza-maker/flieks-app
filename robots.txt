@@ -1,0 +1,16 @@
+# 4flieks
+
+User-agent: *
+Allow: /
+
+# Nothing useful to a search engine, and some of it should not be indexed.
+Disallow: /admin
+Disallow: /pulse
+Disallow: /cast
+Disallow: /attribution
+Disallow: /me/
+Disallow: /report/
+Disallow: /?payment=
+Disallow: /*?a=
+
+Sitemap: https://4flieks.com/sitemap.xml
