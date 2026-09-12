@@ -42,7 +42,7 @@ export default async (request, context) => {
   const type = response.headers.get('content-type') || '';
   if (!type.includes('text/html')) return response;
 
-  let film = null;
+  let film = null, cast = null;
   try {
     // A link may carry a slug or, if none has been set, the raw film id.
     const idRes = await fetch(`${DB}/flieks_film_slugs/${encodeURIComponent(path)}.json`);
@@ -51,6 +51,9 @@ export default async (request, context) => {
 
     const fRes = await fetch(`${DB}/flieks_films/${encodeURIComponent(filmId)}.json`);
     film = fRes.ok ? await fRes.json() : null;
+
+    const cRes = await fetch(`${DB}/flieks_cast/${encodeURIComponent(filmId)}.json`);
+    cast = cRes.ok ? await cRes.json() : null;
   } catch {
     return response;               // never break the page over a preview
   }
@@ -102,8 +105,79 @@ ${image ? `<meta property="og:image" content="${esc(image)}">
 ${image ? `<meta name="twitter:image" content="${esc(image)}">
 <meta name="twitter:image:alt" content="${esc(title)}">` : ''}
 <meta name="description" content="${esc(desc)}">
+<link rel="canonical" href="${esc(url.origin + '/' + path)}">
 <title>${esc(title)}${mins ? ' · ' + mins : ''} · 4flieks</title>
+<script type="application/ld+json">${JSON.stringify(ld)}</script>
 `.trim();
+
+  /* ---------- structured data ----------
+     Google renders ratings, runtime and price directly in results for a film
+     that declares them properly. Ours come from people who actually paid,
+     which is worth more than the aggregate on most film sites. */
+  const people = Object.values(cast || {});
+  const actors = people.filter(p => p && (p.kind || 'cast') === 'cast' && p.name);
+  const crew   = people.filter(p => p && p.kind === 'crew' && p.name);
+  const director = crew.find(p => /director/i.test(p.role || '') && !/photograph/i.test(p.role || ''));
+
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': film.duration_mins && film.duration_mins > 40 ? 'Movie' : 'ShortFilm',
+    name: title,
+    description: desc,
+    url: `${url.origin}/${path}`,
+    inLanguage: film.language || 'en-ZA',
+    countryOfOrigin: { '@type': 'Country', name: 'South Africa' }
+  };
+  if (image) ld.image = image;
+  if (film.duration_mins) ld.duration = `PT${Math.round(film.duration_mins)}M`;
+  if (film.published_at) ld.datePublished = new Date(film.published_at).toISOString().slice(0, 10);
+  if (Array.isArray(film.genre) && film.genre.length) ld.genre = film.genre;
+
+  if (director || film.filmmaker) {
+    ld.director = { '@type': 'Person', name: (director && director.name) || film.filmmaker };
+  }
+  if (actors.length) {
+    ld.actor = actors.slice(0, 12).map(a => ({
+      '@type': 'Person', name: a.name,
+      ...(a.role ? { characterName: a.role } : {})
+    }));
+  }
+  if (film.rating_count && film.rating_avg) {
+    ld.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: Number(film.rating_avg).toFixed(1),
+      reviewCount: film.rating_count,
+      bestRating: 5, worstRating: 1
+    };
+  }
+  if (film.price_rent || film.price_own) {
+    ld.offers = [];
+    if (film.price_rent) ld.offers.push({
+      '@type': 'Offer', price: String(film.price_rent), priceCurrency: 'ZAR',
+      availability: 'https://schema.org/InStock',
+      category: 'rental', url: `${url.origin}/${path}`
+    });
+    if (film.price_own) ld.offers.push({
+      '@type': 'Offer', price: String(film.price_own), priceCurrency: 'ZAR',
+      availability: 'https://schema.org/InStock',
+      category: 'purchase', url: `${url.origin}/${path}`
+    });
+  }
+
+  /* Real text in the HTML, for crawlers that never run the JavaScript.
+     Hidden from people, who get the rendered page. */
+  const crawlable = `
+<div hidden aria-hidden="true">
+  <h1>${esc(title)}</h1>
+  <p>${esc(desc)}</p>
+  ${film.filmmaker ? `<p>A film by ${esc(film.filmmaker)}</p>` : ''}
+  ${film.duration_mins ? `<p>${film.duration_mins} minutes</p>` : ''}
+  ${actors.length ? `<p>Starring ${actors.slice(0, 8).map(a => esc(a.name)).join(', ')}</p>` : ''}
+  ${crew.length ? `<p>Crew: ${crew.slice(0, 8).map(c =>
+      esc(c.name) + (c.role ? ` (${esc(c.role)})` : '')).join(', ')}</p>` : ''}
+  <p>Watch ${esc(title)} on 4flieks — South African independent film, streaming
+  ${film.price_rent ? `from R${esc(film.price_rent)}` : ''}.</p>
+</div>`;
 
   let html = await response.text();
 
@@ -111,7 +185,8 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}">
   html = html
     .replace(/<title>[\s\S]*?<\/title>/i, '')
     .replace(/<meta\s+(?:property|name)="(?:og:|twitter:|description)[^"]*"[^>]*>/gi, '')
-    .replace(/<\/head>/i, tags + '\n</head>');
+    .replace(/<\/head>/i, tags + '\n</head>')
+    .replace(/<body([^>]*)>/i, `<body$1>${crawlable}`);
 
   /* Build the headers fresh rather than copying the original's.
      The body has been rewritten, so content-length and content-encoding from
