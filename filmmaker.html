@@ -227,7 +227,9 @@ select.input option{background:#1A1A1A;color:var(--text)}
     <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
-  <div style="padding:14px 20px">
+  <div id="agree-gate" style="padding:14px 20px;display:none"></div>
+
+  <div id="upload-body" style="padding:14px 20px">
     <div class="input-group">
       <label class="input-label">Film Title *</label>
       <input class="input" id="up-title" type="text" placeholder="e.g. UMOYA" style="text-transform:uppercase">
@@ -1013,6 +1015,7 @@ function nav(viewId) {
   window.scrollTo(0, 0);
   if (viewId === 'films') loadMyFilms();
   if (viewId === 'payouts') loadPayouts();
+  if (viewId === 'upload') checkAgreement();
 }
 
 /* ============================================================
@@ -2110,8 +2113,118 @@ function handleFileDrop(event, type) {
   }
 }
 
+/* ============================================================
+   THE AGREEMENT
+   Nothing goes up without it. A film on the platform with no agreement behind
+   it is a film we have no right to be distributing.
+   ============================================================ */
+let agreementState = null;
+
+async function agreeCall(action, extra) {
+  const r = await fetch('/.netlify/functions/flieks-agree', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...(extra || {}) })
+  });
+  return { ok: r.ok, d: await r.json() };
+}
+
+async function checkAgreement() {
+  const gate = document.getElementById('agree-gate');
+  const form = document.getElementById('upload-body');
+  if (!gate || !form) return true;
+
+  const { ok, d } = await agreeCall('status');
+  agreementState = ok ? d : null;
+
+  if (ok && d.current) { gate.style.display = 'none'; form.style.display = 'block'; return true; }
+
+  form.style.display = 'none';
+  gate.style.display = 'block';
+  gate.innerHTML = `
+    <p class="section-label" style="margin-bottom:6px">BEFORE YOUR FIRST FILM</p>
+    <h2 style="font-family:var(--fb);font-size:21px;line-height:1.2;margin-bottom:10px">
+      ${d && d.accepted ? 'The agreement has changed' : 'The distribution agreement'}</h2>
+    <p style="font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+      ${d && d.accepted
+        ? 'We have updated the terms since you last accepted. Please read and accept the current version to carry on adding films.'
+        : 'Short, and worth reading. You keep your copyright, it is non-exclusive, you get 70%, and either of us can walk away on 30 days\' notice.'}</p>
+
+    <div style="border:1px solid var(--border);border-radius:11px;padding:15px;margin-bottom:14px">
+      ${[['You keep the copyright','We never own your film, and we never ask to.'],
+         ['Non-exclusive','Broadcasters, festivals, other platforms — all still open to you, at the same time.'],
+         ['70% of net revenue','We keep 30% for hosting, streaming, card fees and support.'],
+         ['You set the price','Rental and purchase, your call.'],
+         ['You confirm you have the rights','To the film and everything in it — music is the usual catch.'],
+         ['Leave on 30 days\' notice','Anyone who already bought it keeps it; you keep earning on them.']
+        ].map(([t, d2]) => `
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <span style="color:var(--accent,#F0A62E);flex-shrink:0">→</span>
+          <span style="font-size:13px;line-height:1.5;color:var(--muted)">
+            <b style="color:var(--text)">${t}.</b> ${d2}</span>
+        </div>`).join('')}
+      <a href="/Filmmaker-Distribution-Agreement.pdf" target="_blank" rel="noopener"
+        style="font-size:13px;color:var(--accent,#F0A62E)">Read the full agreement (PDF) →</a>
+    </div>
+
+    <label style="display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Your full name, as you would sign it</label>
+    <input id="ag-name" placeholder="e.g. Cameron Hadlow" autocomplete="name"
+      style="width:100%;font:inherit;font-size:16px;padding:12px;border-radius:9px;
+             background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:11px">
+
+    <label style="display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Signing as (optional)</label>
+    <input id="ag-capacity" placeholder="e.g. Director, or for Nguniverse Studios"
+      style="width:100%;font:inherit;font-size:16px;padding:12px;border-radius:9px;
+             background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:13px">
+
+    <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;cursor:pointer">
+      <input type="checkbox" id="ag-read" style="margin-top:3px;accent-color:var(--accent,#F0A62E)">
+      <span style="font-size:13px;color:var(--text);line-height:1.5">
+        I have read the agreement and I accept it.</span></label>
+
+    <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="ag-rights" style="margin-top:3px;accent-color:var(--accent,#F0A62E)">
+      <span style="font-size:13px;color:var(--text);line-height:1.5">
+        I have the rights to the films I upload, including music and performances.</span></label>
+
+    <p id="ag-msg" style="font-size:12.5px;color:var(--red);min-height:1.3em;margin-bottom:8px"></p>
+    <button class="btn btn-amber" id="ag-btn" onclick="acceptAgreement()">ACCEPT AND CONTINUE</button>
+
+    <p style="font-size:11.5px;color:var(--dim);line-height:1.55;margin-top:14px">
+      Accepting here is a signature under the Electronic Communications and Transactions
+      Act. We record your name, the date and the version you accepted. You can also send a
+      countersigned PDF to filmmakers@4flieks.com if you would rather have one on file.</p>`;
+  return false;
+}
+
+async function acceptAgreement() {
+  const msg = document.getElementById('ag-msg');
+  const btn = document.getElementById('ag-btn');
+  const name = document.getElementById('ag-name').value.trim();
+  const capacity = document.getElementById('ag-capacity').value.trim();
+
+  msg.style.color = 'var(--red)';
+  if (!document.getElementById('ag-read').checked) { msg.textContent = 'Please confirm you have read it.'; return; }
+  if (!document.getElementById('ag-rights').checked) { msg.textContent = 'Please confirm you hold the rights.'; return; }
+  if (name.length < 3 || !name.includes(' ')) { msg.textContent = 'Type your full name as you would sign it.'; return; }
+
+  btn.disabled = true; btn.textContent = 'RECORDING…';
+  const { ok, d } = await agreeCall('accept', { fullName: name, capacity });
+  if (!ok) {
+    msg.textContent = d.message || 'Could not record that.';
+    btn.disabled = false; btn.textContent = 'ACCEPT AND CONTINUE';
+    return;
+  }
+  snack(`Agreement accepted. Your reference is ${d.reference}.`);
+  checkAgreement();
+}
+
 async function submitFilm() {
   if (!currentUser) return;
+
+  // Last line of defence — the gate hides the form, but never rely on that alone.
+  const ready = await checkAgreement();
+  if (!ready) { snack('Please accept the distribution agreement first.'); return; }
+
   const title = document.getElementById('up-title').value.trim().toUpperCase();
   const synopsis = document.getElementById('up-synopsis').value.trim();
   const duration = parseInt(document.getElementById('up-duration').value);
