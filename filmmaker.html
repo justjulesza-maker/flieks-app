@@ -2121,11 +2121,27 @@ function handleFileDrop(event, type) {
 let agreementState = null;
 
 async function agreeCall(action, extra) {
-  const r = await fetch('/.netlify/functions/flieks-agree', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...(extra || {}) })
-  });
-  return { ok: r.ok, d: await r.json() };
+  try {
+    const r = await fetch('/.netlify/functions/flieks-agree', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...(extra || {}) })
+    });
+    const text = await r.text();
+
+    // A missing function falls through to the app's HTML. Parsing that as JSON
+    // throws, and an unhandled throw here leaves the button spinning forever.
+    let d;
+    try { d = JSON.parse(text); }
+    catch {
+      console.error('[agreement] expected JSON, got:', text.slice(0, 120));
+      return { ok: false, d: { message:
+        'The agreement service is not responding. It may not be deployed yet.' } };
+    }
+    return { ok: r.ok, d };
+  } catch (e) {
+    console.error('[agreement]', e);
+    return { ok: false, d: { message: 'Could not reach the server. Check your connection.' } };
+  }
 }
 
 async function checkAgreement() {
@@ -2203,19 +2219,25 @@ async function acceptAgreement() {
   const capacity = document.getElementById('ag-capacity').value.trim();
 
   msg.style.color = 'var(--red)';
+  msg.textContent = '';                       // clear whatever the last attempt said
   if (!document.getElementById('ag-read').checked) { msg.textContent = 'Please confirm you have read it.'; return; }
   if (!document.getElementById('ag-rights').checked) { msg.textContent = 'Please confirm you hold the rights.'; return; }
   if (name.length < 3 || !name.includes(' ')) { msg.textContent = 'Type your full name as you would sign it.'; return; }
 
   btn.disabled = true; btn.textContent = 'RECORDING…';
-  const { ok, d } = await agreeCall('accept', { fullName: name, capacity });
-  if (!ok) {
-    msg.textContent = d.message || 'Could not record that.';
-    btn.disabled = false; btn.textContent = 'ACCEPT AND CONTINUE';
-    return;
+  try {
+    const { ok, d } = await agreeCall('accept', { fullName: name, capacity });
+    if (!ok) {
+      msg.textContent = d.message || 'Could not record that.';
+      return;
+    }
+    snack(`Agreement accepted. Your reference is ${d.reference}.`);
+    checkAgreement();
+  } finally {
+    // Whatever happened, the button comes back.
+    btn.disabled = false;
+    btn.textContent = 'ACCEPT AND CONTINUE';
   }
-  snack(`Agreement accepted. Your reference is ${d.reference}.`);
-  checkAgreement();
 }
 
 async function submitFilm() {
