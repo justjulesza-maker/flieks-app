@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Script — 4flieks</title>
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var s=null;try{s=localStorage.getItem('flieks_mode')}catch(e){}
+var m=s||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+document.documentElement.setAttribute('data-mode',m);})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;--border:#222;
+  --amber:#F5A623;--amber-fill:#F5A623;--on-amber:#0A0A0A;
+  --text:#F0EDE8;--muted:#888;--dim:#555;
+  --fb:'Archivo Black',sans-serif;--fn:'DM Sans',system-ui,sans-serif;
+  --fm:'JetBrains Mono',monospace;
+}
+html[data-mode="light"]{
+  --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;--border:#E2DACB;
+  --amber:#B3660A;--amber-fill:#A55C08;--on-amber:#F5F1E8;
+  --text:#1C1512;--muted:#6B6259;--dim:#8F877D;color-scheme:light;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--fn);
+  min-height:100dvh;display:flex;flex-direction:column}
+
+header{border-bottom:1px solid var(--border);padding:12px 16px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface)}
+header .back{font-size:13.5px;color:var(--muted);text-decoration:none;flex-shrink:0}
+header .who{flex:1;min-width:0}
+header h1{font-family:var(--fb);font-size:16px;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header p{font-size:11.5px;color:var(--muted);margin-top:2px}
+header a.open{font-size:12px;color:var(--amber);text-decoration:none;flex-shrink:0;
+  border:1px solid var(--border);border-radius:7px;padding:7px 11px}
+
+.frame{flex:1;min-height:0;background:var(--card)}
+iframe{width:100%;height:100%;border:0;display:block}
+
+.pane{max-width:440px;margin:0 auto;padding:56px 22px;text-align:center}
+.pane img{height:36px;width:auto;margin:0 auto 24px;display:block}
+.pane h2{font-family:var(--fb);font-size:22px;line-height:1.2;margin-bottom:10px}
+.pane p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.btn{display:block;width:100%;border:0;border-radius:9px;padding:14px;
+  font-family:var(--fn);font-size:14px;font-weight:700;cursor:pointer;text-align:center;
+  background:var(--amber-fill);color:var(--on-amber);text-decoration:none;margin-bottom:9px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.note{font-size:12px;color:var(--dim);line-height:1.55;margin-top:18px}
+
+.logo-dark,.logo-light{display:block}
+html[data-mode="light"] .logo-dark{display:none}
+html[data-mode="dark"] .logo-light{display:none}
+html:not([data-mode="light"]) .logo-light{display:none}
+</style>
+</head>
+<body>
+<div id="app" style="flex:1;display:flex;flex-direction:column">
+  <div class="pane"><p>Opening…</p></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+});
+const auth = firebase.auth();
+const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+
+const slug = location.pathname.split('/').filter(Boolean).pop() ||
+             new URLSearchParams(location.search).get('f');
+
+const logo = `
+  <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks">
+  <img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="">`;
+
+function pane(html) {
+  document.getElementById('app').innerHTML = `<div class="pane">${logo}${html}</div>`;
+}
+
+auth.onAuthStateChanged(async user => {
+  if (!slug) { pane('<h2>Which script?</h2><p>This page needs to know which film.</p>' +
+    '<a class="btn" href="/">Browse films</a>'); return; }
+
+  if (!user) {
+    pane(`
+      <h2>Scripts are for members</h2>
+      <p>You do not have to buy the film — an account is enough. It is free, and it is
+      how we know the scripts are being read by people rather than scraped.</p>
+      <a class="btn" href="/">Sign in or create an account</a>
+      <a class="btn ghost" href="/${esc(slug)}">Back to the film</a>
+      <p class="note">South African screenplays are almost impossible to find. We are
+      collecting them here so people studying film can actually read them.</p>`);
+    return;
+  }
+
+  let d;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-script', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await user.getIdToken(), filmSlug: slug })
+    });
+    d = await r.json();
+    if (!r.ok) throw new Error(d.message || 'Could not open that.');
+  } catch (e) {
+    pane(`<h2>Not available</h2><p>${esc(e.message)}</p>
+      <a class="btn ghost" href="/${esc(slug)}">Back to the film</a>`);
+    return;
+  }
+
+  document.getElementById('app').innerHTML = `
+    <header>
+      <a class="back" href="/${esc(d.filmSlug)}">&larr; Film</a>
+      <div class="who">
+        <h1>${esc(d.title)}</h1>
+        <p>${d.writer ? 'Written by ' + esc(d.writer) : 'Screenplay'}${
+          d.draft ? ' · ' + esc(d.draft) : ''}${d.pages ? ' · ' + d.pages + ' pages' : ''}</p>
+      </div>
+      <a class="open" href="${esc(d.url)}" target="_blank" rel="noopener">Open full screen</a>
+    </header>
+    <div class="frame">
+      <iframe src="${esc(d.url)}#toolbar=1&navpanes=0&view=FitH"
+        title="${esc(d.title)} screenplay"></iframe>
+    </div>`;
+});
+</script>
+</body>
+</html>

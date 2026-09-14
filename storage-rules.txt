@@ -1,0 +1,72 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============ 4flieks platform ============
+
+    // Poster images — public read so the catalogue works signed out
+    match /flieks_films/{filmId}/poster.jpg {
+      allow read: if true;
+      allow write: if request.auth != null
+                  && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Film files — authenticated read, filmmakers and admin write
+    match /flieks_films/{filmId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                  && request.resource.size < 2 * 1024 * 1024 * 1024;
+    }
+
+    // Poster/thumbnail images — public read, auth write
+    match /flieks_posters/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                  && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Screenplays. Readable by anyone with the link, which only the
+    // flieks-script function hands out, and only to signed-in people.
+    match /flieks_scripts/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                  && request.resource.size < 30 * 1024 * 1024
+                  && request.resource.contentType == 'application/pdf';
+    }
+
+    // NEW — cast and crew headshots. Public read: they appear on the film
+    // page for signed-out visitors, same as posters.
+    match /flieks_cast/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                  && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // ============ Destroying Desmond ============
+
+    // The feature itself. No browsable read — the tokened download URL still
+    // works, so dd-stream can hand it to a paying account while the file
+    // stays unlisted. Must sit above /dd/{allPaths} to take precedence.
+    match /dd/film/{allPaths=**} {
+      allow read: if false;
+      allow write: if request.auth != null
+                  && request.auth.uid == 'LGANwGT28XPHyESixxX7yZiV1UQ2'
+                  && request.resource.size < 5 * 1024 * 1024 * 1024;
+    }
+
+    match /dd/cast/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                  && request.auth.uid == 'LGANwGT28XPHyESixxX7yZiV1UQ2'
+                  && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /dd/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                  && request.auth.uid == 'LGANwGT28XPHyESixxX7yZiV1UQ2'
+                  && request.resource.size < 2 * 1024 * 1024 * 1024;
+    }
+  }
+}

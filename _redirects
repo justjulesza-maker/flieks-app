@@ -9,6 +9,7 @@
 /sitemap.xml     /.netlify/functions/sitemap  200
 /robots.txt      /robots.txt        200
 /me/*            /me.html           200
+/script/*        /script.html       200
 /report/*        /results.html      200
 /privacy         /terms.html#privacy 302
 /refunds         /terms.html#refunds 302

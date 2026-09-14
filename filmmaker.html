@@ -1203,6 +1203,15 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:6px">THE SCRIPT</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+        Anyone with a 4flieks account can read it — they do not have to buy the film.
+        There is no repository of South African screenplays anywhere, and people studying
+        film have nothing to learn from. This is the start of one.</p>
+      <div id="script-state"></div>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
       <p class="section-label" style="margin-bottom:6px">RELEASE REPORT</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
         A page you can send a funder, festival or broadcaster — what the film earned,
@@ -1263,6 +1272,7 @@ function openFilmDetail(filmId) {
   `;
   nav('film-detail');
   mountCastPanel(f);
+  mountScript(f);
   mountReport(f);
   mountShareOptions(f);
   mountThemePicker(f);
@@ -1324,6 +1334,156 @@ const SHARE_OPTIONS = [
 ];
 
 let currentShare = { type: 'pct20', note: '' };
+
+/* ============================================================
+   THE SCRIPT
+   ============================================================ */
+function mountScript(f) {
+  const box = document.getElementById('script-state');
+  if (!box) return;
+  const up = !!f.script_public;
+
+  box.innerHTML = up ? `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:9px;
+                padding:12px 14px;margin-bottom:10px">
+      <p style="font-size:14px;color:var(--text);font-weight:600">Script is up</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:3px">
+        ${f.script_writer ? 'Written by ' + f.script_writer : 'No writer credited'}${
+          f.script_pages ? ' · ' + f.script_pages + ' pages' : ''}
+        ${f.script_reads ? ' · read ' + f.script_reads + (f.script_reads === 1 ? ' time' : ' times') : ''}</p>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="window.open('${location.origin}/script/${f.slug || f.id}','_blank')">READ IT</button>
+    <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="showScriptForm('${f.id}', true)">REPLACE</button>
+    <button class="btn btn-outline btn-sm" style="margin-left:6px;border:0;color:var(--muted)"
+      onclick="removeScript('${f.id}')">Take it down</button>
+    <div id="script-form" style="display:none;margin-top:14px"></div>`
+  : `<button class="btn btn-outline btn-sm" onclick="showScriptForm('${f.id}')">ADD THE SCRIPT</button>
+     <div id="script-form" style="display:none;margin-top:14px"></div>`;
+}
+
+function showScriptForm(filmId, replacing) {
+  const box = document.getElementById('script-form');
+  const f = (myFilms || []).find(x => x.id === filmId) || {};
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px">
+      <label style="display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Written by</label>
+      <input id="sc-writer" value="${(f.script_writer || f.filmmaker || '').replace(/"/g,'&quot;')}"
+        placeholder="Whoever wrote it"
+        style="width:100%;font:inherit;font-size:16px;padding:11px;border-radius:8px;
+               background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:11px">
+
+      <label style="display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Which draft (optional)</label>
+      <input id="sc-draft" value="${(f.script_draft || '').replace(/"/g,'&quot;')}"
+        placeholder="e.g. Shooting draft, March 2021"
+        style="width:100%;font:inherit;font-size:16px;padding:11px;border-radius:8px;
+               background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:11px">
+
+      <div class="upload-zone" id="sc-drop" style="padding:18px"
+        onclick="document.getElementById('sc-file').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');pickScript(event.dataTransfer.files[0])">
+        <p style="font-size:13px;color:var(--muted)" id="sc-name">Drop the PDF, or click to choose</p>
+        <p style="font-size:11px;color:var(--dim);margin-top:4px">PDF only</p>
+      </div>
+      <input type="file" id="sc-file" accept="application/pdf,.pdf" style="display:none"
+        onchange="pickScript(this.files[0])">
+
+      <label style="display:flex;align-items:flex-start;gap:10px;margin:14px 0 6px;cursor:pointer">
+        <input type="checkbox" id="sc-rights" style="margin-top:3px;accent-color:var(--accent,#F0A62E)">
+        <span style="font-size:12.5px;color:var(--text);line-height:1.5">
+          I have the right to publish this script.
+          <span style="display:block;font-size:11.5px;color:var(--dim);margin-top:3px">
+            The writer is not always the director. If someone else wrote it, you need their
+            permission before it goes up.</span></span>
+      </label>
+
+      <div id="sc-prog" style="height:3px;background:var(--border);border-radius:2px;margin:10px 0;display:none">
+        <i id="sc-prog-fill" style="display:block;height:100%;background:var(--accent,#F0A62E);width:0;border-radius:2px"></i>
+      </div>
+      <p id="sc-msg" style="font-size:12px;color:var(--muted);min-height:1.2em;margin-bottom:8px"></p>
+      <button class="btn btn-amber btn-sm" onclick="saveScript('${filmId}')">PUT IT UP</button>
+    </div>`;
+}
+
+let scriptFile = null;
+function pickScript(file) {
+  if (!file) return;
+  const msg = document.getElementById('sc-msg');
+  if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+    msg.style.color = 'var(--red)'; msg.textContent = 'It needs to be a PDF.'; return;
+  }
+  if (file.size > 30 * 1024 * 1024) {
+    msg.style.color = 'var(--red)'; msg.textContent = 'That is over 30MB — a script should be well under that.'; return;
+  }
+  scriptFile = file;
+  msg.textContent = '';
+  document.getElementById('sc-name').textContent =
+    `${file.name} · ${(file.size / 1048576).toFixed(1)}MB`;
+}
+
+async function saveScript(filmId) {
+  const msg = document.getElementById('sc-msg');
+  const prog = document.getElementById('sc-prog');
+  const fill = document.getElementById('sc-prog-fill');
+  const writer = document.getElementById('sc-writer').value.trim();
+  const draft = document.getElementById('sc-draft').value.trim();
+
+  msg.style.color = 'var(--red)';
+  if (!scriptFile) { msg.textContent = 'Choose the PDF first.'; return; }
+  if (!writer) { msg.textContent = 'Who wrote it?'; return; }
+  if (!document.getElementById('sc-rights').checked) {
+    msg.textContent = 'Confirm you have the right to publish it.'; return;
+  }
+
+  msg.style.color = 'var(--muted)';
+  msg.textContent = 'Uploading…';
+  prog.style.display = 'block';
+
+  try {
+    const ref = storage.ref(`flieks_scripts/${filmId}/script.pdf`);
+    const task = ref.put(scriptFile, { contentType: 'application/pdf' });
+    task.on('state_changed',
+      sn => fill.style.width = (sn.bytesTransferred / sn.totalBytes * 100) + '%',
+      err => { prog.style.display = 'none'; msg.style.color = 'var(--red)';
+        msg.textContent = err && err.code === 'storage/unauthorized'
+          ? 'Upload blocked by Storage rules — flieks_scripts needs write access.'
+          : 'Upload failed: ' + ((err && err.message) || 'unknown error'); },
+      async () => {
+        const url = await ref.getDownloadURL();
+        // The file lives in the private node, like the films.
+        await db.ref(`${DB_PREFIX}private/${filmId}/script_url`).set(url);
+        await db.ref(`${DB_PREFIX}films/${filmId}`).update({
+          script_public: true,
+          script_writer: writer.slice(0, 80),
+          script_draft: draft.slice(0, 60),
+          script_added_at: Date.now()
+        });
+        const film = (myFilms || []).find(x => x.id === filmId);
+        if (film) Object.assign(film, { script_public: true, script_writer: writer, script_draft: draft });
+        prog.style.display = 'none';
+        scriptFile = null;
+        snack('Script is up. Anyone with an account can read it.');
+        mountScript(film || { id: filmId, script_public: true, script_writer: writer });
+      });
+  } catch (e) {
+    prog.style.display = 'none';
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Could not upload that.';
+  }
+}
+
+async function removeScript(filmId) {
+  if (!confirm('Take the script down? People will no longer be able to read it.')) return;
+  try {
+    await db.ref(`${DB_PREFIX}films/${filmId}/script_public`).set(false);
+    const film = (myFilms || []).find(x => x.id === filmId);
+    if (film) film.script_public = false;
+    snack('Script taken down.');
+    mountScript(film || { id: filmId });
+  } catch { snack('Could not do that.'); }
+}
 
 /* ============================================================
    RELEASE REPORT
