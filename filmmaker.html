@@ -16,8 +16,7 @@
 (function () {
   var saved = null;
   try { saved = localStorage.getItem('flieks_mode'); } catch (e) {}
-  var mode = saved || (window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  var mode = saved || 'light'; // default look & feel is daytime/light until a viewer switches
   document.documentElement.setAttribute('data-mode', mode);
 })();
 </script>
