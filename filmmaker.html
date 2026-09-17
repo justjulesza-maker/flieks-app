@@ -2510,6 +2510,10 @@ function showSnack(msg) {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bnav').style.display = 'none';
+  // A banner link like filmmaker.html?tab=register opens straight on Register
+  if (new URLSearchParams(location.search).get('tab') === 'register') {
+    switchTab('reg');
+  }
 });
 </script>
 

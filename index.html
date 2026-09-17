@@ -101,6 +101,13 @@ input,textarea{font-family:var(--fb)}
 .topbar-right svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:1.8;cursor:pointer}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--amber-fill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--on-amber);cursor:pointer;flex-shrink:0}
 
+/* ===================== FILMMAKER BANNER ===================== */
+.fm-banner{position:relative;margin:12px 20px 0;padding:12px 34px 12px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;animation:fadeIn .25s ease}
+.fm-banner p{margin:0;font-family:var(--fb);font-size:12.5px;line-height:1.4;color:var(--text);flex:1 1 200px}
+.fm-banner p b{color:var(--amber)}
+.fm-banner a.fm-cta{flex-shrink:0;font-family:var(--fn);letter-spacing:1px;font-size:14px;padding:9px 16px;border-radius:8px;background:var(--amber-fill);color:var(--on-amber);text-decoration:none;white-space:nowrap}
+.fm-banner .fm-close{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:14px;line-height:1;cursor:pointer;padding:6px}
+
 /* ===================== BOTTOM NAV ===================== */
 .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:68px;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:50}
 .bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 16px;cursor:pointer}
@@ -313,6 +320,13 @@ input,textarea{font-family:var(--fb)}
       <svg viewBox="0 0 24 24" onclick="nav('search')"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <div class="avatar" id="home-avatar" onclick="nav('profile')">?</div>
     </div>
+  </div>
+
+  <!-- Filmmaker call-to-action -->
+  <div class="fm-banner" id="fm-banner" style="display:none">
+    <button class="fm-close" aria-label="Dismiss" onclick="dismissFmBanner()">&#10005;</button>
+    <p><b>Are you a filmmaker?</b> Upload your short film, keep your copyright, and earn 70% of every sale.</p>
+    <a class="fm-cta" href="/filmmaker.html?tab=register">Click here to upload your film</a>
   </div>
 
   <!-- Hero featured film -->
@@ -2698,10 +2712,32 @@ function showSnack(msg) {
 }
 
 /* ============================================================
+   FILMMAKER BANNER
+   ============================================================ */
+const FM_BANNER_KEY = 'flieks_fm_banner_dismissed_until';
+function initFmBanner() {
+  const el = document.getElementById('fm-banner');
+  if (!el) return;
+  try {
+    const until = localStorage.getItem(FM_BANNER_KEY);
+    if (until && Date.now() < Number(until)) return; // stays hidden
+  } catch (e) {}
+  el.style.display = 'flex';
+}
+function dismissFmBanner() {
+  const el = document.getElementById('fm-banner');
+  if (el) el.style.display = 'none';
+  try {
+    localStorage.setItem(FM_BANNER_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  } catch (e) {}
+}
+
+/* ============================================================
    BOOT
    ============================================================ */
 document.addEventListener('DOMContentLoaded', async () => {
   paintModeToggle();
+  initFmBanner();
   await loadFilms();
   // a link like 4flieks.com/fhf?a=someone opens that film straight away
   if (window.FlieksSocial) {
