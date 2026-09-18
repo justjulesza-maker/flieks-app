@@ -152,7 +152,7 @@ Return ONLY valid JSON (no markdown fences, no commentary):
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 16000,
+        max_tokens: 64000,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }]
       })
@@ -176,19 +176,76 @@ Return ONLY valid JSON (no markdown fences, no commentary):
     }, firebaseUrl, firebaseSecret);
 
     const rawText = (data.content || []).map(b => b.text || "").join("");
-    const cleanJson = rawText.replace(/```json|```/g, "").trim();
+    const stopReason = data.stop_reason || "";
 
+    // Check if output was truncated (hit max_tokens)
+    if (stopReason === "max_tokens") {
+      console.error("Output truncated — hit max_tokens. Raw length:", rawText.length);
+    }
+
+    // Robust JSON extraction: strip fences, find the outermost { ... }
+    let cleanJson = rawText.replace(/```json|```/g, "").trim();
+
+    // Find the first { and try to extract the JSON object
+    const firstBrace = cleanJson.indexOf("{");
+    if (firstBrace > 0) {
+      cleanJson = cleanJson.substring(firstBrace);
+    }
+
+    // If truncated, try to repair: close any open arrays/objects
     let extracted;
     try {
       extracted = JSON.parse(cleanJson);
     } catch (parseErr) {
-      console.error("JSON parse failed:", parseErr.message, "\nRaw:", rawText.substring(0, 500));
-      await fbPatch(`script_coach/jobs/${jobId}`, {
-        status: "error",
-        error: "AI returned invalid JSON — try uploading again",
-        finishedAt: new Date().toISOString()
-      }, firebaseUrl, firebaseSecret);
-      return { statusCode: 200 };
+      // Attempt repair for truncated JSON: find last complete character entry
+      console.log("Initial parse failed, attempting truncation repair…");
+      try {
+        // Find the last complete } ] pattern and close the structure
+        // Look for the last "}," or "}" that ends a character block
+        let repaired = cleanJson;
+
+        // Remove any trailing incomplete object/array
+        // Find last complete line entry (ends with })
+        const lastCompleteObj = repaired.lastIndexOf("}");
+        if (lastCompleteObj > 0) {
+          repaired = repaired.substring(0, lastCompleteObj + 1);
+
+          // Count open brackets to figure out what needs closing
+          let openBraces = 0, openBrackets = 0;
+          let inString = false, escaped = false;
+          for (let i = 0; i < repaired.length; i++) {
+            const c = repaired[i];
+            if (escaped) { escaped = false; continue; }
+            if (c === "\\") { escaped = true; continue; }
+            if (c === '"') { inString = !inString; continue; }
+            if (inString) continue;
+            if (c === "{") openBraces++;
+            if (c === "}") openBraces--;
+            if (c === "[") openBrackets++;
+            if (c === "]") openBrackets--;
+          }
+
+          // Remove trailing comma if present
+          repaired = repaired.replace(/,\s*$/, "");
+
+          // Close open brackets/braces
+          for (let i = 0; i < openBrackets; i++) repaired += "]";
+          for (let i = 0; i < openBraces; i++) repaired += "}";
+
+          extracted = JSON.parse(repaired);
+          console.log("Truncation repair succeeded");
+        } else {
+          throw parseErr;
+        }
+      } catch (repairErr) {
+        console.error("JSON parse + repair both failed:", parseErr.message, "\nRaw start:", rawText.substring(0, 500), "\nRaw end:", rawText.substring(rawText.length - 500));
+        await fbPatch(`script_coach/jobs/${jobId}`, {
+          status: "error",
+          error: "AI returned invalid JSON — try uploading again",
+          finishedAt: new Date().toISOString()
+        }, firebaseUrl, firebaseSecret);
+        return { statusCode: 200 };
+      }
     }
 
     if (!extracted.characters || !Array.isArray(extracted.characters)) {
