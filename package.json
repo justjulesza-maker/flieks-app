@@ -1,8 +1,8 @@
 {
-  "name": "flieks-app",
+  "name": "4flieks-script-coach",
   "private": true,
-  "description": "Netlify serverless dependencies for 4flieks",
   "dependencies": {
-    "qrcode": "^1.5.4"
+    "pdf-parse": "^1.1.1",
+    "mammoth": "^1.8.0"
   }
 }
