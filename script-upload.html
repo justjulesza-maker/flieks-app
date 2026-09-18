@@ -555,8 +555,19 @@
         })
       });
 
-      const data = await res.json();
       stopProgress();
+
+      // If the response isn't JSON (e.g. Netlify 404/502 HTML page), handle gracefully
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Non-JSON response:", res.status, text.substring(0, 500));
+        showSection("form");
+        showError(`Server returned ${res.status} (not JSON). Check that the script-extract function is deployed and package.json is in the site root.`);
+        return;
+      }
+
+      const data = await res.json();
 
       if (!res.ok) {
         showSection("form");
@@ -571,7 +582,8 @@
     } catch (err) {
       stopProgress();
       showSection("form");
-      showError("Network error — check your connection and try again.");
+      console.error("Upload error:", err);
+      showError("Network error: " + (err.message || "check your connection and try again."));
     }
   });
 
