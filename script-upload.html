@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Script Upload — 4Flieks Script Coach</title>
+<style>
+  :root {
+    --bg: #f5f0ea;
+    --text: #1a1a1a;
+    --accent: #8b0000;
+    --accent-light: #a52a2a;
+    --card-bg: #fffaf5;
+    --border: #d4c5b0;
+    --muted: #6b5e50;
+    --success: #2d6a30;
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 16px;
+  }
+
+  .container {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 40px 0 60px;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  /* ── Form ── */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  label .optional {
+    font-weight: normal;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .file-drop {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #fff;
+    position: relative;
+  }
+
+  .file-drop:hover, .file-drop.dragover {
+    border-color: var(--accent);
+    background: #fef8f2;
+  }
+
+  .file-drop.has-file {
+    border-color: var(--success);
+    background: #f0f7f0;
+  }
+
+  .file-drop input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .file-drop-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+
+  .file-drop-text {
+    font-size: 0.95rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .file-drop-text strong {
+    color: var(--accent);
+  }
+
+  .file-name {
+    font-size: 0.9rem;
+    color: var(--success);
+    font-weight: bold;
+    margin-top: 6px;
+  }
+
+  /* ── Button ── */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: bold;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    margin-top: 28px;
+  }
+
+  .btn:hover { background: var(--accent-light); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Progress ── */
+  .progress-section {
+    display: none;
+    text-align: center;
+    padding: 40px 0;
+  }
+
+  .progress-section.active { display: block; }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .progress-status {
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-weight: bold;
+  }
+
+  .progress-detail {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* ── Results ── */
+  .results-section {
+    display: none;
+  }
+
+  .results-section.active { display: block; }
+
+  .results-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .results-header .check {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+  }
+
+  .results-header h2 {
+    font-size: 1.4rem;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .results-header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .char-card {
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .char-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .char-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--text);
+  }
+
+  .char-lines {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .char-scenes {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .link-input {
+    flex: 1;
+    padding: 8px 10px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .copy-btn {
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--accent);
+    background: #fff;
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .copy-btn:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .copy-btn.copied {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+  }
+
+  .another-btn {
+    display: block;
+    text-align: center;
+    margin-top: 28px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+
+  /* ── Error ── */
+  .error-msg {
+    display: none;
+    background: #fef0f0;
+    border: 1.5px solid #e0a0a0;
+    color: #8b0000;
+    border-radius: var(--radius);
+    padding: 14px;
+    font-size: 0.9rem;
+    margin-top: 16px;
+    line-height: 1.5;
+  }
+
+  .error-msg.active { display: block; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ── Upload Form ── -->
+  <div id="formSection">
+    <h1>Upload a Script</h1>
+    <p class="subtitle">
+      Upload a screenplay PDF or DOCX. We'll extract every character's lines
+      and generate personalised coaching links — ready for actors to start learning.
+    </p>
+
+    <div class="form-group">
+      <label for="title">Film Title</label>
+      <input type="text" id="title" placeholder="e.g. The Nothing Mirror" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label for="writers">Writer(s) <span class="optional">— comma separated</span></label>
+      <input type="text" id="writers" placeholder="e.g. Letuka Makoko" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label for="storyBy">Story By <span class="optional">— optional, comma separated</span></label>
+      <input type="text" id="storyBy" placeholder="e.g. Julian Von Plato, Thabo Rametsi" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label>Screenplay File</label>
+      <div class="file-drop" id="fileDrop">
+        <input type="file" id="fileInput" accept=".pdf,.docx">
+        <div id="fileDropContent">
+          <div class="file-drop-icon">📄</div>
+          <div class="file-drop-text">
+            <strong>Choose a file</strong> or drag it here<br>
+            PDF or DOCX — text-based, not scanned
+          </div>
+        </div>
+        <div class="file-name" id="fileName" style="display:none"></div>
+      </div>
+    </div>
+
+    <button class="btn" id="submitBtn" disabled>Extract Characters & Lines</button>
+
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- ── Progress ── -->
+  <div class="progress-section" id="progressSection">
+    <div class="spinner"></div>
+    <div class="progress-status" id="progressStatus">Uploading script…</div>
+    <div class="progress-detail" id="progressDetail">This may take 30–60 seconds for a full screenplay</div>
+  </div>
+
+  <!-- ── Results ── -->
+  <div class="results-section" id="resultsSection">
+    <div class="results-header">
+      <div class="check">✅</div>
+      <h2 id="resultsTitle"></h2>
+      <p id="resultsSummary"></p>
+    </div>
+    <div id="characterCards"></div>
+    <button class="another-btn" id="anotherBtn">Upload another script</button>
+  </div>
+
+  <div class="footer">
+    <a href="index.html">4Flieks</a> · Script Coach
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const EXTRACT_URL = "/.netlify/functions/script-extract";
+
+  // ── Elements ──
+  const formSection     = document.getElementById("formSection");
+  const progressSection = document.getElementById("progressSection");
+  const resultsSection  = document.getElementById("resultsSection");
+
+  const titleInput   = document.getElementById("title");
+  const writersInput = document.getElementById("writers");
+  const storyByInput = document.getElementById("storyBy");
+  const fileInput    = document.getElementById("fileInput");
+  const fileDrop     = document.getElementById("fileDrop");
+  const fileDropContent = document.getElementById("fileDropContent");
+  const fileNameEl   = document.getElementById("fileName");
+  const submitBtn    = document.getElementById("submitBtn");
+  const errorMsg     = document.getElementById("errorMsg");
+
+  const progressStatus = document.getElementById("progressStatus");
+  const progressDetail = document.getElementById("progressDetail");
+
+  const resultsTitle   = document.getElementById("resultsTitle");
+  const resultsSummary = document.getElementById("resultsSummary");
+  const characterCards = document.getElementById("characterCards");
+  const anotherBtn     = document.getElementById("anotherBtn");
+
+  let selectedFile = null;
+
+  // ── File handling ──
+  function handleFile(file) {
+    if (!file) return;
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (ext !== "pdf" && ext !== "docx") {
+      showError("Please upload a PDF or DOCX file.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      showError("File too large — 20 MB max.");
+      return;
+    }
+    selectedFile = file;
+    fileDropContent.style.display = "none";
+    fileNameEl.textContent = "📎 " + file.name + " (" + (file.size / 1024).toFixed(0) + " KB)";
+    fileNameEl.style.display = "block";
+    fileDrop.classList.add("has-file");
+    checkReady();
+  }
+
+  fileInput.addEventListener("change", () => handleFile(fileInput.files[0]));
+
+  fileDrop.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    fileDrop.classList.add("dragover");
+  });
+  fileDrop.addEventListener("dragleave", () => fileDrop.classList.remove("dragover"));
+  fileDrop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    fileDrop.classList.remove("dragover");
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+
+  titleInput.addEventListener("input", checkReady);
+
+  function checkReady() {
+    submitBtn.disabled = !(titleInput.value.trim() && selectedFile);
+  }
+
+  // ── Error display ──
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.add("active");
+  }
+  function clearError() {
+    errorMsg.classList.remove("active");
+  }
+
+  // ── Progress messages ──
+  const stages = [
+    { text: "Uploading script…",            detail: "Sending your file to the server" },
+    { text: "Extracting text…",             detail: "Reading your PDF/DOCX" },
+    { text: "AI is reading the screenplay…", detail: "Identifying characters, scenes, and dialogue" },
+    { text: "Building character profiles…",  detail: "Structuring lines, cues, beats, and hooks" },
+    { text: "Almost there…",                detail: "Saving to database and generating links" },
+  ];
+
+  let stageInterval = null;
+
+  function startProgress() {
+    let idx = 0;
+    progressStatus.textContent = stages[0].text;
+    progressDetail.textContent = stages[0].detail;
+    stageInterval = setInterval(() => {
+      idx++;
+      if (idx < stages.length) {
+        progressStatus.textContent = stages[idx].text;
+        progressDetail.textContent = stages[idx].detail;
+      }
+    }, 8000);
+  }
+
+  function stopProgress() {
+    if (stageInterval) clearInterval(stageInterval);
+  }
+
+  // ── Section switching ──
+  function showSection(section) {
+    formSection.style.display = "none";
+    progressSection.classList.remove("active");
+    resultsSection.classList.remove("active");
+    if (section === "form")     formSection.style.display = "block";
+    if (section === "progress") progressSection.classList.add("active");
+    if (section === "results")  resultsSection.classList.add("active");
+  }
+
+  // ── Submit ──
+  submitBtn.addEventListener("click", async () => {
+    clearError();
+
+    const title   = titleInput.value.trim();
+    const writers = writersInput.value.trim();
+    const storyBy = storyByInput.value.trim();
+
+    if (!title || !selectedFile) return;
+
+    // Read file as base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(selectedFile);
+    });
+
+    showSection("progress");
+    startProgress();
+
+    try {
+      const res = await fetch(EXTRACT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          writers,
+          storyBy,
+          fileBase64: base64,
+          fileName: selectedFile.name
+        })
+      });
+
+      const data = await res.json();
+      stopProgress();
+
+      if (!res.ok) {
+        showSection("form");
+        showError(data.error || "Something went wrong — please try again.");
+        return;
+      }
+
+      // ── Build results ──
+      renderResults(data);
+      showSection("results");
+
+    } catch (err) {
+      stopProgress();
+      showSection("form");
+      showError("Network error — check your connection and try again.");
+    }
+  });
+
+  // ── Render results ──
+  function renderResults(data) {
+    const baseUrl = window.location.origin + "/script-coach.html";
+
+    resultsTitle.textContent = data.filmTitle;
+    const total = data.characters.reduce((s, c) => s + c.lineCount, 0);
+    resultsSummary.textContent = data.characters.length + " character" + (data.characters.length !== 1 ? "s" : "") + " · " + total + " lines extracted";
+
+    characterCards.innerHTML = "";
+
+    data.characters.forEach(ch => {
+      const fullLink = baseUrl + "?film=" + data.filmSlug + "&character=" + ch.slug;
+
+      const card = document.createElement("div");
+      card.className = "char-card";
+      card.innerHTML =
+        '<div class="char-card-header">' +
+          '<span class="char-name">' + esc(ch.name) + '</span>' +
+          '<span class="char-lines">' + ch.lineCount + ' line' + (ch.lineCount !== 1 ? 's' : '') + '</span>' +
+        '</div>' +
+        '<div class="char-scenes">Scenes: ' + esc(ch.scenes.join(", ")) + '</div>' +
+        '<div class="link-row">' +
+          '<input class="link-input" readonly value="' + esc(fullLink) + '">' +
+          '<button class="copy-btn" data-link="' + esc(fullLink) + '">Copy</button>' +
+        '</div>';
+
+      characterCards.appendChild(card);
+    });
+
+    // Copy buttons
+    characterCards.querySelectorAll(".copy-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        navigator.clipboard.writeText(btn.dataset.link).then(() => {
+          btn.textContent = "Copied!";
+          btn.classList.add("copied");
+          setTimeout(() => {
+            btn.textContent = "Copy";
+            btn.classList.remove("copied");
+          }, 2000);
+        });
+      });
+    });
+  }
+
+  function esc(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── Upload another ──
+  anotherBtn.addEventListener("click", () => {
+    titleInput.value = "";
+    writersInput.value = "";
+    storyByInput.value = "";
+    fileInput.value = "";
+    selectedFile = null;
+    fileDropContent.style.display = "";
+    fileNameEl.style.display = "none";
+    fileDrop.classList.remove("has-file");
+    submitBtn.disabled = true;
+    clearError();
+    showSection("form");
+  });
+
+})();
+</script>
+
+</body>
+</html>

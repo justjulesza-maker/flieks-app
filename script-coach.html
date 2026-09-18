@@ -113,13 +113,17 @@
    ═══════════════════════════════════════════════ */
 
 const FUNCTION_URL = "/.netlify/functions/line-coach";
+const FIREBASE_DB = "https://flieks-app-default-rtdb.firebaseio.com";
 
-// ── Script registry: add new scripts here ──
+// ── Script registry: static scripts bundled with the site ──
 const SCRIPT_INDEX = [
   { file: "scripts/the-nothing-mirror--lance-mullen.json", title: "The Nothing Mirror", character: "Detective Lance Mullen" },
   { file: "scripts/the-nothing-mirror--oscar-phiri.json", title: "The Nothing Mirror", character: "Oscar Phiri" },
   { file: "scripts/the-nothing-mirror--inspector-naude.json", title: "The Nothing Mirror", character: "Inspector Beverly Naude" }
 ];
+
+// Combined index: static + dynamic (populated at boot)
+let fullIndex = [...SCRIPT_INDEX];
 
 let scriptData = null;
 let mode = "breakdown";
@@ -165,10 +169,58 @@ function esc(str) {
   return d.innerHTML;
 }
 
+// ── Fetch dynamic index from Firebase and merge with static ──
+async function loadDynamicIndex() {
+  try {
+    const res = await fetch(`${FIREBASE_DB}/script_coach/index.json`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data) return;
+    Object.values(data).forEach(entry => {
+      // Avoid duplicating anything already in static index
+      const alreadyExists = SCRIPT_INDEX.some(s =>
+        s.title === entry.title && s.character === entry.character
+      );
+      if (!alreadyExists) {
+        fullIndex.push({
+          film: entry.filmSlug,
+          character_slug: entry.charSlug,
+          title: entry.title,
+          character: entry.character,
+          lineCount: entry.lineCount,
+          dynamic: true
+        });
+      }
+    });
+  } catch (e) {
+    console.warn("Could not load dynamic index:", e.message);
+  }
+}
+
+// ── Load script data from Firebase ──
+async function loadFirebaseScript(filmSlug, charSlug) {
+  const app = document.getElementById("app");
+  app.innerHTML = `<div class="loader"><h2>Loading script...</h2></div>`;
+  try {
+    const res = await fetch(`${FIREBASE_DB}/script_coach/films/${filmSlug}/characters/${charSlug}.json`);
+    if (!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    if (!data || !data.lines) throw new Error("Character data not found");
+    scriptData = data;
+    document.title = `${scriptData.character} — Line Coach`;
+    loadStats();
+    renderApp();
+  } catch(e) {
+    app.innerHTML = `<div class="loader"><h2>Script Coach</h2><div class="error">Couldn't load script: ${esc(e.message)}</div></div>`;
+  }
+}
+
 // ── Render: Script picker ──
 function renderPicker() {
-  if (SCRIPT_INDEX.length === 1) {
-    loadScript(SCRIPT_INDEX[0].file);
+  if (fullIndex.length === 1) {
+    const s = fullIndex[0];
+    if (s.dynamic) loadFirebaseScript(s.film, s.character_slug);
+    else loadScript(s.file);
     return;
   }
   const app = document.getElementById("app");
@@ -177,10 +229,12 @@ function renderPicker() {
       <h2>Script Coach</h2>
       <p>Choose a script to start learning your lines</p>
       <div class="picker">
-        ${SCRIPT_INDEX.map(s => `
-          <div class="picker-card" onclick="loadScript('${s.file}')">
+        ${fullIndex.map((s, i) => `
+          <div class="picker-card" onclick="${s.dynamic
+            ? `loadFirebaseScript('${s.film}','${s.character_slug}')`
+            : `loadScript('${s.file}')`}">
             <div class="picker-title">${esc(s.title)}</div>
-            <div class="picker-sub">${esc(s.character)}</div>
+            <div class="picker-sub">${esc(s.character)}${s.lineCount ? ` · ${s.lineCount} lines` : ''}</div>
           </div>`).join("")}
       </div>
       <div class="powered">Powered by <a href="https://4flieks.com">4Flieks</a></div>
@@ -208,7 +262,7 @@ function renderApp() {
   app.innerHTML = `
     <div class="header">
       <div class="header-sub">${esc(scriptData.filmTitle)} — <span>Line Coach</span></div>
-      ${SCRIPT_INDEX.length > 1 ? `<span class="back-link" onclick="backToPicker()">← All Scripts</span>` : ""}
+      ${fullIndex.length > 1 ? `<span class="back-link" onclick="backToPicker()">← All Scripts</span>` : ""}
       <h1>${esc(scriptData.character.toUpperCase())}</h1>
       <div class="tabs">
         <button class="tab ${mode==='breakdown'?'active':''}" onclick="switchMode('breakdown')">Scene Breakdown</button>
@@ -404,16 +458,30 @@ async function checkAnswer() {
 }
 
 // ── Boot ──
-// Allow loading a specific script via ?script=filename.json
-const params = new URLSearchParams(location.search);
-const directScript = params.get("script");
-if (directScript) {
-  const match = SCRIPT_INDEX.find(s => s.file.includes(directScript));
-  if (match) loadScript(match.file);
-  else loadScript(`scripts/${directScript}`);
-} else {
+(async function boot() {
+  const params = new URLSearchParams(location.search);
+
+  // Direct Firebase link: ?film=slug&character=slug
+  const filmParam = params.get("film");
+  const charParam = params.get("character");
+  if (filmParam && charParam) {
+    loadFirebaseScript(filmParam, charParam);
+    return;
+  }
+
+  // Direct static file link: ?script=filename.json
+  const directScript = params.get("script");
+  if (directScript) {
+    const match = SCRIPT_INDEX.find(s => s.file.includes(directScript));
+    if (match) loadScript(match.file);
+    else loadScript(`scripts/${directScript}`);
+    return;
+  }
+
+  // Default: fetch dynamic index, then show picker
+  await loadDynamicIndex();
   renderPicker();
-}
+})();
 </script>
 </body>
 </html>
