@@ -1,8 +1,8 @@
 [functions]
   node_bundler = "esbuild"
 
-[functions."script-extract"]
-  timeout = 26
+[functions."script-extract-background"]
+  timeout = 900
 
 [functions."line-coach"]
   timeout = 10

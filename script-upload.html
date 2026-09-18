@@ -386,7 +386,7 @@
   <div class="progress-section" id="progressSection">
     <div class="spinner"></div>
     <div class="progress-status" id="progressStatus">Uploading script…</div>
-    <div class="progress-detail" id="progressDetail">This may take 30–60 seconds for a full screenplay</div>
+    <div class="progress-detail" id="progressDetail">This usually takes 30–90 seconds for a full screenplay</div>
   </div>
 
   <!-- ── Results ── -->
@@ -408,7 +408,8 @@
 
 <script>
 (function () {
-  const EXTRACT_URL = "/.netlify/functions/script-extract";
+  const EXTRACT_URL = "/.netlify/functions/script-extract-background";
+  const FIREBASE_DB  = "https://flieks-app-default-rtdb.firebaseio.com";
 
   // ── Elements ──
   const formSection     = document.getElementById("formSection");
@@ -483,32 +484,24 @@
     errorMsg.classList.remove("active");
   }
 
-  // ── Progress messages ──
-  const stages = [
-    { text: "Uploading script…",            detail: "Sending your file to the server" },
-    { text: "Extracting text…",             detail: "Reading your PDF/DOCX" },
-    { text: "AI is reading the screenplay…", detail: "Identifying characters, scenes, and dialogue" },
-    { text: "Building character profiles…",  detail: "Structuring lines, cues, beats, and hooks" },
-    { text: "Almost there…",                detail: "Saving to database and generating links" },
-  ];
-
-  let stageInterval = null;
+  // ── Progress ──
+  // Real-time stages come from Firebase polling; this just provides the initial state
+  let dotInterval = null;
 
   function startProgress() {
-    let idx = 0;
-    progressStatus.textContent = stages[0].text;
-    progressDetail.textContent = stages[0].detail;
-    stageInterval = setInterval(() => {
-      idx++;
-      if (idx < stages.length) {
-        progressStatus.textContent = stages[idx].text;
-        progressDetail.textContent = stages[idx].detail;
-      }
-    }, 8000);
+    progressStatus.textContent = "Uploading script…";
+    progressDetail.textContent = "Sending your file to the server";
+    // Animate dots to show activity
+    let dots = 0;
+    dotInterval = setInterval(() => {
+      dots = (dots + 1) % 4;
+      const base = progressStatus.textContent.replace(/\.+$/, "");
+      // Don't override Firebase-driven updates, just add dots to current text
+    }, 500);
   }
 
   function stopProgress() {
-    if (stageInterval) clearInterval(stageInterval);
+    if (dotInterval) clearInterval(dotInterval);
   }
 
   // ── Section switching ──
@@ -519,6 +512,71 @@
     if (section === "form")     formSection.style.display = "block";
     if (section === "progress") progressSection.classList.add("active");
     if (section === "results")  resultsSection.classList.add("active");
+  }
+
+  // ── Generate a unique job ID ──
+  function makeJobId(title) {
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return slug + "-" + Date.now();
+  }
+
+  // ── Poll Firebase for job status ──
+  function pollJob(jobId) {
+    const url = FIREBASE_DB + "/script_coach/jobs/" + jobId + ".json";
+    let elapsed = 0;
+    const maxWait = 300000; // 5 minutes
+    const interval = 3000;  // poll every 3 seconds
+
+    const timer = setInterval(async () => {
+      elapsed += interval;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          console.error("Firebase poll error:", res.status);
+          return; // keep trying
+        }
+
+        const job = await res.json();
+        if (!job) return; // not written yet
+
+        // Update progress stage text from Firebase
+        if (job.stage) {
+          progressStatus.textContent = job.stage;
+        }
+
+        if (job.status === "complete") {
+          clearInterval(timer);
+          stopProgress();
+          renderResults({
+            filmTitle: job.filmTitle,
+            filmSlug: job.filmSlug,
+            characters: job.characters
+          });
+          showSection("results");
+          return;
+        }
+
+        if (job.status === "error") {
+          clearInterval(timer);
+          stopProgress();
+          showSection("form");
+          showError(job.error || "Something went wrong — please try again.");
+          return;
+        }
+
+      } catch (err) {
+        console.error("Poll error:", err);
+        // keep polling — could be a transient failure
+      }
+
+      if (elapsed >= maxWait) {
+        clearInterval(timer);
+        stopProgress();
+        showSection("form");
+        showError("Processing is taking longer than expected. The extraction may still be running — check back in a minute.");
+      }
+    }, interval);
   }
 
   // ── Submit ──
@@ -539,6 +597,8 @@
       reader.readAsDataURL(selectedFile);
     });
 
+    const jobId = makeJobId(title);
+
     showSection("progress");
     startProgress();
 
@@ -551,33 +611,26 @@
           writers,
           storyBy,
           fileBase64: base64,
-          fileName: selectedFile.name
+          fileName: selectedFile.name,
+          jobId
         })
       });
 
+      // Background functions return 202 — that's success
+      if (res.status === 202) {
+        // Function accepted — now poll Firebase for results
+        progressStatus.textContent = "Script accepted — AI is working…";
+        progressDetail.textContent = "This usually takes 30–90 seconds for a full screenplay";
+        pollJob(jobId);
+        return;
+      }
+
+      // If we got something else, the function might not be deployed as background
       stopProgress();
-
-      // If the response isn't JSON (e.g. Netlify 404/502 HTML page), handle gracefully
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        const text = await res.text();
-        console.error("Non-JSON response:", res.status, text.substring(0, 500));
-        showSection("form");
-        showError(`Server returned ${res.status} (not JSON). Check that the script-extract function is deployed and package.json is in the site root.`);
-        return;
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        showSection("form");
-        showError(data.error || "Something went wrong — please try again.");
-        return;
-      }
-
-      // ── Build results ──
-      renderResults(data);
-      showSection("results");
+      const text = await res.text();
+      console.error("Unexpected response:", res.status, text.substring(0, 500));
+      showSection("form");
+      showError(`Server returned ${res.status} instead of 202. Make sure script-extract-background.js is deployed.`);
 
     } catch (err) {
       stopProgress();
