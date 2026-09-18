@@ -1,0 +1,234 @@
+{
+  "filmTitle": "The Nothing Mirror",
+  "character": "Detective Lance Mullen",
+  "writers": ["Letuka Makoko"],
+  "storyBy": ["Julian Von Plato", "Thabo Rametsi", "Dylan Von Plato"],
+  "scenes": ["Scene 1", "Scene 2", "Scene 3", "Scene 4", "Scene 5"],
+  "lines": [
+    {
+      "id": 1,
+      "scene": "Scene 1 — First Recess Demand",
+      "beat": "Naude enters trying to take over. Lance doesn't even look at her.",
+      "cue": "NAUDE: \"Lance, the captain's called me in to take over—\"",
+      "line": "--Fuck Off.",
+      "hook": "He doesn't even finish her sentence. Cuts her cold. TWO WORDS.",
+      "emotion": "Cold rage. Don't shout — it's scarier quiet."
+    },
+    {
+      "id": 2,
+      "scene": "Scene 1 — Handing Over His Gun",
+      "beat": "Naude asks for his service pistol. He hands it over without looking.",
+      "cue": "NAUDE: \"Ok, but give it to me Lance. I know you're not careless enough...\"",
+      "line": "Don't need it.",
+      "hook": "Three words. He means it literally — he plans to use his hands.",
+      "emotion": "Flat. Chilling. No inflection."
+    },
+    {
+      "id": 3,
+      "scene": "Scene 1 — Final Dismissal",
+      "beat": "Naude makes one last plea before leaving.",
+      "cue": "NAUDE: \"Lance... please—\"",
+      "line": "Fuck. Off.",
+      "hook": "Same two words as before, but with a full stop between them. Heavier. Deliberate.",
+      "emotion": "Barely contained. Each word is a warning."
+    },
+    {
+      "id": 4,
+      "scene": "Scene 1 — Official Recording",
+      "beat": "Lance starts the voice recorder. Procedural — recite it like a man who's done it a thousand times but is barely holding together.",
+      "cue": "[Lance starts recording — no cue from Oscar]",
+      "line": "The date is August 4th 2025, 01:13am. Detective Lance Mullen, 9013-BA, Capricorn Unit. Suspect in custody is Oscar Phiri 8806215286082. Apprehended at 23:13pm, August 3rd at the scene in question. Processed at Douglasdale Police Station by Lieutenant Mavimbela. Observer and Reserve are Captain Phineas Tsotetsi and Inspector Beverly Naude. Respectively.",
+      "hook": "Break it into chunks: DATE / NAME + BADGE / SUSPECT ID / ARREST DETAILS / STATION / OBSERVERS. Each chunk like a robot trying not to cry.",
+      "emotion": "Robotic professionalism over boiling fury."
+    },
+    {
+      "id": 5,
+      "scene": "Scene 2 — First Question",
+      "beat": "The interrogation begins. Lance opens with a direct question.",
+      "cue": "[Opens file. Picks up pen. Looks at Oscar.]",
+      "line": "What time did you arrive at 3 Fisant Avenue on the evening of the 3rd of August 2025 Mr. Phiri.",
+      "hook": "ADDRESS: 3 Fisant Avenue. DATE: evening of the 3rd. He says 'Mr. Phiri' — respect he doesn't feel, control he's forcing.",
+      "emotion": "Low, stern, professional. The volcano has a lid on it — for now."
+    },
+    {
+      "id": 6,
+      "scene": "Scene 2 — Repeat Question",
+      "beat": "Oscar mocks the 'Mr.' Lance swallows it and repeats himself.",
+      "cue": "OSCAR: \"Mr. even. Whew, that must be tough.\"",
+      "line": "Let me try again. What time did you arrive at 3 Fisant Avenue on the evening of the 3rd of August 2025?",
+      "hook": "'Let me try again' — that phrase is the key. Same question, more menacing. No 'Mr. Phiri' this time.",
+      "emotion": "Menacing beneath the calm. Gritted teeth."
+    },
+    {
+      "id": 7,
+      "scene": "Scene 2 — Warning Oscar",
+      "beat": "Oscar gets philosophical. Lance snaps him back to reality.",
+      "cue": "OSCAR: \"Oh but nothing is ever easy is it detective?\"",
+      "line": "Mr. Phiri, it would benefit you greatly to answer my questions, as quickly and as honestly as possible. This doesn't have to take time, this doesn't have to be difficult.",
+      "hook": "'Benefit you greatly' — lawyer-speak from a man who has no intention of helping Oscar. BENEFIT / QUICKLY & HONESTLY / DOESN'T HAVE TO BE.",
+      "emotion": "Controlled. Every word a threat wrapped in courtesy."
+    },
+    {
+      "id": 8,
+      "scene": "Scene 2 — The Window",
+      "beat": "Oscar references the two-way glass and the people watching.",
+      "cue": "OSCAR: \"In the movies, there are people watching behind that window... Is that the case here?\"",
+      "line": "Let's say they are there? How long do you think it would take them to get in here and save you?",
+      "hook": "He turns Oscar's question back on him. A threat disguised as a hypothetical.",
+      "emotion": "Cold smile energy. He already knows what he plans to do."
+    },
+    {
+      "id": 9,
+      "scene": "Scene 2 — Salvation",
+      "beat": "Oscar asks if there's salvation for people like them.",
+      "cue": "OSCAR: \"Do you think there's salvation for people like us detective?\"",
+      "line": "Not when I'm involved typically.",
+      "hook": "Five words. Short. Lethal. 'Typically' is the key word — makes it sound routine.",
+      "emotion": "Matter of fact. Almost bored with violence."
+    },
+    {
+      "id": 10,
+      "scene": "Scene 2 — Who Sent You",
+      "beat": "Lance breaks from procedure — the word 'kill' nearly destroys him mid-sentence.",
+      "cue": "OSCAR: \"You don't strike me as someone who saves people.\"",
+      "line": "What did you want there? And before you get smart with me again, I know it wasn't to steal anything. You didn't touch a single item in the house.\n\n[beat — nearly breaks]\n\nWho sent you to kill... to kill her?",
+      "hook": "The stutter on 'kill...to kill her' is in the script. It's real. Let it happen. WANT / DIDN'T STEAL / WHO SENT YOU.",
+      "emotion": "The crack in the wall. The first moment we see the man behind the detective."
+    },
+    {
+      "id": 11,
+      "scene": "Scene 3 — After Recess",
+      "beat": "Lance returns after crying. Speaks to someone at the door before entering.",
+      "cue": "[To unseen figure at the door]",
+      "line": "Yeah, I'm good. Let's get it over with. I can handle it.",
+      "hook": "He's lying to whoever is out there. Three short beats. He's lying to himself too.",
+      "emotion": "Fragile resolve. Eyes still swollen."
+    },
+    {
+      "id": 12,
+      "scene": "Scene 3 — Two Unanswered Questions",
+      "beat": "Lance restarts the recording and refocuses.",
+      "cue": "OSCAR: \"Do you ever get the sense you've seen someone or some place before detective?\"",
+      "line": "I've asked you two questions, both of which I still want answers for.",
+      "hook": "He ignores Oscar's philosophy. Refuses to give him anything. Back to business.",
+      "emotion": "Deliberately flat. Refusing to give Oscar anything."
+    },
+    {
+      "id": 13,
+      "scene": "Scene 4 — Who Are You (First)",
+      "beat": "Oscar reveals he was sent specifically for Lance's wife. Lance can't process it.",
+      "cue": "OSCAR: \"I was there to kill your wife detective.\"",
+      "line": "Who the fuck are you?",
+      "hook": "Shortest version of the question. Pure shock. No tactics left.",
+      "emotion": "Raw. Shaking. The detective disappears and the husband emerges."
+    },
+    {
+      "id": 14,
+      "scene": "Scene 4 — Who Are You (Second)",
+      "beat": "Oscar stays silent. Lance loses it.",
+      "cue": "[Oscar stares — pity and resentment, says nothing]",
+      "line": "I said, who the fuck are you? Who sent you?",
+      "hook": "'I SAID' — he's repeating himself. ADD 'Who sent you?' this time.",
+      "emotion": "Breathing heavy. Barely at the table."
+    },
+    {
+      "id": 15,
+      "scene": "Scene 4 — Agreeing to Oscar's Game",
+      "beat": "Lance has nearly attacked Oscar. He pulls back and agrees to play Oscar's game.",
+      "cue": "NAUDE (V.O.): 'LANCE! recess!'",
+      "line": "I'm good, I'm good. Please, don't take this away from me captain. I need answers.\n\n[Retreats to chair. To Oscar:]\n\nWhat is your question?",
+      "hook": "Two parts: PLEAD TO CAPTAIN / CONCEDE TO OSCAR. 'I need answers' — desperation.",
+      "emotion": "Desperation and self-loathing at having to beg."
+    },
+    {
+      "id": 16,
+      "scene": "Scene 4 — Laughing at Being Interrogated",
+      "beat": "Oscar asks where Lance was 3 years ago. Lance laughs — bitter, broken laughter.",
+      "cue": "OSCAR: \"First question: Do you remember where you were on this exact day 3 years ago?\"",
+      "line": "Is this a fucken joke to you? Who the fuck do you think you are interrogating me? Do you know what the hell is happening to you right now?",
+      "hook": "THREE questions back at him: JOKE? / WHO ARE YOU TO INTERROGATE? / DO YOU KNOW YOUR SITUATION? He laughs while he says it — manic.",
+      "emotion": "Bitter, manic laughter. Pain dressed as contempt."
+    },
+    {
+      "id": 17,
+      "scene": "Scene 4 — Who Are You (Third)",
+      "beat": "Lance drops the laughing act. He needs to know.",
+      "cue": "OSCAR: \"We are not so different me and you, right?\"",
+      "line": "Who the fuck are you? How do you know me.",
+      "hook": "No question mark on 'How do you know me' — it's not really a question anymore. It's fear.",
+      "emotion": "Fear creeping in under the rage."
+    },
+    {
+      "id": 18,
+      "scene": "Scene 4 — You're Nothing",
+      "beat": "Lance draws the line between them. Tries to establish dominance.",
+      "cue": "OSCAR: \"We're not getting anywhere, are we detective.\"",
+      "line": "You're nothing. Nothing at all. And if I do nothing to you right this minute. Believe me you won't last long in your cell. I'll make sure of that. I could kill you now and forget your face by the time the sun comes out. That's the difference. You're nothing, and you're nothing like me.",
+      "hook": "The word NOTHING appears 4 times. That's your anchor. NOTHING / NOTHING AT ALL / DO NOTHING / YOU'RE NOTHING / NOTHING LIKE ME.",
+      "emotion": "Cold fury. This is Lance trying to feel big. Oscar is about to make him feel small."
+    },
+    {
+      "id": 19,
+      "scene": "Scene 4 — Wife Died for Nothing",
+      "beat": "Oscar says 'Mandy died for nothing.' Lance explodes.",
+      "cue": "OSCAR: \"Mandy died for nothing.\"",
+      "line": "You piece of shit! Don't tell me my wife died for fucken nothing! I swear I'll end this myself! You think this is a fucken game!?",
+      "hook": "PIECE OF SHIT / DON'T TELL ME / I'LL END THIS / IS THIS A GAME. The rage is now grief. He just said her name — Mandy.",
+      "emotion": "Pure grief-rage. The dam breaks."
+    },
+    {
+      "id": 20,
+      "scene": "Scene 4 — Cut Off",
+      "beat": "Lance calls Oscar worthless and gets cut off mid-sentence.",
+      "cue": "[Lance advancing on Oscar]",
+      "line": "Who the fuck sent you, you worthless piece of—",
+      "hook": "He gets cut off. The em-dash is literal. Oscar explodes and Lance stops cold.",
+      "emotion": "White-hot rage — then sudden fear when Oscar mirrors it back."
+    },
+    {
+      "id": 21,
+      "scene": "Scene 5 — Denial About Kevin",
+      "beat": "Oscar knows about Kevin. Lance panics and deflects.",
+      "cue": "OSCAR: \"That's also the night your son died no?\"",
+      "line": "What the fuck are you talking about laaitie. You have no idea what the hell you're saying.",
+      "hook": "'laaitie' — Joburg slang slips out. He's rattled. WHAT ARE YOU TALKING ABOUT / YOU HAVE NO IDEA.",
+      "emotion": "Panic hidden under aggression. He glances at the window — has anyone heard?"
+    },
+    {
+      "id": 22,
+      "scene": "Scene 5 — The Confession",
+      "beat": "Oscar implies he understands why Lance killed Kevin's dealer. Lance snaps and confesses — not realizing what he's doing.",
+      "cue": "OSCAR: \"Oh, so you can feel something. Is that why you did it? I would've done the same thing.\"",
+      "line": "Fucken right! I did fucken kill the asshole who gave my boy those drugs, and I'd do it a million times over. Just what do you think I'll do to the man who killed my wife too now, the only thing I had left in this world. Now I have nothing, and nothing to lose.",
+      "hook": "FUCKEN RIGHT / KILLED THE DEALER / DO IT AGAIN / WHAT ABOUT MY WIFE / NOTHING LEFT / NOTHING TO LOSE. This is a confession AND a threat.",
+      "emotion": "Explosive. Grief, pride, threat — all at once. He thinks he's winning. He isn't."
+    },
+    {
+      "id": 23,
+      "scene": "Scene 5 — Say Another Word",
+      "beat": "Oscar says 'You're free now, you're welcome.' Lance goes cold.",
+      "cue": "OSCAR: \"You're free now, you're welcome. You're like me. Nothing.\"",
+      "line": "Say another word.",
+      "hook": "Three words. The quietest he's been since the confession. Deadly quiet.",
+      "emotion": "Ice cold. The realization is hitting. He knows what Oscar knows."
+    },
+    {
+      "id": 24,
+      "scene": "Scene 5 — Shut Up x2",
+      "beat": "Oscar reveals he killed the man Lance framed — his own father. Lance crumbles.",
+      "cue": "OSCAR: \"Why did you choose my father? He was home, alone. Innocent.\"",
+      "line": "Shut up. Shut the fuck up!",
+      "hook": "Escalation: SHUT UP → SHUT THE FUCK UP. Same impulse, doubled.",
+      "emotion": "Desperate. He doesn't want this truth spoken aloud — especially not in front of the glass."
+    },
+    {
+      "id": 25,
+      "scene": "Scene 5 — Final Shout",
+      "beat": "Oscar continues describing his innocent father waiting on the porch. Lance is breaking apart.",
+      "cue": "OSCAR: \"He was never the type to bother anyone. He was waiting for me. Patiently.\"",
+      "line": "I said shut your fucken mouth!",
+      "hook": "'I SAID' again — echoes line 14. He's losing control the same way each time.",
+      "emotion": "Desperation. He charges Oscar. Everything falls apart."
+    }
+  ]
+}
