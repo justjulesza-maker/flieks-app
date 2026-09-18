@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Script Coach — 4Flieks</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f0ea; --surface: #fff; --surface-alt: #ede8e0;
+    --text: #1a1a1a; --text-mid: #444; --text-light: #555;
+    --accent: #8b0000; --accent-light: #7a3535; --accent-border: #e8b0b0;
+    --border: #ddd; --border-dark: #ccc;
+    --green: #4ade80; --yellow: #facc15; --red: #f87171;
+  }
+  body { background: var(--bg); color: var(--text); font-family: Georgia, serif; min-height: 100vh; }
+
+  /* ── Loading / Script picker ── */
+  .loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; padding: 24px; text-align: center; }
+  .loader h2 { font-size: 18px; font-weight: normal; letter-spacing: .06em; margin-bottom: 8px; }
+  .loader p { font-size: 13px; color: var(--text-mid); max-width: 400px; }
+  .loader .error { color: var(--red); margin-top: 16px; font-size: 13px; }
+  .picker { max-width: 500px; width: 100%; margin-top: 28px; }
+  .picker-card { border: 1px solid var(--border); background: var(--surface); padding: 18px 20px; margin-bottom: 8px; cursor: pointer; transition: all .15s; }
+  .picker-card:hover { border-color: var(--accent); }
+  .picker-title { font-size: 15px; color: var(--text); margin-bottom: 4px; }
+  .picker-sub { font-size: 11px; color: var(--text-light); letter-spacing: .06em; }
+
+  /* ── Header ── */
+  .header { border-bottom: 1px solid var(--border); padding: 20px 20px 0; background: linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%); }
+  .header-sub { font-size: 10px; letter-spacing: .2em; color: var(--text-mid); text-transform: uppercase; margin-bottom: 4px; }
+  .header-sub span { color: var(--accent); }
+  .back-link { font-size: 11px; color: var(--accent); cursor: pointer; text-decoration: underline; letter-spacing: .06em; float: right; margin-top: -16px; }
+  h1 { font-size: 22px; font-weight: normal; letter-spacing: .05em; margin-bottom: 20px; color: var(--text); }
+  .tabs { display: flex; gap: 0; overflow-x: auto; }
+  .tab { padding: 10px 18px; background: transparent; color: var(--text-mid); border: 1px solid var(--border-dark); border-bottom: none; cursor: pointer; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-family: Georgia,serif; white-space: nowrap; flex-shrink: 0; transition: all .15s; }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .content { padding: 24px 20px; max-width: 720px; }
+
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .filter-btn { padding: 5px 12px; background: transparent; color: var(--text-light); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 10px; letter-spacing: .08em; font-family: Georgia,serif; }
+  .filter-btn.active { background: var(--surface-alt); color: var(--text); border-color: #aaa; }
+
+  /* ── Breakdown ── */
+  .line-item { border-left: 2px solid var(--border); padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: all .2s; }
+  .line-item.open { background: var(--surface-alt); border-left-color: var(--accent); }
+  .line-label { font-size: 10px; letter-spacing: .15em; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+  .line-preview { font-size: 15px; color: #2a2a2a; font-style: italic; }
+  .line-expand { color: #aaa; font-size: 18px; flex-shrink: 0; margin-left: 12px; }
+  .line-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .line-detail { margin-top: 18px; border-top: 1px solid #1e1e1e; padding-top: 18px; }
+  .detail-label { font-size: 10px; letter-spacing: .12em; color: var(--text-mid); text-transform: uppercase; margin-bottom: 8px; }
+  .detail-text { font-size: 13px; color: var(--text-mid); line-height: 1.7; margin-bottom: 16px; }
+  .detail-cue { font-size: 13px; color: var(--text-light); line-height: 1.7; font-style: italic; margin-bottom: 16px; }
+  .line-box { background: var(--surface); border: 1px solid var(--border); padding: 16px; margin-bottom: 16px; }
+  .line-box-label { font-size: 10px; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; }
+  .line-text { font-size: 16px; color: var(--text); line-height: 1.8; white-space: pre-line; }
+  .hook-text { font-size: 13px; color: var(--text-mid); line-height: 1.7; }
+  .emotion-text { font-size: 13px; color: var(--accent-light); line-height: 1.7; font-style: italic; }
+  .two-col { display: flex; gap: 16px; flex-wrap: wrap; }
+  .two-col > div { flex: 1; min-width: 140px; }
+
+  /* ── Cards ── */
+  .card-counter { text-align: center; margin-bottom: 12px; font-size: 12px; color: var(--text-light); letter-spacing: .1em; }
+  .card { border: 1px solid var(--border); background: var(--surface); padding: 28px 24px; min-height: 320px; display: flex; flex-direction: column; justify-content: space-between; }
+  .card-beat { font-size: 13px; color: var(--text-mid); line-height: 1.7; margin-bottom: 18px; }
+  .card-cue { border-left: 2px solid var(--border-dark); padding-left: 14px; margin-bottom: 22px; font-size: 14px; color: var(--text-mid); font-style: italic; line-height: 1.7; }
+  .reveal-btn { padding: 12px; background: transparent; color: var(--text-mid); border: 1px solid var(--border-dark); cursor: pointer; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; width: 100%; font-family: Georgia,serif; margin-bottom: 14px; transition: all .15s; }
+  .reveal-btn.shown { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .revealed-line { font-size: 19px; color: var(--text); line-height: 1.8; padding: 18px 0; white-space: pre-line; }
+  .hook-btn { padding: 8px 14px; background: transparent; color: var(--text-light); border: 1px solid var(--border); cursor: pointer; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-family: Georgia,serif; margin-top: 8px; transition: all .15s; }
+  .hook-btn.shown { color: var(--accent-light); border-color: var(--accent-border); }
+  .revealed-hook { margin-top: 14px; font-size: 13px; color: var(--accent-light); line-height: 1.7; border-left: 2px solid #c0392b; padding-left: 14px; }
+  .nav-row { display: flex; justify-content: space-between; margin-top: 28px; }
+  .nav-btn { padding: 10px 24px; background: transparent; color: var(--text-light); border: 1px solid var(--border); cursor: pointer; font-size: 12px; letter-spacing: .1em; font-family: Georgia,serif; }
+
+  /* ── Quiz ── */
+  .quiz-cue { border-left: 2px solid #c0392b; padding-left: 14px; margin-bottom: 26px; font-size: 15px; color: var(--accent-light); font-style: italic; line-height: 1.7; }
+  .input-label { font-size: 10px; color: var(--text-light); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
+  textarea { width: 100%; min-height: 90px; background: #fafafa; border: 1px solid var(--border); color: var(--text); padding: 14px; font-size: 15px; line-height: 1.8; font-family: Georgia,serif; resize: vertical; outline: none; }
+  .check-btn { margin-top: 14px; width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; cursor: pointer; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; font-family: Georgia,serif; opacity: 1; transition: opacity .15s; }
+  .check-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .feedback-box { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 22px; }
+  .score-row { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+  .score-num { font-size: 42px; font-weight: bold; line-height: 1; }
+  .verdict { font-size: 16px; margin-bottom: 4px; }
+  .score-sub { font-size: 11px; color: var(--text-light); letter-spacing: .08em; }
+  .fb-text { font-size: 14px; color: var(--text-mid); line-height: 1.8; margin-bottom: 14px; }
+  .hint-box { border-left: 2px solid #c0392b; padding-left: 14px; font-size: 13px; color: var(--accent-light); line-height: 1.7; font-style: italic; }
+  .quiz-btns { display: flex; gap: 10px; margin-top: 22px; }
+  .quiz-btn { flex: 1; padding: 10px; background: transparent; color: var(--text-mid); border: 1px solid var(--border-dark); cursor: pointer; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-family: Georgia,serif; }
+  .loading-text { color: var(--text-mid); font-size: 13px; font-style: italic; margin-top: 14px; }
+
+  /* ── Stats bar ── */
+  .stats-bar { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); }
+  .stat { text-align: center; }
+  .stat-num { font-size: 22px; font-weight: bold; }
+  .stat-label { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-light); }
+
+  /* ── Powered by ── */
+  .powered { text-align: center; padding: 32px 20px 20px; font-size: 10px; letter-spacing: .12em; color: #999; text-transform: uppercase; }
+  .powered a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   4Flieks Script Coach — generic, script-agnostic
+   ═══════════════════════════════════════════════ */
+
+const FUNCTION_URL = "/.netlify/functions/line-coach";
+
+// ── Script registry: add new scripts here ──
+const SCRIPT_INDEX = [
+  { file: "scripts/the-nothing-mirror--lance-mullen.json", title: "The Nothing Mirror", character: "Detective Lance Mullen" }
+  // { file: "scripts/another-film--character.json", title: "Another Film", character: "Character Name" }
+];
+
+let scriptData = null;
+let mode = "breakdown";
+let sceneFilter = "All";
+let cardIndex = 0, cardShowLine = false, cardShowHook = false;
+let quizIndex = 0;
+let expandedId = null;
+
+// Session stats (persisted per script in sessionStorage)
+let stats = { attempts: 0, totalScore: 0, bestScore: 0 };
+
+function loadStats() {
+  if (!scriptData) return;
+  try {
+    const key = `sc_${scriptData.filmTitle}_${scriptData.character}`;
+    const saved = sessionStorage.getItem(key);
+    if (saved) stats = JSON.parse(saved);
+  } catch(e) {}
+}
+function saveStats() {
+  if (!scriptData) return;
+  try {
+    const key = `sc_${scriptData.filmTitle}_${scriptData.character}`;
+    sessionStorage.setItem(key, JSON.stringify(stats));
+  } catch(e) {}
+}
+
+function filtered() {
+  if (!scriptData) return [];
+  if (sceneFilter === "All") return scriptData.lines;
+  return scriptData.lines.filter(l => l.scene.startsWith(sceneFilter));
+}
+
+function scoreColor(s) {
+  if (s >= 85) return "var(--green)";
+  if (s >= 60) return "var(--yellow)";
+  return "var(--red)";
+}
+
+function esc(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ── Render: Script picker ──
+function renderPicker() {
+  if (SCRIPT_INDEX.length === 1) {
+    loadScript(SCRIPT_INDEX[0].file);
+    return;
+  }
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="loader">
+      <h2>Script Coach</h2>
+      <p>Choose a script to start learning your lines</p>
+      <div class="picker">
+        ${SCRIPT_INDEX.map(s => `
+          <div class="picker-card" onclick="loadScript('${s.file}')">
+            <div class="picker-title">${esc(s.title)}</div>
+            <div class="picker-sub">${esc(s.character)}</div>
+          </div>`).join("")}
+      </div>
+      <div class="powered">Powered by <a href="https://4flieks.com">4Flieks</a></div>
+    </div>`;
+}
+
+async function loadScript(file) {
+  const app = document.getElementById("app");
+  app.innerHTML = `<div class="loader"><h2>Loading script...</h2></div>`;
+  try {
+    const res = await fetch(file);
+    if (!res.ok) throw new Error(`${res.status}`);
+    scriptData = await res.json();
+    document.title = `${scriptData.character} — Line Coach`;
+    loadStats();
+    renderApp();
+  } catch(e) {
+    app.innerHTML = `<div class="loader"><h2>Script Coach</h2><div class="error">Couldn't load script: ${esc(e.message)}</div></div>`;
+  }
+}
+
+function renderApp() {
+  const app = document.getElementById("app");
+  const scenes = scriptData.scenes || extractScenes();
+  app.innerHTML = `
+    <div class="header">
+      <div class="header-sub">${esc(scriptData.filmTitle)} — <span>Line Coach</span></div>
+      ${SCRIPT_INDEX.length > 1 ? `<span class="back-link" onclick="backToPicker()">← All Scripts</span>` : ""}
+      <h1>${esc(scriptData.character.toUpperCase())}</h1>
+      <div class="tabs">
+        <button class="tab ${mode==='breakdown'?'active':''}" onclick="switchMode('breakdown')">Scene Breakdown</button>
+        <button class="tab ${mode==='cards'?'active':''}" onclick="switchMode('cards')">Cue Cards</button>
+        <button class="tab ${mode==='quiz'?'active':''}" onclick="switchMode('quiz')">Line Quiz</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="filters"></div>
+      <div id="main"></div>
+    </div>
+    <div class="powered">Powered by <a href="https://4flieks.com">4Flieks</a></div>`;
+  renderFilters(scenes);
+  renderMain();
+}
+
+function extractScenes() {
+  const s = new Set();
+  scriptData.lines.forEach(l => {
+    const m = l.scene.match(/^(Scene \d+)/);
+    if (m) s.add(m[1]);
+  });
+  return Array.from(s).sort();
+}
+
+function backToPicker() {
+  scriptData = null; mode = "breakdown"; sceneFilter = "All";
+  expandedId = null; cardIndex = 0; quizIndex = 0;
+  document.title = "Script Coach — 4Flieks";
+  renderPicker();
+}
+
+function switchMode(m) {
+  mode = m;
+  cardIndex = 0; cardShowLine = false; cardShowHook = false;
+  quizIndex = 0;
+  renderApp();
+}
+
+function setFilter(f) {
+  sceneFilter = f;
+  cardIndex = 0; quizIndex = 0;
+  renderFilters(scriptData.scenes || extractScenes());
+  renderMain();
+}
+
+function renderFilters(scenes) {
+  const allScenes = ["All", ...(scenes || [])];
+  const el = document.getElementById("filters");
+  if (!el) return;
+  el.innerHTML = allScenes.map(s =>
+    `<button class="filter-btn ${sceneFilter===s?'active':''}" onclick="setFilter('${s}')">${s}</button>`
+  ).join('');
+}
+
+function renderMain() {
+  const el = document.getElementById("main");
+  if (!el) return;
+  const lines = filtered();
+
+  if (mode === "breakdown") {
+    el.innerHTML = `<p style="color:var(--text-mid);font-size:13px;margin-bottom:20px;letter-spacing:.03em">${lines.length} line${lines.length!==1?'s':''} — tap any to expand</p>` +
+      lines.map(l => `
+        <div class="line-item ${expandedId===l.id?'open':''}" onclick="toggleExpand(${l.id})">
+          <div class="line-header">
+            <div style="flex:1">
+              <div class="line-label">${esc(l.scene)}</div>
+              <div class="line-preview">"${esc(l.line.split('\\n')[0])}${l.line.includes('\\n')?'...':''}"</div>
+            </div>
+            <span class="line-expand">${expandedId===l.id?'\u2212':'+'}</span>
+          </div>
+          ${expandedId===l.id ? `
+          <div class="line-detail">
+            <div class="detail-label">The Setup</div>
+            <div class="detail-text">${esc(l.beat)}</div>
+            <div class="detail-label">Cue</div>
+            <div class="detail-cue">${esc(l.cue)}</div>
+            <div class="line-box">
+              <div class="line-box-label">${esc(scriptData.character)}'s Line</div>
+              <div class="line-text">${esc(l.line)}</div>
+            </div>
+            <div class="two-col">
+              <div><div class="detail-label">Memory Hook</div><div class="hook-text">${esc(l.hook)}</div></div>
+              <div><div class="detail-label">Play it</div><div class="emotion-text">${esc(l.emotion)}</div></div>
+            </div>
+          </div>` : ''}
+        </div>`).join('');
+
+  } else if (mode === "cards") {
+    if (!lines.length) { el.innerHTML = '<p style="color:var(--text-mid)">No lines in this scene.</p>'; return; }
+    const l = lines[cardIndex] || lines[0];
+    el.innerHTML = `
+      <div class="card-counter">${cardIndex+1} / ${lines.length}</div>
+      <div class="card">
+        <div>
+          <div class="line-label">${esc(l.scene)}</div>
+          <div class="card-beat">${esc(l.beat)}</div>
+          <div class="card-cue">${esc(l.cue)}</div>
+          <button class="reveal-btn ${cardShowLine?'shown':''}" onclick="toggleCardLine()">${cardShowLine?'Hide Line':'Reveal Line'}</button>
+          ${cardShowLine ? `<div class="revealed-line">${esc(l.line)}</div>` : ''}
+          ${cardShowLine ? `<button class="hook-btn ${cardShowHook?'shown':''}" onclick="toggleCardHook()">${cardShowHook?'Hide':'Show'} Memory Hook</button>` : ''}
+          ${cardShowLine && cardShowHook ? `<div class="revealed-hook">${esc(l.hook)}</div>` : ''}
+        </div>
+        <div class="nav-row">
+          <button class="nav-btn" onclick="prevCard()">\u2190 PREV</button>
+          <button class="nav-btn" onclick="nextCard()">NEXT \u2192</button>
+        </div>
+      </div>`;
+
+  } else {
+    if (!lines.length) { el.innerHTML = '<p style="color:var(--text-mid)">No lines in this scene.</p>'; return; }
+    const l = lines[quizIndex] || lines[0];
+    const avg = stats.attempts ? Math.round(stats.totalScore / stats.attempts) : 0;
+    el.innerHTML = `
+      ${stats.attempts ? `
+      <div class="stats-bar">
+        <div class="stat"><div class="stat-num">${stats.attempts}</div><div class="stat-label">Attempts</div></div>
+        <div class="stat"><div class="stat-num">${avg}</div><div class="stat-label">Avg Score</div></div>
+        <div class="stat"><div class="stat-num" style="color:var(--green)">${stats.bestScore}</div><div class="stat-label">Best</div></div>
+      </div>` : ''}
+      <div class="card-counter">Line ${quizIndex+1} / ${lines.length}</div>
+      <div class="card" style="min-height:unset">
+        <div class="line-label">${esc(l.scene)}</div>
+        <div class="card-beat" style="margin-bottom:16px">${esc(l.beat)}</div>
+        <div class="quiz-cue">${esc(l.cue)}</div>
+        <div class="input-label">Your Line \u2014 type it from memory</div>
+        <textarea id="answer" placeholder="Type the line here..." oninput="document.getElementById('checkbtn').disabled=!this.value.trim()"></textarea>
+        <button id="checkbtn" class="check-btn" disabled onclick="checkAnswer()">Check My Line</button>
+        <div id="feedback"></div>
+      </div>`;
+  }
+}
+
+function toggleExpand(id) { expandedId = expandedId === id ? null : id; renderMain(); }
+function toggleCardLine() { cardShowLine = !cardShowLine; cardShowHook = false; renderMain(); }
+function toggleCardHook() { cardShowHook = !cardShowHook; renderMain(); }
+function nextCard() { cardShowLine=false; cardShowHook=false; cardIndex=(cardIndex+1)%filtered().length; renderMain(); }
+function prevCard() { cardShowLine=false; cardShowHook=false; cardIndex=(cardIndex-1+filtered().length)%filtered().length; renderMain(); }
+function nextQuiz() { quizIndex=(quizIndex+1)%filtered().length; renderMain(); }
+
+async function checkAnswer() {
+  const answer = document.getElementById('answer').value;
+  if (!answer.trim()) return;
+  const btn = document.getElementById('checkbtn');
+  btn.disabled = true;
+  btn.textContent = "Coach is reviewing...";
+  document.getElementById('feedback').innerHTML = '<div class="loading-text">Reviewing your line...</div>';
+  const l = filtered()[quizIndex] || scriptData.lines[0];
+
+  try {
+    const res = await fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        correctLine: l.line,
+        actorLine: answer,
+        emotion: l.emotion,
+        character: scriptData.character,
+        filmTitle: scriptData.filmTitle
+      })
+    });
+
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const fb = await res.json();
+    if (fb.error) throw new Error(fb.error);
+
+    const col = scoreColor(fb.score);
+    stats.attempts++;
+    stats.totalScore += fb.score;
+    if (fb.score > stats.bestScore) stats.bestScore = fb.score;
+    saveStats();
+
+    document.getElementById('feedback').innerHTML = `
+      <div class="feedback-box">
+        <div class="score-row">
+          <div class="score-num" style="color:${col}">${fb.score}</div>
+          <div><div class="verdict" style="color:${col}">${esc(fb.verdict)}</div><div class="score-sub">out of 100</div></div>
+        </div>
+        <div class="fb-text">${esc(fb.feedback)}</div>
+        ${fb.hint ? `<div class="hint-box">Hint: ${esc(fb.hint)}</div>` : ''}
+        <div class="quiz-btns">
+          <button class="quiz-btn" onclick="renderMain()">Try Again</button>
+          <button class="quiz-btn" onclick="nextQuiz()">Next Line \u2192</button>
+        </div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('feedback').innerHTML = `
+      <div class="feedback-box">
+        <div class="fb-text">Couldn't connect to the coach. ${esc(e.message)}</div>
+        <div class="quiz-btns"><button class="quiz-btn" onclick="renderMain()">Try Again</button></div>
+      </div>`;
+  }
+}
+
+// ── Boot ──
+// Allow loading a specific script via ?script=filename.json
+const params = new URLSearchParams(location.search);
+const directScript = params.get("script");
+if (directScript) {
+  const match = SCRIPT_INDEX.find(s => s.file.includes(directScript));
+  if (match) loadScript(match.file);
+  else loadScript(`scripts/${directScript}`);
+} else {
+  renderPicker();
+}
+</script>
+</body>
+</html>
