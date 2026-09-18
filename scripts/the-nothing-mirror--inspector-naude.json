@@ -1,0 +1,54 @@
+{
+  "filmTitle": "The Nothing Mirror",
+  "character": "Inspector Beverly Naude",
+  "writers": ["Letuka Makoko"],
+  "storyBy": ["Julian Von Plato", "Thabo Rametsi", "Dylan Von Plato"],
+  "scenes": ["Scene 1", "Scene 2", "Scene 4"],
+  "lines": [
+    {
+      "id": 1,
+      "scene": "Scene 1 — Taking Over",
+      "beat": "Naude enters the interrogation room. She's been called in by the captain to take over the case. She's fearful but determined.",
+      "cue": "[Naude steps in coyly. Her expression fearful, concerned but determined.]",
+      "line": "Lance, the captain's called me in to take ove-",
+      "hook": "She gets CUT OFF. The em-dash is literal — Lance interrupts before she finishes. She never gets to say 'over.'",
+      "emotion": "Concerned but professional. She knows this is a powder keg."
+    },
+    {
+      "id": 2,
+      "scene": "Scene 1 — Give Me the Gun",
+      "beat": "Lance told her to fuck off. She steps back, finds her resolve, and steps forward again. She knows he has another weapon.",
+      "cue": "LANCE: \"--Fuck Off.\"",
+      "line": "Ok, but give it to me Lance. I know you're not careless enough to not have another one on you.",
+      "hook": "She's asking for his service pistol. 'I know you're not careless enough' — she knows him. She knows he's armed with a backup. 23 years on the force together.",
+      "emotion": "Resolve through fear. She's shaking but standing her ground."
+    },
+    {
+      "id": 3,
+      "scene": "Scene 1 — Please",
+      "beat": "Lance hands over the gun without looking. Naude retreats toward the door. One last plea before leaving.",
+      "cue": "[Lance hands her the gun. She receives it and begins retreating toward the door.]",
+      "line": "Lance...please--",
+      "hook": "Two words and she gets cut off again. The ellipsis and the em-dash — she's begging and he won't let her finish.",
+      "emotion": "Desperate. A final attempt to reach the man she's known for decades. She fails."
+    },
+    {
+      "id": 4,
+      "scene": "Scene 2 — Recess Order (V.O.)",
+      "beat": "Oscar asks Lance 'Did you know her?' The question is fuel to Lance's rage. Before he can act, Naude's voice comes through the door — a lifeline from the outside.",
+      "cue": "OSCAR: \"Did you know her detective?\" [Lance nearly breaks. A knock is heard at the door.]",
+      "line": "Lance, recess. Captain's order.",
+      "hook": "Voice-over through the door. Short and official. LANCE / RECESS / CAPTAIN'S ORDER. She's pulling rank to save both of them.",
+      "emotion": "Firm, professional. Hiding the panic behind protocol."
+    },
+    {
+      "id": 5,
+      "scene": "Scene 4 — Pull Him Out (V.O.)",
+      "beat": "Lance is about to physically attack Oscar. Naude screams through the door — she's lost all composure. This isn't protocol anymore, it's fear.",
+      "cue": "[Lance reaches Oscar, ready to pounce. Hard knocking on the door.]",
+      "line": "LANCE! LANCE! recess! Fuck Lance! I knew this was a bad idea, Captain, pull him out of there!",
+      "hook": "LANCE x2 / RECESS / FUCK LANCE / BAD IDEA / CAPTAIN / PULL HIM OUT. She swears for the first time — the composure is gone. She's addressing both Lance and the Captain in the same breath.",
+      "emotion": "Full panic. Screaming. She can hear what's happening and can't stop it."
+    }
+  ]
+}

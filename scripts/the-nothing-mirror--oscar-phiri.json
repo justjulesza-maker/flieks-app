@@ -1,0 +1,279 @@
+{
+  "filmTitle": "The Nothing Mirror",
+  "character": "Oscar Phiri",
+  "writers": ["Letuka Makoko"],
+  "storyBy": ["Julian Von Plato", "Thabo Rametsi", "Dylan Von Plato"],
+  "scenes": ["Scene 2", "Scene 3", "Scene 4", "Scene 5"],
+  "lines": [
+    {
+      "id": 1,
+      "scene": "Scene 2 — Mr. Even",
+      "beat": "Lance addresses him formally as 'Mr. Phiri.' Oscar mocks the courtesy.",
+      "cue": "LANCE: \"What time did you arrive at 3 Fisant Avenue on the evening of the 3rd of August 2025 Mr. Phiri.\"",
+      "line": "Mr. even. Whew, that must be tough.",
+      "hook": "Short and sharp. 'Mr. even' — he's mocking the respect. Then a sarcastic sigh: 'Whew.'",
+      "emotion": "Smiling. Calm provocation. He's testing how far he can push."
+    },
+    {
+      "id": 2,
+      "scene": "Scene 2 — The Difference",
+      "beat": "Lance repeats his question menacingly. Oscar ignores it and asks his own.",
+      "cue": "LANCE: \"Let me try again. What time did you arrive at 3 Fisant Avenue on the evening of the 3rd of August 2025?\"",
+      "line": "Detective, if you had to guess, what is the difference between me and you?",
+      "hook": "A philosophical question in the middle of an interrogation. He's seizing control of the room.",
+      "emotion": "Calm, probing. Like a therapist, not a suspect."
+    },
+    {
+      "id": 3,
+      "scene": "Scene 2 — Nothing Is Easy",
+      "beat": "Lance warns him to answer quickly and honestly. Oscar deflects with philosophy.",
+      "cue": "LANCE: \"Mr. Phiri, it would benefit you greatly to answer my questions, as quickly and as honestly as possible. This doesn't have to take time, this doesn't have to be difficult.\"",
+      "line": "Oh but nothing is ever easy is it detective? At least not for most of us. For a lot of us, difficulty is all there is.",
+      "hook": "The word NOTHING starts appearing — it's the theme of the whole script. NOTHING EASY / NOT FOR MOST / DIFFICULTY IS ALL THERE IS.",
+      "emotion": "Philosophical, almost wistful. He means every word."
+    },
+    {
+      "id": 4,
+      "scene": "Scene 2 — The Window",
+      "beat": "Lance locks the door and sits back down. Oscar references the two-way glass — a veiled warning about witnesses.",
+      "cue": "[Lance locks the door and sits back down, staring at Oscar]",
+      "line": "In the movies, there are people watching behind that window. And when the detective begins to assault the suspect they see it, and are what you guys call witnesses am I right? Is that the case here? I thought I heard you mention observers earlier?",
+      "hook": "MOVIES / WATCHING / ASSAULT / WITNESSES / IS THAT THE CASE? / OBSERVERS. He's reminding Lance that people are watching — a subtle threat disguised as a movie reference.",
+      "emotion": "Casually intellectual. He knows exactly what he's doing."
+    },
+    {
+      "id": 5,
+      "scene": "Scene 2 — Salvation",
+      "beat": "Lance threatens him about how long it would take people to save him. Oscar pivots to a deeper question.",
+      "cue": "LANCE: \"Let's say they are there? How long do you think it would take them to get in here and save you?\"",
+      "line": "Save me? Do you think there's salvation for people like us detective?",
+      "hook": "He turns 'save' into 'salvation.' SAVE ME? / SALVATION / PEOPLE LIKE US. The 'us' is deliberate — linking himself to Lance.",
+      "emotion": "Serious now. The question is genuine, almost spiritual."
+    },
+    {
+      "id": 6,
+      "scene": "Scene 2 — You Don't Save People",
+      "beat": "Lance says 'Not when I'm involved typically.' Oscar agrees — chillingly.",
+      "cue": "LANCE: \"Not when I'm involved typically.\"",
+      "line": "I didn't think so detective. You don't strike me as someone who saves people.",
+      "hook": "I DIDN'T THINK SO — he expected that answer. YOU DON'T SAVE PEOPLE — double meaning. He knows what Lance did.",
+      "emotion": "His expression hardens. The ominous stare returns. He's showing his hand."
+    },
+    {
+      "id": 7,
+      "scene": "Scene 2 — Did You Know Her",
+      "beat": "Lance nearly breaks asking 'Who sent you to kill...to kill her?' Oscar responds with a question that cuts even deeper.",
+      "cue": "LANCE: \"Who sent you to kill...to kill her?\"",
+      "line": "Did you know her detective?",
+      "hook": "Four words. He already knows the answer. He's making Lance say it. Glaring back.",
+      "emotion": "Glaring. Direct. The mask slips — there's real intensity behind the calm."
+    },
+    {
+      "id": 8,
+      "scene": "Scene 3 — Lonely In Here",
+      "beat": "Lance returns after crying during recess. Oscar greets him like an old friend.",
+      "cue": "LANCE: [Re-enters, speaks to figure at door] \"Yeah, I'm good. Let's get it over with. I can handle it.\"",
+      "line": "Oh, I was starting to feel a little lonely in here. This room, it's...it's terrifying, but somehow...familiar. Do you ever get the sense you've seen someone or some place before detective",
+      "hook": "LONELY / TERRIFYING BUT FAMILIAR / SEEN SOMEONE BEFORE. The ellipses are real — he speaks in fragments. 'Familiar' hints at their deeper connection.",
+      "emotion": "Almost warm. Unsettling calm. He's at home in this room."
+    },
+    {
+      "id": 9,
+      "scene": "Scene 3 — The Long Answer",
+      "beat": "Lance demands answers to his two questions. Oscar gives a devastating monologue about the night he spent with Mandy.",
+      "cue": "LANCE: \"I've asked you two questions, both of which I still want answers for.\"",
+      "line": "I counted three questions, but I'll answer the first two as you wish. I arrived there at 20:45. Had a lovely conversation with her. She was, a beautiful soul. Showed me around the house. Told me about her daughter at UCT, and her son who passed away some years back. Tragic, she said he didn't get along with his dad much, before OD'ing.",
+      "hook": "THREE QUESTIONS (correcting Lance) / 20:45 / LOVELY CONVERSATION / BEAUTIFUL SOUL / DAUGHTER AT UCT / SON PASSED AWAY / DIDN'T GET ALONG WITH DAD / OD'ING. Each detail is a knife twist.",
+      "emotion": "Gentle, almost tender when describing Mandy. The cruelty is in how caring he sounds."
+    },
+    {
+      "id": 10,
+      "scene": "Scene 3 — Called the Police",
+      "beat": "Oscar reveals he told Mandy to call the police — and they were too slow.",
+      "cue": "[Lance winces, clenches his fist. Oscar smirks and continues.]",
+      "line": "I Asked her to call the police precisely an hour and 15 minutes before they arrived. Sad really the state of of the law enforcement in this country. I wonder if she'd still be alive if they got there on time.",
+      "hook": "AN HOUR AND 15 MINUTES — specific and devastating. Then a dig at the police. 'I wonder if she'd still be alive' — pure cruelty wrapped in a casual observation.",
+      "emotion": "Matter-of-fact. The cruelty is in the casualness."
+    },
+    {
+      "id": 11,
+      "scene": "Scene 3 — Asked for You",
+      "beat": "Oscar drops the bombshell — he specifically told Mandy to call Lance.",
+      "cue": "[Lance is shattered, head in hands, tearing up]",
+      "line": "Which brings me to the next question, I Asked her specifically to call you detective.",
+      "hook": "SPECIFICALLY TO CALL YOU. This is the twist — Oscar chose Lance. This wasn't random.",
+      "emotion": "Deliberate. Each word placed like a chess piece."
+    },
+    {
+      "id": 12,
+      "scene": "Scene 3 — I Was There to Kill Your Wife",
+      "beat": "Oscar reveals why others came instead of Lance, and states his mission plainly.",
+      "cue": "[Lance looks up sharply, wondering if he heard correctly]",
+      "line": "She only called the other guys because you didn't answer. She was adamant that you wouldn't, I didn't believe her but alas. I was there to kill your wife detective.",
+      "hook": "YOU DIDN'T ANSWER / SHE WAS ADAMANT / I DIDN'T BELIEVE HER / ALAS / I WAS THERE TO KILL YOUR WIFE. The final sentence lands like a bomb — flat, direct, no apology.",
+      "emotion": "Almost regretful about the phone call. Then cold and direct on the killing."
+    },
+    {
+      "id": 13,
+      "scene": "Scene 4 — Three Questions",
+      "beat": "Lance asks 'Who the fuck are you?' twice, nearly attacks. Oscar makes his offer — answer three questions and get answers.",
+      "cue": "LANCE: \"I said, who the fuck are you? Who sent you?\"",
+      "line": "Detective. If you answer just three questions I have, I suspect you'll get the answers you're looking for as well.",
+      "hook": "THREE QUESTIONS — his price. 'I suspect you'll get answers too' — implying they're connected.",
+      "emotion": "Deadpan. Completely unbothered by Lance's rage. A negotiation."
+    },
+    {
+      "id": 14,
+      "scene": "Scene 4 — First Question",
+      "beat": "Lance begs the captain not to pull him out. Then concedes: 'What is your question?' Oscar begins.",
+      "cue": "LANCE: \"What is your question?\"",
+      "line": "Thank you detective. You did say this doesn't have to be hard correct? First question: Do you remember where you were on this exact day 3 years ago?",
+      "hook": "THANK YOU (mocking) / DOESN'T HAVE TO BE HARD (throwing Lance's words back) / 3 YEARS AGO — the date is specific because it's the night everything happened.",
+      "emotion": "Mockingly polite. He's enjoying turning Lance's words against him."
+    },
+    {
+      "id": 15,
+      "scene": "Scene 4 — That's Not an Answer",
+      "beat": "Lance laughs bitterly and deflects. Oscar presses.",
+      "cue": "LANCE: \"Is this a fucken joke to you? Who the fuck do you think you are interrogating me? Do you know what the hell is happening to you right now?\"",
+      "line": "Detective that's not an answer. Do you want to know why I did it or not?",
+      "hook": "NOT AN ANSWER — refusing to accept the deflection. DO YOU WANT TO KNOW? — holding the truth hostage.",
+      "emotion": "Patient. Unmoved by the outburst. A teacher waiting for a student."
+    },
+    {
+      "id": 16,
+      "scene": "Scene 4 — Not So Different",
+      "beat": "Lance asks who Oscar is and how he knows him. Oscar sighs — they're going in circles.",
+      "cue": "LANCE: \"Who the fuck are you? How do you know me.\"",
+      "line": "We're not getting anywhere, are we detective. It seems we are both not good at answering questions. We are not so different me and you, right?",
+      "hook": "NOT GETTING ANYWHERE / BOTH BAD AT ANSWERING / NOT SO DIFFERENT. The sighs are real — he's frustrated too. 'Not so different' is the whole point.",
+      "emotion": "Sighing. Genuine frustration wrapped in the recurring theme."
+    },
+    {
+      "id": 17,
+      "scene": "Scene 4 — Nothing Is What We Are",
+      "beat": "Lance calls Oscar 'nothing.' Oscar absorbs it and turns it into a devastating speech.",
+      "cue": "LANCE: \"You're nothing. Nothing at all. And if I do nothing to you right this minute. Believe me you won't last long in your cell...\"",
+      "line": "I see. Nothing. That's what we are to you.\n\n[sighs]\n\nHere I was hoping you were the type to feel something at the very least. But I see now, I was a dumb-ass to hold on to hope.\n\n[deflated]\n\nI'm losing the appetite to continue our game now. Maybe it really was all for nothing.",
+      "hook": "NOTHING — THAT'S WHAT WE ARE TO YOU / HOPING YOU'D FEEL SOMETHING / DUMB-ASS TO HOPE / LOSING APPETITE / ALL FOR NOTHING. The deflation is real — or is it a tactic?",
+      "emotion": "Moves from hurt to deflation. Sighs are genuine. Whether it's real or manipulation is the actor's choice."
+    },
+    {
+      "id": 18,
+      "scene": "Scene 4 — Mandy Died for Nothing",
+      "beat": "Lance says Oscar is nothing. Oscar agrees — and uses it to destroy Lance.",
+      "cue": "LANCE: \"...That's the difference. You're nothing, and you're nothing like me.\"",
+      "line": "You did say I am nothing. Nothing is, as nothing does. You, the big something. Me, the small nothing. Nothing lost, nothing gained. Mandy died for nothing.",
+      "hook": "NOTHING IS AS NOTHING DOES / BIG SOMETHING vs SMALL NOTHING / NOTHING LOST NOTHING GAINED / MANDY DIED FOR NOTHING. The word 'nothing' is a weapon. The last line is the detonator.",
+      "emotion": "Building from philosophical to devastating. 'Mandy died for nothing' is delivered flat — that's what makes it lethal."
+    },
+    {
+      "id": 19,
+      "scene": "Scene 4 — Answer My Question",
+      "beat": "Lance charges at Oscar. For the first time, Oscar explodes — mirroring Lance's rage back at him.",
+      "cue": "LANCE: \"Who the fuck sent you, you worthless piece of—\"",
+      "line": "--Answer my fucken question!",
+      "hook": "He CUTS LANCE OFF. First time Oscar raises his voice in the whole script. The em-dash is real — he interrupts mid-sentence.",
+      "emotion": "Explosive. The peaceful murderer becomes fierce, ferocious. A direct mirror of Lance's anger. Then he breathes heavily and resets."
+    },
+    {
+      "id": 20,
+      "scene": "Scene 5 — Three Years Ago",
+      "beat": "Oscar sits back down, calm again. Asks his question a second time — and adds the devastating follow-up about Kevin.",
+      "cue": "[Oscar backs off, assumes calm again, sits back down. Knocks on door stop.]",
+      "line": "Do you remember what you did on this exact date, 3 years ago? That's also the night your son died no?",
+      "hook": "Same question rephrased — WHAT YOU DID (not where you were). Then: YOUR SON DIED. The 'no?' is casual — he already knows.",
+      "emotion": "Back to calm. The question is sharper this time. 'No?' at the end is almost gentle."
+    },
+    {
+      "id": 21,
+      "scene": "Scene 5 — Kevin Didn't Fuck with You",
+      "beat": "Lance panics and calls Oscar 'laaitie.' Oscar reveals Mandy told him about Kevin and Lance's relationship.",
+      "cue": "LANCE: \"What the fuck are you talking about laaitie. You have no idea what the hell you're saying.\"",
+      "line": "But you do detective and that's the point. When your wife told me that Kevin didn't fuck with you I didn't have to wonder why, I mean a junkie and a cop. Odd couple right?",
+      "hook": "BUT YOU DO — turning Lance's words against him. KEVIN DIDN'T FUCK WITH YOU / JUNKIE AND A COP / ODD COUPLE. He's connecting dots Lance hoped no one would.",
+      "emotion": "Knowing. Each revelation is measured, deliberate."
+    },
+    {
+      "id": 22,
+      "scene": "Scene 5 — I Would've Done the Same",
+      "beat": "Lance is shaking with emotion. Oscar sees the crack and pushes.",
+      "cue": "[Lance is shaking, emotions a cocktail of fear, anger and regret]",
+      "line": "Oh, so you can feel something. Is that why you did it? I would've done the same thing.",
+      "hook": "YOU CAN FEEL SOMETHING — mocking surprise. IS THAT WHY? — pushing toward the confession. I WOULD'VE DONE THE SAME — the empathy trap that makes Lance confess.",
+      "emotion": "The 'Oh' is key — mock surprise. Then genuine empathy. The trap is sprung."
+    },
+    {
+      "id": 23,
+      "scene": "Scene 5 — You're Free Now",
+      "beat": "Lance confesses to killing Kevin's dealer. Oscar delivers the mirror speech — revealing they're the same.",
+      "cue": "LANCE: \"Fucken right! I did fucken kill the asshole who gave my boy those drugs...Now I have nothing, and nothing to lose.\"",
+      "line": "You're free now, you're welcome. You're like me. Nothing. I told you there's not much between us. I was like you that night, when you took away the only person I had left in this world, in much the same way I just did your wife.",
+      "hook": "YOU'RE FREE / YOU'RE WELCOME / YOU'RE LIKE ME / NOTHING / NOT MUCH BETWEEN US / YOU TOOK THE ONLY PERSON I HAD / SAME WAY I DID YOUR WIFE. This is the mirror — everything Lance did, Oscar mirrors back.",
+      "emotion": "Calm revelation. No anger — just truth. The weight of it should stop Lance cold."
+    },
+    {
+      "id": 24,
+      "scene": "Scene 5 — Why My Father",
+      "beat": "Oscar turns to the window. A tear streams from his eye. He asks the question he came for.",
+      "cue": "[Oscar turns toward the window. Through his POV we see the reflection. A tear streams from his eye.]",
+      "line": "Why did you choose my father? He was home, alone. Innocent.",
+      "hook": "WHY MY FATHER? — the real question behind everything. HOME / ALONE / INNOCENT. Three words, each one a wound.",
+      "emotion": "Raw grief. The tear is real. This is the son behind the killer."
+    },
+    {
+      "id": 25,
+      "scene": "Scene 5 — A Chance to Say Goodbye",
+      "beat": "Lance tells him to shut up. Oscar reveals the mercy he showed that Lance didn't.",
+      "cue": "LANCE: \"Shut up. Shut the fuck up!\"",
+      "line": "You didn't even give him a chance. I let your wife reach for her phone at least. I wanted to give you something you didn't give me. A chance to say goodbye.",
+      "hook": "YOU DIDN'T GIVE HIM A CHANCE / I LET HER REACH FOR HER PHONE / I WANTED TO GIVE YOU SOMETHING / A CHANCE TO SAY GOODBYE. The moral difference — Oscar was more merciful than Lance.",
+      "emotion": "Controlled grief. This is his justification. It's almost tender."
+    },
+    {
+      "id": 26,
+      "scene": "Scene 5 — The Nearest Nothing",
+      "beat": "Lance screams to shut his mouth. Oscar lays out exactly what Lance did — framing an innocent man.",
+      "cue": "LANCE: \"I said shut your fucken mouth!\"",
+      "line": "You needed someone to take the fall for killing Kevin's dealer. So you grabbed the nearest nothing you could find. He was sitting on the porch, he wouldn't have said nothing about what he saw you do that night. He was never the type to bother anyone. He was waiting for me. Patiently.",
+      "hook": "TAKE THE FALL / NEAREST NOTHING / SITTING ON THE PORCH / WOULDN'T HAVE SAID NOTHING / NEVER BOTHERED ANYONE / WAITING FOR ME / PATIENTLY. The last word — 'Patiently' — is the most devastating word in the script.",
+      "emotion": "Building from accusation to grief. 'He was waiting for me. Patiently.' — let it break you."
+    },
+    {
+      "id": 27,
+      "scene": "Scene 5 — To the Glass",
+      "beat": "Oscar has Lance in a chokehold against the two-way glass. He addresses the people watching — the cover-up.",
+      "cue": "[Oscar flips Lance, uses handcuffs to choke him, holds him against the window. Panicked knocks on the door.]",
+      "line": "You knew didn't you. His story didn't add up. But you didn't dig. You knew the man he pinned that death on was innocent. And you did nothing, because His son had died. You let him have his moment. Because we are nothing to you too.",
+      "hook": "YOU KNEW / DIDN'T ADD UP / DIDN'T DIG / INNOCENT / DID NOTHING / HIS SON HAD DIED / HIS MOMENT / NOTHING TO YOU TOO. He's speaking to the observers — Tsotetsi, Naude, the system that covered for Lance.",
+      "emotion": "Tears streaming but voice steady. Accusing the system. This is his closing argument."
+    },
+    {
+      "id": 28,
+      "scene": "Scene 5 — The Glass",
+      "beat": "Oscar looks at the glass — the metaphor crystallizes.",
+      "cue": "[Lance struggles for air. Frantic knocks continue. Bang! Bang!]",
+      "line": "Life, in a way is kind of like this Glass, it shows you everything and nothing at the same time.",
+      "hook": "LIFE / GLASS / EVERYTHING AND NOTHING AT THE SAME TIME. The two-way mirror becomes the metaphor for the whole story.",
+      "emotion": "Philosophical calm in the middle of violence. Almost peaceful."
+    },
+    {
+      "id": 29,
+      "scene": "Scene 5 — We're Nothing Alike",
+      "beat": "Oscar continues — the final comparison between himself and Lance.",
+      "cue": "[Lance faintly struggling, strength draining]",
+      "line": "You see people, but you see nothing. So you do nothing, while everything happens, good and bad. We're the same me and Lance. Yet we're nothing alike.",
+      "hook": "SEE PEOPLE / SEE NOTHING / DO NOTHING / EVERYTHING HAPPENS / WE'RE THE SAME / NOTHING ALIKE. The paradox is the point — same and nothing alike.",
+      "emotion": "Calm, measured. The contradiction is delivered as truth."
+    },
+    {
+      "id": 30,
+      "scene": "Scene 5 — The Nothing Mirror",
+      "beat": "The final line. The title. Oscar names what life is.",
+      "cue": "[Lance breathes his last. Fade begins.]",
+      "line": "Life...It's the nothing mirror.",
+      "hook": "The title of the film. The ellipsis before it is real — a pause. Let it land.",
+      "emotion": "Quiet. Final. Almost a whisper. The most important line in the script."
+    }
+  ]
+}
