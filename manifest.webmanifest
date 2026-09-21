@@ -1,7 +1,7 @@
 {
-  "name": "4flieks — South African Short Films",
+  "name": "4flieks — African Independent Films",
   "short_name": "4flieks",
-  "description": "Watch and own stories from the next generation of South African filmmakers.",
+  "description": "Watch and own stories from the next generation of African filmmakers.",
   "start_url": "/?source=installed",
   "scope": "/",
   "display": "standalone",

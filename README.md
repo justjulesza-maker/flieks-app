@@ -7,7 +7,7 @@ Last updated 26 August 2026
 
 ## What it is, in one paragraph
 
-South African filmmakers release films directly to viewers. Every cast and crew
+African filmmakers release films directly to viewers. Every cast and crew
 member gets their own tracked link, so a sale can be traced to the person who
 brought the buyer. Filmmakers keep 70% of net revenue and their copyright, and
 the arrangement is non-exclusive. Viewers rent for 48 hours, buy permanently,
