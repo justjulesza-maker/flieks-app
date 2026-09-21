@@ -89,7 +89,7 @@ async function openBuy(opts) {
       <input id="fgTo" placeholder="Their name" autocomplete="off"></div>
     <div class="fg-f"><label for="fgMsg">Message (optional)</label>
       <textarea id="fgMsg" rows="3" maxlength="300" placeholder="Watch this, then call me."></textarea></div>
-    <button class="fg-btn" id="fgPay">Pay with PayFast</button>
+    <button class="fg-btn" id="fgPay">Pay with Yoco</button>
     <div class="fg-err" id="fgErr"></div>
     <p class="fg-note">Card, Instant EFT, SnapScan and more. You'll get the code straight
       after payment — send it by WhatsApp, DM, or read it out.</p>`);
@@ -119,14 +119,10 @@ async function openBuy(opts) {
         try { msg = JSON.parse(msg).message || msg; } catch {}
         throw new Error(msg);
       }
-      const { action, fields } = await r.json();
-      const f = document.createElement('form');
-      f.method = 'POST'; f.action = action;
-      Object.entries(fields).forEach(([k, v]) => {
-        const i = document.createElement('input');
-        i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i);
-      });
-      document.body.appendChild(f); f.submit();
+      const { redirectUrl } = await r.json();
+      if (!redirectUrl) throw new Error('No payment page was returned.');
+      // Yoco hosts the payment page; we just send them there.
+      location.href = redirectUrl;
     } catch (e) {
       err.textContent = 'Could not start checkout — ' + (e.message || 'try again in a moment');
       m.$('#fgPay').disabled = false;
@@ -141,7 +137,7 @@ function mountBuy(target, opts) {
 }
 
 /* --------------------------------------------------------------------------
-   Showing the code after a gift purchase returns from PayFast
+   Showing the code after a gift purchase returns from Yoco
    -------------------------------------------------------------------------- */
 function showCode(code, filmTitle) {
   const m = modal(`

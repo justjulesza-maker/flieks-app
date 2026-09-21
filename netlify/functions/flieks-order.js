@@ -1,7 +1,7 @@
 /**
  * flieks-order — what happened with this transaction?
  *
- * Called when PayFast sends the buyer back. The transaction id is an
+ * Called when Yoco sends the buyer back. The transaction id is an
  * unguessable token created at checkout and carried in the return URL, so this
  * works even if the sign-in session didn't survive the round trip — which it
  * often doesn't on mobile browsers.
@@ -83,7 +83,7 @@ exports.handler = async event => {
         if (found) {
           out.code = found[0];
           // The buyer's name, so the share message reads properly even when
-          // the sign-in session didn't survive the trip to PayFast.
+          // the sign-in session didn't survive the trip to Yoco.
           out.buyerName = found[1].buyerName || '';
         }
       }

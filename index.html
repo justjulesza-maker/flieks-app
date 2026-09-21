@@ -901,15 +901,6 @@ const FIREBASE_CONFIG = {
   appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
 };
 
-/* PayFast config — replace with your merchant details */
-const PF_CONFIG = {
-  // Merchant credentials live in Netlify env vars and are used only by
-  // flieks-checkout. Nothing secret belongs in this file — it is public.
-  return_url: window.location.origin + "/?payment=success",
-  cancel_url: window.location.origin + "/?payment=cancel",
-  notify_url: window.location.origin + "/.netlify/functions/payfast-itn",
-};
-
 const DB_PREFIX = "flieks_";
 
 /* ============================================================
@@ -999,7 +990,7 @@ auth.onAuthStateChanged(async user => {
     await loadUserPurchases();
     maybeOfferInstall();
   }
-  // Handle return from PayFast
+  // Handle return from Yoco
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('payment') === 'success') {
     const tx = urlParams.get('tx');
@@ -1360,7 +1351,7 @@ async function renderCastWall(f) {
     </div>`;
 }
 
-/* Finish a purchase using the transaction id PayFast handed back.
+/* Finish a purchase using the transaction id Yoco handed back.
    Deliberately independent of the sign-in session: on mobile the session often
    does not survive the redirect, and a buyer must still get what they paid for. */
 async function handlePaymentReturn(txId) {
@@ -1518,7 +1509,7 @@ async function redeemGift() {
   }
 }
 
-/* ---- after PayFast sends them back, was this a gift? ---- */
+/* ---- after Yoco sends them back, was this a gift? ---- */
 async function pendingGiftCode() {
   const user = await requireUser();
   if (!user) return null;
@@ -1595,7 +1586,7 @@ function showGiftCode(gift) {
 /* One message with everything in it, so nothing has to be sent separately. */
 function buildGiftMessage(gift, title, url) {
   // The record's own copy first — the session may be gone by the time the
-  // buyer gets back from PayFast.
+  // buyer gets back from Yoco.
   const from = (gift.buyerName || '').trim()
     || (currentUser && (currentUser.displayName || '').trim())
     || '';
@@ -2084,7 +2075,7 @@ function renderCheckout() {
     </div>
     <div class="info-box amber" style="margin-bottom:16px">
       <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <p>Payments secured by PayFast. <strong style="color:var(--amber)">70%</strong> of every purchase goes directly to the filmmaker.</p>
+      <p>Payments secured by Yoco. <strong style="color:var(--amber)">70%</strong> of every purchase goes directly to the filmmaker.</p>
     </div>
     <p class="section-label" style="margin-bottom:10px">PAY WITH</p>
     <div class="pay-methods" id="pay-methods">
@@ -2094,7 +2085,7 @@ function renderCheckout() {
     <div class="pay-opt" style="margin-bottom:16px" onclick="selectPayMethod(this,'snapscan')"><div class="pay-dot"></div><span style="font-size:14px;color:var(--muted)">SnapScan / Yoco</span></div>
     <button class="btn btn-amber" onclick="processPayment(${amount},${total})" style="margin-bottom:10px">PAY R${total.toFixed(2)}</button>
     <p style="text-align:center;color:var(--dim);font-size:12px;line-height:1.6">
-      You'll be redirected to Payfast to complete payment securely.<br>
+      You'll be redirected to Yoco to complete payment securely.<br>
       By paying you agree to our <a href="/terms" style="color:var(--muted);text-decoration:underline">terms</a>
       and <a href="/terms#refunds" style="color:var(--muted);text-decoration:underline">refund policy</a>.</p>
   `;
