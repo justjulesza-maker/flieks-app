@@ -1,0 +1,189 @@
+{
+  "rules": {
+    "flieks_films": {
+      ".read": true,
+      ".indexOn": ["filmmaker_uid", "status"],
+      "$filmId": {
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'filmmaker' || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin')",
+        "view_count": { ".write": "auth != null" },
+        "rent_count": { ".write": false },
+        "own_count": { ".write": false }
+      }
+    },
+    "flieks_users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "$uid === auth.uid || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'"
+      }
+    },
+    "flieks_purchases": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": false
+      }
+    },
+    "flieks_transactions": {
+      ".read": "auth != null",
+      ".indexOn": ["filmmaker_uid", "uid"],
+      "$txId": { ".write": "auth != null && !data.exists()" }
+    },
+    "flieks_admin_queue": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["status"]
+    },
+    "flieks_filmmaker_applications": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "flieks_payouts": {
+      ".read": false,
+      ".write": false,
+      "$uid": {
+        ".read": "$uid === auth.uid"
+      }
+    },
+
+    "flieks_agreements": {
+      ".read": false,
+      ".write": false,
+      "$uid": { ".read": "$uid === auth.uid" }
+    },
+
+    "flieks_bank": {
+      ".read": false,
+      ".write": false
+    },
+
+    "flieks_film_slugs": {
+      ".read": true,
+      "$slug": {
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_users').child(auth.uid).child('role').val() === 'filmmaker')",
+        ".validate": "newData.isString()"
+      }
+    },
+
+    "flieks_cast": {
+      ".read": true,
+      "$filmId": {
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child($filmId).child('filmmaker_uid').val() === auth.uid)"
+      }
+    },
+
+    "flieks_result_keys": {
+      ".read": false,
+      "$key": {
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child(newData.val()).child('filmmaker_uid').val() === auth.uid || (!newData.exists() && data.exists()))",
+        ".validate": "!newData.exists() || newData.isString()"
+      }
+    },
+
+    "flieks_reviews": {
+      ".read": true,
+      ".write": false,
+      "$filmId": { ".indexOn": ["created_at", "rating"] }
+    },
+
+    "flieks_support": {
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": false
+    },
+
+    "flieks_moderation": {
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": false
+    },
+
+    "flieks_private": {
+      ".read": false,
+      "$filmId": {
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child($filmId).child('filmmaker_uid').val() === auth.uid || !root.child('flieks_films').child($filmId).exists())"
+      }
+    },
+
+    "flieks_gifts":    { ".read": false, ".write": false },
+    "flieks_orders":   { ".read": false, ".write": false },
+
+    "flieks_my_gifts": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": false
+      }
+    },
+
+    "flieks_stats": {
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": false,
+      "$filmId": {
+        "views":        { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" },
+        "clicks":       { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" },
+        "trailerPlays": { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" },
+        "refs": {
+          "$slug": {
+            "clicks":       { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" },
+            "trailerPlays": { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" }
+          }
+        }
+      }
+    },
+
+    "dd_config": {
+      ".read": true,
+      ".write": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'"
+    },
+
+    "dd_cast": {
+      ".read": true,
+      ".write": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'"
+    },
+
+    "dd_private": {
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "dd_orders":  { ".read": false, ".write": false },
+    "dd_gifts":   { ".read": false, ".write": false },
+
+    "dd_my_gifts": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": false
+      }
+    },
+
+    "dd_reviews": {
+      ".read": true,
+      ".indexOn": ["approved", "createdAt"],
+      "$rid": {
+        ".write": "auth != null && (!data.exists() || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin')",
+        ".validate": "newData.hasChildren(['uid','rating','body','approved','createdAt'])",
+        "uid":       { ".validate": "newData.val() === auth.uid" },
+        "rating":    { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 5" },
+        "body":      { ".validate": "newData.isString() && newData.val().length >= 10 && newData.val().length <= 600" },
+        "approved":  { ".validate": "newData.isBoolean() && (newData.val() === false || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin')" },
+        "name":      { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "ref":       { ".validate": "newData.isString() || newData.val() === null" },
+        "createdAt": { ".validate": "newData.val() === now" },
+        "$other":    { ".validate": false }
+      }
+    },
+
+    "dd_stats": {
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": false,
+      "trailerPlays": { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" },
+      "plays":        { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" },
+      "refs": {
+        "$slug": {
+          "clicks":       { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" },
+          "trailerPlays": { ".read": true, ".write": true, ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 1 : newData.val() === data.val() + 1)" }
+        }
+      }
+    },
+
+    "script_coach": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}
