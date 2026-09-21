@@ -776,7 +776,10 @@ function apply(id, target) {
 function reset(target) {
   const el = target || document.documentElement;
   ['--bg','--surface','--card','--text','--muted','--dim','--amber','--red',
-   '--border','--border2','--fb','--fn'].forEach(k => el.style.removeProperty(k));
+   '--border','--border2','--fb','--fn',
+   '--t-bg','--t-surface','--t-raised','--t-text','--t-muted','--t-accent',
+   '--t-accent-2','--t-on-accent','--t-line','--t-radius',
+   '--t-display','--t-body','--t-hand'].forEach(k => el.style.removeProperty(k));
   el.removeAttribute('data-flieks-theme');
   // Whatever the stylesheet says for the current mode takes over again.
 }
@@ -1031,6 +1034,10 @@ function nav(viewId, pushHistory = true) {
     const v = document.getElementById('flieks-video');
     if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
   }
+  // A film's own colour theme belongs only on its own page — leaving it
+  // behind (e.g. via the back button) used to leak that theme's dark
+  // background onto every other view. Strip it before showing anything else.
+  if (viewId !== 'film' && window.FlieksThemes) FlieksThemes.reset();
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + viewId).classList.add('active');
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('on', b.dataset.view === viewId));
@@ -1709,7 +1716,7 @@ function setMode(mode) {
   paintModeToggle();
   // A film's own theme sits on top of the mode, so reapply whichever is showing.
   const open = document.querySelector('.view.active');
-  if (open && open.id === 'view-film-detail' && currentFilm && window.FlieksThemes) {
+  if (open && open.id === 'view-film' && currentFilm && window.FlieksThemes) {
     FlieksThemes.apply(currentFilm.theme);
   }
 }
