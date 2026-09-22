@@ -98,6 +98,19 @@
   .stat-num { font-size: 22px; font-weight: bold; }
   .stat-label { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-light); }
 
+  /* ── Full Script ── */
+  .script-view { font-family: "Courier New", Courier, monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; background: var(--surface); border: 1px solid var(--border); padding: 28px 24px; color: var(--text); max-height: 70vh; overflow-y: auto; }
+  .script-view .scene-heading { font-weight: bold; text-transform: uppercase; color: var(--accent); margin: 24px 0 8px; letter-spacing: .06em; }
+  .script-view .scene-heading:first-child { margin-top: 0; }
+  .script-view .char-name { text-transform: uppercase; text-align: center; margin: 16px 0 4px; font-weight: bold; letter-spacing: .08em; }
+  .script-view .dialogue { margin: 0 auto; max-width: 420px; }
+  .script-view .action { margin: 10px 0; color: var(--text-mid); }
+  .script-view .highlight { background: #fff3cd; padding: 0 2px; }
+  .script-highlight-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 12px; color: var(--text-mid); letter-spacing: .04em; }
+  .script-highlight-toggle input { accent-color: var(--accent); }
+  .no-script { text-align: center; padding: 40px 20px; color: var(--text-mid); }
+  .no-script p { margin-bottom: 12px; font-size: 14px; line-height: 1.7; }
+
   /* ── Powered by ── */
   .powered { text-align: center; padding: 32px 20px 20px; font-size: 10px; letter-spacing: .12em; color: #999; text-transform: uppercase; }
   .powered a { color: var(--accent); text-decoration: none; }
@@ -131,6 +144,9 @@ let sceneFilter = "All";
 let cardIndex = 0, cardShowLine = false, cardShowHook = false;
 let quizIndex = 0;
 let expandedId = null;
+let fullScriptText = null;
+let fullScriptLoading = false;
+let highlightMyLines = true;
 
 // Session stats (persisted per script in sessionStorage)
 let stats = { attempts: 0, totalScore: 0, bestScore: 0 };
@@ -256,6 +272,100 @@ async function loadScript(file) {
   }
 }
 
+// ── Load full script text ──
+// For static scripts: loads from scripts/{film-slug}--full-script.txt
+// For dynamic scripts: loads from Firebase script_coach/films/{filmSlug}/fullScript
+async function loadFullScript() {
+  if (fullScriptText) return; // already loaded
+  if (fullScriptLoading) return;
+  fullScriptLoading = true;
+
+  try {
+    // Determine the film slug
+    const filmSlug = scriptData.filmTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const params = new URLSearchParams(location.search);
+
+    // Try Firebase first (works for both dynamic and static if uploaded)
+    const fbRes = await fetch(`${FIREBASE_DB}/script_coach/films/${filmSlug}/fullScript.json`);
+    if (fbRes.ok) {
+      const fbData = await fbRes.json();
+      if (fbData) {
+        fullScriptText = fbData;
+        fullScriptLoading = false;
+        renderMain();
+        return;
+      }
+    }
+
+    // Fallback: try static text file
+    const txtRes = await fetch(`scripts/${filmSlug}--full-script.txt`);
+    if (txtRes.ok) {
+      fullScriptText = await txtRes.text();
+      fullScriptLoading = false;
+      renderMain();
+      return;
+    }
+
+    // No script found
+    fullScriptText = null;
+    fullScriptLoading = false;
+    renderMain();
+  } catch (e) {
+    console.warn("Could not load full script:", e.message);
+    fullScriptText = null;
+    fullScriptLoading = false;
+    renderMain();
+  }
+}
+
+function formatScreenplay(text) {
+  // Simple screenplay formatter — preserves structure, highlights character's lines
+  const charName = scriptData.character.toUpperCase();
+  // Also match shortened versions (e.g. "LANCE" for "Detective Lance Mullen")
+  const nameParts = charName.split(/\s+/);
+  const shortNames = nameParts.filter(n => n.length > 2 && !["THE","AND","OF","DETECTIVE","INSPECTOR","OFFICER","SERGEANT","CAPTAIN","DR","MR","MRS","MS","PROF"].includes(n));
+
+  const lines = text.split("\n");
+  let html = "";
+  let inMyDialogue = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+
+    // Scene headings (INT./EXT. or SCENE)
+    if (/^(INT\.|EXT\.|INT\/EXT\.|SCENE\s*\d)/i.test(trimmed)) {
+      inMyDialogue = false;
+      html += `<div class="scene-heading">${esc(trimmed)}</div>\n`;
+      continue;
+    }
+
+    // Character names (all caps line, often centred, possibly with (V.O.) etc)
+    if (/^[A-Z][A-Z\s.''\-]+(\s*\(.*\))?\s*$/.test(trimmed) && trimmed.length < 50 && trimmed.length > 1) {
+      const isMe = shortNames.some(n => trimmed.includes(n));
+      inMyDialogue = isMe;
+      html += `<div class="char-name">${esc(trimmed)}</div>\n`;
+      continue;
+    }
+
+    // Dialogue or action
+    if (trimmed === "") {
+      inMyDialogue = false;
+      html += "\n";
+    } else if (inMyDialogue && highlightMyLines) {
+      html += `<div class="dialogue highlight">${esc(raw)}</div>\n`;
+    } else {
+      html += `<div>${esc(raw)}</div>\n`;
+    }
+  }
+  return html;
+}
+
+function toggleHighlight() {
+  highlightMyLines = !highlightMyLines;
+  renderMain();
+}
+
 function renderApp() {
   const app = document.getElementById("app");
   const scenes = scriptData.scenes || extractScenes();
@@ -268,6 +378,7 @@ function renderApp() {
         <button class="tab ${mode==='breakdown'?'active':''}" onclick="switchMode('breakdown')">Scene Breakdown</button>
         <button class="tab ${mode==='cards'?'active':''}" onclick="switchMode('cards')">Cue Cards</button>
         <button class="tab ${mode==='quiz'?'active':''}" onclick="switchMode('quiz')">Line Quiz</button>
+        <button class="tab ${mode==='script'?'active':''}" onclick="switchMode('script')">Full Script</button>
       </div>
     </div>
     <div class="content">
@@ -291,6 +402,7 @@ function extractScenes() {
 function backToPicker() {
   scriptData = null; mode = "breakdown"; sceneFilter = "All";
   expandedId = null; cardIndex = 0; quizIndex = 0;
+  fullScriptText = null; fullScriptLoading = false;
   document.title = "Script Coach — 4Flieks";
   renderPicker();
 }
@@ -371,6 +483,26 @@ function renderMain() {
           <button class="nav-btn" onclick="nextCard()">NEXT \u2192</button>
         </div>
       </div>`;
+
+  } else if (mode === "script") {
+    // Full Script mode
+    if (fullScriptLoading) {
+      el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">Loading full script…</p>';
+      return;
+    }
+    if (!fullScriptText) {
+      // Trigger load
+      loadFullScript();
+      el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">Loading full script…</p>';
+      return;
+    }
+    el.innerHTML = `
+      <label class="script-highlight-toggle">
+        <input type="checkbox" ${highlightMyLines ? 'checked' : ''} onchange="toggleHighlight()">
+        Highlight ${esc(scriptData.character)}'s lines
+      </label>
+      <div class="script-view">${formatScreenplay(fullScriptText)}</div>`;
+    return;
 
   } else {
     if (!lines.length) { el.innerHTML = '<p style="color:var(--text-mid)">No lines in this scene.</p>'; return; }
