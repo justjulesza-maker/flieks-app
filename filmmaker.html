@@ -2923,5 +2923,15 @@ async function saveFilmEdit() {
     btn.textContent = 'SAVE CHANGES'; btn.disabled = false;
   }
 }
-</script></body>
+</script>
+<script src="/flieks-chat.js"></script>
+<script>
+/* Filmmaker support assistant — answers routine questions instantly,
+   escalates to a real ticket when it isn't confident. */
+FlieksChat.mount({
+  getToken: () => currentUser ? currentUser.getIdToken() : Promise.resolve(null),
+  getEmail: () => currentUser ? currentUser.email : ''
+});
+</script>
+</body>
 </html>
