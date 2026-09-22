@@ -314,7 +314,10 @@ Return ONLY valid JSON (no markdown fences, no commentary):
     };
     await fbWrite(`script_coach/films/${filmSlug}/meta`, meta, firebaseUrl, firebaseSecret);
 
-    // ── 8. Mark job complete with results ──
+    // ── 8. Save full script text (for "Read Full Script" feature) ──
+    await fbWrite(`script_coach/films/${filmSlug}/fullScript`, scriptText, firebaseUrl, firebaseSecret);
+
+    // ── 9. Mark job complete with results ──
     await fbPatch(`script_coach/jobs/${jobId}`, {
       status: "complete",
       stage: "Done!",
