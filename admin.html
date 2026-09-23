@@ -224,11 +224,21 @@ function nav(v) {
   if (v === 'stats') loadStats();
 }
 
-/* ---- QUEUE ---- */
+/* ---- QUEUE ----
+   Reads flieks_films directly rather than the admin_queue notification log.
+   admin_queue is written by a separate, non-atomic call right after the film
+   itself is saved — if that second write never lands (closed tab, dropped
+   connection, an old client), the film sits in status:'review' forever with
+   no trace in admin_queue, and it silently never shows up here even though
+   it's really waiting on a decision. The film's own status is the actual
+   source of truth, so query that instead; a film only ever leaves 'review'
+   through approveFilm/rejectFilm below, so nothing here can go stale the
+   same way again. */
 async function loadQueue() {
-  const snap = await db.ref(DB+'admin_queue').orderByChild('status').equalTo('pending_review').once('value');
+  const snap = await db.ref(DB+'films').orderByChild('status').equalTo('review').once('value');
   const items = [];
-  snap.forEach(c => items.push({ id: c.key, ...c.val() }));
+  snap.forEach(c => items.push({ id: c.key, film_id: c.key, ...c.val() }));
+  items.sort((a, b) => (b.submitted_at || 0) - (a.submitted_at || 0));
   const el = document.getElementById('queue-list');
   if (!items.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films awaiting review.</p>`; return; }
   el.innerHTML = items.map(q => `
@@ -236,11 +246,11 @@ async function loadQueue() {
       <div class="row" style="margin-bottom:8px">
         <div>
           <p style="font-size:14px;font-weight:700;color:var(--text)">${q.title}</p>
-          <p style="font-size:12px;color:var(--muted)">${q.filmmaker} · ${new Date(q.submitted_at).toLocaleDateString('en-ZA')}</p>
+          <p style="font-size:12px;color:var(--muted)">${q.filmmaker}${q.submitted_at ? ' · ' + new Date(q.submitted_at).toLocaleDateString('en-ZA') : ''}</p>
         </div>
         <span class="tag tag-a">PENDING</span>
       </div>
-      <button class="btn btn-a" onclick="openReview('${q.film_id||q.id}','${q.id}')">REVIEW FILM</button>
+      <button class="btn btn-a" onclick="openReview('${q.film_id}','')">REVIEW FILM</button>
     </div>
   `).join('');
 }

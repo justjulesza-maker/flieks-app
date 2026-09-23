@@ -2483,6 +2483,7 @@ async function doRegister() {
     await db.ref(`${DB_PREFIX}users/${cred.user.uid}`).set({
       name, email, location, bio,
       role: 'filmmaker_pending',
+      filmmaker_application_at: Date.now(),
       created_at: Date.now()
     });
     // Notify admin
