@@ -198,6 +198,21 @@ input,textarea{font-family:var(--fb)}
 /* ===================== PLAYER ===================== */
 .video-wrap{background:#000;position:relative;flex-shrink:0}
 .video-wrap video{width:100%;display:block;max-height:56vw;object-fit:contain}
+.fs-btn{position:absolute;top:12px;right:12px;z-index:5;width:36px;height:36px;border-radius:50%;
+  background:rgba(0,0,0,.55);border:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.fs-btn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* True browser fullscreen (not just the desktop full-window layout below) —
+   let the fullscreened player fill the screen edge to edge instead of
+   inheriting the phone-width column. */
+#view-player:fullscreen,#view-player:-webkit-full-screen{
+  width:100vw;height:100vh;max-width:none;display:flex;flex-direction:column;justify-content:center;background:#000
+}
+#view-player:fullscreen .video-wrap,#view-player:-webkit-full-screen .video-wrap{
+  flex:1;display:flex;align-items:center;justify-content:center;max-width:none
+}
+#view-player:fullscreen .video-wrap video,#view-player:-webkit-full-screen .video-wrap video{
+  max-height:100%;max-width:100%;width:auto;height:auto
+}
 
 /* ---------- watching on a laptop or TV ----------
    Everything else stays a phone-width column on purpose. The player is the
@@ -421,6 +436,9 @@ input,textarea{font-family:var(--fb)}
            ontimeupdate="updateProgress()"
            onended="videoEnded()">
     </video>
+    <button class="fs-btn" onclick="toggleFullscreen()" aria-label="Fullscreen">
+      <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m11-5v3a2 2 0 0 1-2 2h-3"/></svg>
+    </button>
   </div>
   <div class="player-controls">
     <!-- Progress bar -->
@@ -2347,6 +2365,29 @@ function videoEnded() {
 
 function videoError() { showSnack('Video not yet available for this film.'); }
 
+/* True OS-level fullscreen (hides the browser chrome), not just the
+   full-window desktop layout the player already gets. Targets the whole
+   player view, not just the <video>, so our own play/skip/progress
+   controls stay usable in fullscreen instead of only Safari's own
+   video-only fullscreen (which has no room for them). */
+function toggleFullscreen() {
+  const el = document.getElementById('view-player');
+  const isFull = document.fullscreenElement || document.webkitFullscreenElement;
+  if (isFull) {
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+    return;
+  }
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else {
+    // Old iPhone Safari has no fullscreen API for arbitrary elements — only
+    // for the <video> itself, with its own native controls.
+    const v = document.getElementById('flieks-video');
+    if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+    else showSnack('Fullscreen is not supported in this browser.');
+  }
+}
+
 function fmtTime(secs) {
   if (!secs || isNaN(secs)) return '0:00';
   const m = Math.floor(secs / 60);
@@ -2362,7 +2403,7 @@ function rateFilm() {
   // Reviews replaced this — send them to the real thing rather than a promise.
   const f = currentFilm;
   if (!f) return;
-  nav('film-detail');
+  nav('film');
   setTimeout(() => {
     const box = document.getElementById('film-reviews');
     if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
