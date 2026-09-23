@@ -965,9 +965,18 @@ function showPendingState(profile) {
       <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px">
         ${applied
           ? 'Your application is being reviewed. We\'ll email you as soon as it\'s approved — usually within a couple of days.'
-          : 'This area is for filmmakers releasing their work on 4flieks. Apply and we\'ll be in touch once your account is approved.'}
+          : 'This area is for filmmakers releasing their work on 4flieks. Tell us a bit about yourself and we\'ll be in touch once your account is approved.'}
       </p>
-      ${applied ? '' : `<button class="btn btn-amber" id="applyBtn">APPLY TO BECOME A FILMMAKER</button>`}
+      ${applied ? '' : `
+        <div style="text-align:left">
+          <div class="input-group"><label class="input-label">Full Name</label>
+            <input class="input" id="apply-name" type="text" placeholder="Your name" value="${escHtmlAttr(auth.currentUser && auth.currentUser.displayName || '')}"></div>
+          <div class="input-group"><label class="input-label">City / Province</label>
+            <input class="input" id="apply-location" type="text" placeholder="e.g. Soweto, Gauteng"></div>
+          <div class="input-group"><label class="input-label">Bio (tell us about yourself)</label>
+            <textarea class="input" id="apply-bio" placeholder="Short filmmaker bio…"></textarea></div>
+        </div>
+        <button class="btn btn-amber" id="applyBtn" style="margin-top:6px">APPLY TO BECOME A FILMMAKER</button>`}
       <a href="/" class="btn btn-outline" style="margin-top:10px;display:block;text-decoration:none">
         BACK TO 4FLIEKS</a>
       <button class="btn btn-outline" style="margin-top:10px;border:0;color:var(--muted)"
@@ -979,17 +988,35 @@ function showPendingState(profile) {
   if (btn) btn.onclick = () => applyAsFilmmaker();
 }
 
+/* Matches escHtml's escaping but for use inside an attribute value. */
+function escHtmlAttr(s) {
+  const d = document.createElement('div');
+  d.textContent = s ?? '';
+  return d.innerHTML.replace(/"/g, '&quot;');
+}
+
 async function applyAsFilmmaker() {
   const msg = document.getElementById('applyMsg');
   const u = auth.currentUser;
   if (!u) return;
+  const name = (document.getElementById('apply-name').value || '').trim();
+  const location = (document.getElementById('apply-location').value || '').trim();
+  const bio = (document.getElementById('apply-bio').value || '').trim();
+  if (!name) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Your name helps us know who we\'re approving.';
+    return;
+  }
   msg.style.color = 'var(--muted)';
   msg.textContent = 'Sending…';
   try {
+    if (name !== u.displayName) await u.updateProfile({ displayName: name });
     await db.ref(`${DB_PREFIX}filmmaker_applications/${u.uid}`).set({
       uid: u.uid,
       email: u.email || '',
-      name: u.displayName || '',
+      name,
+      location,
+      bio,
       status: 'pending',
       created_at: Date.now()
     });
