@@ -233,26 +233,38 @@ function nav(v) {
    it's really waiting on a decision. The film's own status is the actual
    source of truth, so query that instead; a film only ever leaves 'review'
    through approveFilm/rejectFilm below, so nothing here can go stale the
-   same way again. */
+   same way again.
+
+   Read over REST with a force-refreshed token, not the client SDK's
+   orderByChild/equalTo — the same stale-cache class of bug the README
+   already flags for users/films/cast counts elsewhere in this file
+   (loadUsers does the same thing for exactly this reason). A film that
+   genuinely matches status:'review' in the database can still be missing
+   from the SDK's own indexed-query cache. */
 async function loadQueue() {
-  const snap = await db.ref(DB+'films').orderByChild('status').equalTo('review').once('value');
-  const items = [];
-  snap.forEach(c => items.push({ id: c.key, film_id: c.key, ...c.val() }));
-  items.sort((a, b) => (b.submitted_at || 0) - (a.submitted_at || 0));
   const el = document.getElementById('queue-list');
-  if (!items.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films awaiting review.</p>`; return; }
-  el.innerHTML = items.map(q => `
-    <div class="card">
-      <div class="row" style="margin-bottom:8px">
-        <div>
-          <p style="font-size:14px;font-weight:700;color:var(--text)">${q.title}</p>
-          <p style="font-size:12px;color:var(--muted)">${q.filmmaker}${q.submitted_at ? ' · ' + new Date(q.submitted_at).toLocaleDateString('en-ZA') : ''}</p>
+  try {
+    const token = await currentAdmin.getIdToken(true); // force refresh
+    const resp = await fetch(`https://flieks-app-default-rtdb.firebaseio.com/flieks_films.json?auth=${token}&orderBy=%22status%22&equalTo=%22review%22`);
+    const data = await resp.json();
+    const items = data ? Object.entries(data).map(([id, v]) => ({ id, film_id: id, ...v })) : [];
+    items.sort((a, b) => (b.submitted_at || 0) - (a.submitted_at || 0));
+    if (!items.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films awaiting review.</p>`; return; }
+    el.innerHTML = items.map(q => `
+      <div class="card">
+        <div class="row" style="margin-bottom:8px">
+          <div>
+            <p style="font-size:14px;font-weight:700;color:var(--text)">${q.title}</p>
+            <p style="font-size:12px;color:var(--muted)">${q.filmmaker}${q.submitted_at ? ' · ' + new Date(q.submitted_at).toLocaleDateString('en-ZA') : ''}</p>
+          </div>
+          <span class="tag tag-a">PENDING</span>
         </div>
-        <span class="tag tag-a">PENDING</span>
+        <button class="btn btn-a" onclick="openReview('${q.film_id}','')">REVIEW FILM</button>
       </div>
-      <button class="btn btn-a" onclick="openReview('${q.film_id}','')">REVIEW FILM</button>
-    </div>
-  `).join('');
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--red);font-size:14px">Error loading queue: ${e.message}</p>`;
+  }
 }
 
 async function openReview(filmId, queueId) {
