@@ -4,69 +4,103 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     // ============ 4flieks platform ============
+    //
+    // Every file the portal uploads is stamped with its uploader
+    // (metadata.owner) and given a name that has never been used, so nothing
+    // is ever overwritten.
+    //
+    // Playback, posters, trailers, scripts, headshots and link previews all
+    // use the download links stored in the database. Those carry their own
+    // token and are NOT affected by these rules, so the only read the app
+    // needs is the uploader fetching the link for a file they just uploaded.
+    // Everything else is refused. That is what stops a signed-in account
+    // fetching a film's master file without paying (which the old
+    // "allow read: if request.auth != null" allowed).
+    //
+    // Files uploaded before this change have no owner stamp, so nobody can
+    // fetch or overwrite them through the app. Their stored links still work.
+    // Manage them in the Firebase console, which these rules don't apply to.
 
-    // Poster images — public read so the catalogue works signed out
-    match /flieks_films/{filmId}/poster.jpg {
-      allow read: if true;
-      allow write: if request.auth != null
-                  && request.resource.size < 10 * 1024 * 1024;
+    function signedIn()     { return request.auth != null; }
+    function ownsIt()       { return signedIn() && resource.metadata.owner == request.auth.uid; }
+    function stampedByMe()  { return signedIn() && request.resource.metadata.owner == request.auth.uid; }
+    function underMB(n)     { return request.resource.size < n * 1024 * 1024; }
+    function isImage()      { return request.resource.contentType.matches('image/.*'); }
+    function isVideo()      { return request.resource.contentType.matches('video/.*'); }
+
+    // Films, trailers, posters, link-preview images
+    match /flieks_films/{filmId}/{file} {
+      allow get:    if ownsIt();
+      allow list:   if false;
+      allow create: if stampedByMe()
+                    && ((isVideo() && request.resource.size < 2 * 1024 * 1024 * 1024)
+                     || (isImage() && underMB(10)));
+      allow update: if ownsIt() && stampedByMe();
+      allow delete: if ownsIt();
     }
 
-    // Film files — authenticated read, filmmakers and admin write
-    match /flieks_films/{filmId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-                  && request.resource.size < 2 * 1024 * 1024 * 1024;
+    // Screenplays (PDF). Readers get them through the flieks-script
+    // function, which hands out the stored link to signed-in accounts
+    // only when the filmmaker has made the script public.
+    match /flieks_scripts/{filmId}/{file} {
+      allow get:    if ownsIt();
+      allow list:   if false;
+      allow create: if stampedByMe() && underMB(30)
+                    && request.resource.contentType == 'application/pdf';
+      allow update: if ownsIt() && stampedByMe();
+      allow delete: if ownsIt();
     }
 
-    // Poster/thumbnail images — public read, auth write
+    // Cast and crew headshots
+    match /flieks_cast/{filmId}/{file} {
+      allow get:    if ownsIt();
+      allow list:   if false;
+      allow create: if stampedByMe() && isImage() && underMB(10);
+      allow update: if ownsIt() && stampedByMe();
+      allow delete: if ownsIt();
+    }
+
+    // Old poster folder. Nothing in the app writes here any more; anything
+    // still in it keeps working through its stored link.
     match /flieks_posters/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null
-                  && request.resource.size < 10 * 1024 * 1024;
-    }
-
-    // Screenplays. Readable by anyone with the link, which only the
-    // flieks-script function hands out, and only to signed-in people.
-    match /flieks_scripts/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null
-                  && request.resource.size < 30 * 1024 * 1024
-                  && request.resource.contentType == 'application/pdf';
-    }
-
-    // NEW — cast and crew headshots. Public read: they appear on the film
-    // page for signed-out visitors, same as posters.
-    match /flieks_cast/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null
-                  && request.resource.size < 10 * 1024 * 1024;
+      allow read, write: if false;
     }
 
     // ============ Destroying Desmond ============
+    //
+    // Storage rules have no precedence: if ANY matching rule allows a request,
+    // it is allowed. The old catch-all "match /dd/{allPaths=**} { allow read:
+    // if true }" therefore also matched dd/film/..., and anyone — signed in or
+    // not — could list the feature and fetch its download link. The catch-all
+    // below is split by folder so it can never match dd/film.
 
-    // The feature itself. No browsable read — the tokened download URL still
-    // works, so dd-stream can hand it to a paying account while the file
-    // stays unlisted. Must sit above /dd/{allPaths} to take precedence.
+    function ddAdmin() {
+      return request.auth != null && request.auth.uid == 'LGANwGT28XPHyESixxX7yZiV1UQ2';
+    }
+
+    // The feature itself. Only the DD admin account can read or write it
+    // through the app; dd-stream hands paying accounts the stored tokened link.
     match /dd/film/{allPaths=**} {
-      allow read: if false;
-      allow write: if request.auth != null
-                  && request.auth.uid == 'LGANwGT28XPHyESixxX7yZiV1UQ2'
-                  && request.resource.size < 5 * 1024 * 1024 * 1024;
+      allow read: if ddAdmin();
+      allow write: if ddAdmin() && request.resource.size < 5 * 1024 * 1024 * 1024;
     }
 
     match /dd/cast/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                  && request.auth.uid == 'LGANwGT28XPHyESixxX7yZiV1UQ2'
-                  && request.resource.size < 10 * 1024 * 1024;
+      allow write: if ddAdmin() && request.resource.size < 10 * 1024 * 1024;
     }
 
-    match /dd/{allPaths=**} {
+    // Any other DD folder: public read as before, but never the film folder.
+    match /dd/{folder}/{allPaths=**} {
+      allow read: if folder != 'film';
+      allow write: if folder != 'film' && ddAdmin()
+                   && request.resource.size < 2 * 1024 * 1024 * 1024;
+    }
+
+    // Files sitting directly in dd/ (not in a folder): public read as before.
+    match /dd/{file} {
       allow read: if true;
-      allow write: if request.auth != null
-                  && request.auth.uid == 'LGANwGT28XPHyESixxX7yZiV1UQ2'
-                  && request.resource.size < 2 * 1024 * 1024 * 1024;
+      allow write: if ddAdmin() && request.resource.size < 2 * 1024 * 1024 * 1024;
     }
   }
 }
