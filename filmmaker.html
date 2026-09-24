@@ -323,6 +323,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       <p style="color:var(--muted);font-size:14px">Tap to upload poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
       <div id="poster-file-name" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
+      <div class="progress-upload" id="poster-upload-progress" style="display:none"><div class="progress-upload-fill" id="poster-prog-fill"></div></div>
     </div>
     <input type="file" id="poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleFileSelect(event,'poster')">
     <div class="divider" style="margin:16px 0"></div>
@@ -331,6 +332,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <p>Films are reviewed by our team before going live. Review takes 1–2 business days. We check for quality, originality, and community guidelines compliance.</p>
     </div>
     <button class="btn btn-amber" onclick="submitFilm()" style="margin-bottom:10px" id="submit-btn">SUBMIT FOR REVIEW</button>
+    <button class="btn btn-outline" onclick="cancelUpload()" style="margin-bottom:10px;display:none" id="cancel-upload-btn">CANCEL UPLOAD</button>
     <p style="text-align:center;color:var(--dim);font-size:12px">By submitting you confirm this is your original work and you own all rights</p>
   </div>
 </div>
@@ -2107,22 +2109,33 @@ function copyFilmLink(slug) {
 
 let replacementFile = null;
 
-function handleReplaceSelect(event, filmId) {
-  const file = event.target.files[0];
+function pickReplacement(file, filmId) {
   if (!file) return;
+  const label = document.getElementById(`replace-name-${filmId}`);
+  const btn = document.getElementById(`replace-btn-${filmId}`);
+  const problem = checkUploadFile('film', file);
+  if (problem) {
+    replacementFile = null;
+    label.style.color = 'var(--red)';
+    label.textContent = problem;
+    btn.disabled = true;
+    return;
+  }
   replacementFile = file;
-  document.getElementById(`replace-name-${filmId}`).textContent = file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
-  document.getElementById(`replace-btn-${filmId}`).disabled = false;
+  label.style.color = '';
+  label.textContent = `${file.name} (${mb(file.size)})`;
+  btn.disabled = false;
+}
+
+function handleReplaceSelect(event, filmId) {
+  pickReplacement(event.target.files[0], filmId);
+  event.target.value = '';
 }
 
 function handleReplaceDrop(event, filmId) {
   event.preventDefault();
   document.getElementById(`replace-drop-${filmId}`).classList.remove('drag');
-  const file = event.dataTransfer.files[0];
-  if (!file) return;
-  replacementFile = file;
-  document.getElementById(`replace-name-${filmId}`).textContent = file.name + ' (' + (file.size/1024/1024).toFixed(1) + ' MB)';
-  document.getElementById(`replace-btn-${filmId}`).disabled = false;
+  pickReplacement(event.dataTransfer.files[0], filmId);
 }
 
 async function uploadReplacement(filmId) {
@@ -2176,37 +2189,87 @@ async function uploadReplacement(filmId) {
 /* ============================================================
    UPLOAD FILM
    ============================================================ */
-function handleFileSelect(event, type) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (type === 'film') {
-    filmFile = file;
-    document.getElementById('film-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
-  } else if (type === 'trailer') {
-    trailerFile = file;
-    document.getElementById('trailer-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+/* Checked the moment a file is picked, not after a long upload on mobile
+   data. Limits match storage-rules.txt (films < 2GB, posters < 10MB); the
+   trailer limit is the 200MB the form has always promised. */
+const UPLOAD_LIMITS = {
+  film:    { max: 2 * 1024 ** 3 - 1, label: '2GB',   kind: 'video' },
+  trailer: { max: 200 * 1024 ** 2,   label: '200MB', kind: 'video' },
+  poster:  { max: 10 * 1024 ** 2 - 1, label: '10MB', kind: 'image' }
+};
+const mb = n => n >= 1073741824 ? (n / 1073741824).toFixed(1) + 'GB' : (n / 1048576).toFixed(1) + 'MB';
+
+function checkUploadFile(type, file) {
+  const lim = UPLOAD_LIMITS[type];
+  const name = (file.name || '').toLowerCase();
+  if (lim.kind === 'video') {
+    const ok = /^video\/(mp4|quicktime|mov)$/.test(file.type) || /\.(mp4|mov)$/.test(name);
+    if (!ok) return 'That doesn’t look like an MP4 or MOV video.';
   } else {
-    posterFile = file;
-    document.getElementById('poster-file-name').textContent = file.name;
+    if (!/^image\/(jpeg|png)$/.test(file.type)) return 'The poster needs to be a JPG or PNG.';
   }
+  if (!file.size) return 'That file is empty.';
+  if (file.size > lim.max) return `That file is ${mb(file.size)} — the limit is ${lim.label}.` +
+    (type === 'film' ? ' Export at a lower bitrate (H.264, around 10–15 Mbps is plenty for 1080p).' : '');
+  return null;
+}
+
+function pickUpload(type, file) {
+  if (!file) return;
+  const label = document.getElementById(`${type}-file-name`);
+  const problem = checkUploadFile(type, file);
+  if (problem) {
+    if (type === 'film') filmFile = null; else if (type === 'trailer') trailerFile = null; else posterFile = null;
+    label.style.color = 'var(--red)';
+    label.textContent = problem;
+    return;
+  }
+  if (type === 'film') filmFile = file; else if (type === 'trailer') trailerFile = file; else posterFile = file;
+  label.style.color = 'var(--amber)';
+  label.textContent = `${file.name} (${mb(file.size)})`;
+}
+
+function handleFileSelect(event, type) {
+  pickUpload(type, event.target.files[0]);
+  event.target.value = '';           // so picking the same file again still fires
 }
 
 function handleFileDrop(event, type) {
   event.preventDefault();
-  const zoneId = type === 'film' ? 'film-drop' : type === 'trailer' ? 'trailer-drop' : 'poster-drop';
-  document.getElementById(zoneId).classList.remove('drag');
-  const file = event.dataTransfer.files[0];
-  if (!file) return;
-  if (type === 'film') {
-    filmFile = file;
-    document.getElementById('film-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
-  } else if (type === 'trailer') {
-    trailerFile = file;
-    document.getElementById('trailer-file-name').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
-  } else {
-    posterFile = file;
-    document.getElementById('poster-file-name').textContent = file.name;
-  }
+  document.getElementById(`${type}-drop`).classList.remove('drag');
+  pickUpload(type, event.dataTransfer.files[0]);
+}
+
+/* Cancelling: the upload in flight is cancelled; files that already
+   finished stay in storage but nothing is saved to the database, so no
+   half-submitted film ever appears. */
+let activeUpload = null;       // the Storage task currently running
+let uploadCancelled = false;
+
+function cancelUpload() {
+  uploadCancelled = true;
+  if (activeUpload) activeUpload.cancel();
+}
+
+function warnBeforeLeaving(e) { e.preventDefault(); e.returnValue = ''; }
+
+// Runs one Storage upload with a progress bar; resolves with the download URL.
+function uploadWithProgress(ref, file, barId, fillId, btn, label) {
+  return new Promise((resolve, reject) => {
+    if (uploadCancelled) return reject(Object.assign(new Error('cancelled'), { code: 'storage/canceled' }));
+    const task = ref.put(file);
+    activeUpload = task;
+    document.getElementById(barId).style.display = 'block';
+    task.on('state_changed', snap => {
+      const pct = (snap.bytesTransferred / snap.totalBytes * 100).toFixed(0);
+      document.getElementById(fillId).style.width = pct + '%';
+      btn.textContent = `${label} ${pct}%…`;
+    }, err => { activeUpload = null; reject(err); },
+    async () => {
+      activeUpload = null;
+      try { resolve(await ref.getDownloadURL()); } catch (e) { reject(e); }
+    });
+  });
 }
 
 /* ============================================================
@@ -2358,50 +2421,35 @@ async function submitFilm() {
   }
   if (!filmFile) return showSnack('Please select your film file');
 
+  // Re-check in case the files were picked before these checks existed.
+  for (const [type, f] of [['film', filmFile], ['trailer', trailerFile], ['poster', posterFile]]) {
+    const problem = f && checkUploadFile(type, f);
+    if (problem) return showSnack(problem);
+  }
+
   const btn = document.getElementById('submit-btn');
+  const cancelBtn = document.getElementById('cancel-upload-btn');
   btn.textContent = 'UPLOADING…';
   btn.disabled = true;
+  uploadCancelled = false;
+  cancelBtn.style.display = 'block';
+  window.addEventListener('beforeunload', warnBeforeLeaving);
 
   try {
     // Generate film ID
     const filmId = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
 
-    // Upload video to Firebase Storage
-    let videoUrl = '';
-    const videoRef = storage.ref(`flieks_films/${filmId}/film.mp4`);
-    const uploadTask = videoRef.put(filmFile);
-    uploadTask.on('state_changed', snap => {
-      const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
-      document.getElementById('film-upload-progress').style.display = 'block';
-      document.getElementById('film-prog-fill').style.width = pct.toFixed(0) + '%';
-      btn.textContent = `UPLOADING ${pct.toFixed(0)}%…`;
-    });
-    await uploadTask;
-    videoUrl = await videoRef.getDownloadURL();
+    const videoUrl = await uploadWithProgress(storage.ref(`flieks_films/${filmId}/film.mp4`), filmFile,
+      'film-upload-progress', 'film-prog-fill', btn, 'UPLOADING FILM');
+    const posterUrl = posterFile ? await uploadWithProgress(storage.ref(`flieks_films/${filmId}/poster.jpg`), posterFile,
+      'poster-upload-progress', 'poster-prog-fill', btn, 'UPLOADING POSTER') : '';
+    const trailerUrl = trailerFile ? await uploadWithProgress(storage.ref(`flieks_films/${filmId}/trailer.mp4`), trailerFile,
+      'trailer-upload-progress', 'trailer-prog-fill', btn, 'UPLOADING TRAILER') : '';
 
-    // Upload poster if provided
-    let posterUrl = '';
-    if (posterFile) {
-      const posterRef = storage.ref(`flieks_films/${filmId}/poster.jpg`);
-      await posterRef.put(posterFile);
-      posterUrl = await posterRef.getDownloadURL();
-    }
-
-    // Upload trailer if provided
-    let trailerUrl = '';
-    if (trailerFile) {
-      btn.textContent = 'UPLOADING TRAILER…';
-      const trailerRef = storage.ref(`flieks_films/${filmId}/trailer.mp4`);
-      const trailerTask = trailerRef.put(trailerFile);
-      trailerTask.on('state_changed', snap => {
-        const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
-        document.getElementById('trailer-upload-progress').style.display = 'block';
-        document.getElementById('trailer-prog-fill').style.width = pct.toFixed(0) + '%';
-        btn.textContent = `UPLOADING TRAILER ${pct.toFixed(0)}%…`;
-      });
-      await trailerTask;
-      trailerUrl = await trailerRef.getDownloadURL();
-    }
+    // Last chance to back out before anything is saved.
+    if (uploadCancelled) throw Object.assign(new Error('cancelled'), { code: 'storage/canceled' });
+    cancelBtn.style.display = 'none';
+    btn.textContent = 'SAVING…';
 
     // Save to database
     await db.ref(`${DB_PREFIX}films/${filmId}`).set({
@@ -2440,6 +2488,7 @@ async function submitFilm() {
       status: 'pending_review'
     });
 
+    window.removeEventListener('beforeunload', warnBeforeLeaving);
     showSnack('Film submitted! You\'ll hear from us in 1–2 days.');
     btn.textContent = 'SUBMITTED ✓';
     // Reset form
@@ -2454,17 +2503,32 @@ async function submitFilm() {
       document.getElementById('film-file-name').textContent = '';
       document.getElementById('trailer-file-name').textContent = '';
       document.getElementById('poster-file-name').textContent = '';
-      document.getElementById('film-upload-progress').style.display = 'none';
-      document.getElementById('trailer-upload-progress').style.display = 'none';
+      ['film', 'trailer', 'poster'].forEach(t => {
+        document.getElementById(`${t}-upload-progress`).style.display = 'none';
+        document.getElementById(`${t}-prog-fill`).style.width = '0%';
+      });
       btn.disabled = false;
       btn.textContent = 'SUBMIT FOR REVIEW';
       nav('films');
     }, 2000);
   } catch(e) {
-    console.error(e);
-    showSnack('Upload failed. Please try again.');
+    window.removeEventListener('beforeunload', warnBeforeLeaving);
+    cancelBtn.style.display = 'none';
+    activeUpload = null;
+    ['film', 'trailer', 'poster'].forEach(t => {
+      document.getElementById(`${t}-upload-progress`).style.display = 'none';
+      document.getElementById(`${t}-prog-fill`).style.width = '0%';
+    });
     btn.disabled = false;
     btn.textContent = 'SUBMIT FOR REVIEW';
+    if (e && e.code === 'storage/canceled') {
+      showSnack('Upload cancelled. Nothing was submitted — your details are still filled in.');
+    } else {
+      console.error(e);
+      showSnack(/unauthorized|permission/i.test((e && (e.code || e.message)) || '')
+        ? 'The upload was refused — check the file size, then try again.'
+        : 'Upload failed — check your connection and try again. Your details are still filled in.');
+    }
   }
 }
 
