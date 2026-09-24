@@ -1521,7 +1521,7 @@ async function saveScript(filmId) {
         if (film) Object.assign(film, { script_public: true, script_writer: writer, script_draft: draft });
         prog.style.display = 'none';
         scriptFile = null;
-        snack('Script is up. Anyone with an account can read it.');
+        showSnack('Script is up. Anyone with an account can read it.');
         mountScript(film || { id: filmId, script_public: true, script_writer: writer });
       });
   } catch (e) {
@@ -1537,9 +1537,9 @@ async function removeScript(filmId) {
     await db.ref(`${DB_PREFIX}films/${filmId}/script_public`).set(false);
     const film = (myFilms || []).find(x => x.id === filmId);
     if (film) film.script_public = false;
-    snack('Script taken down.');
+    showSnack('Script taken down.');
     mountScript(film || { id: filmId });
-  } catch { snack('Could not do that.'); }
+  } catch { showSnack('Could not do that.'); }
 }
 
 /* ============================================================
@@ -1591,8 +1591,8 @@ async function startReport(filmId) {
     const film = myFilms.find(x => x.id === filmId);
     if (film) Object.assign(film, { results_public: true, results_key: key, results_show_revenue: true });
     mountReport(film || { id: filmId, results_public: true, results_key: key });
-    snack('Report is live. Share the link.');
-  } catch { snack('Could not create that.'); }
+    showSnack('Report is live. Share the link.');
+  } catch { showSnack('Could not create that.'); }
 }
 
 async function stopReport(filmId) {
@@ -1604,8 +1604,8 @@ async function stopReport(filmId) {
     await db.ref(`${DB_PREFIX}films/${filmId}`).update({ results_public: false, results_key: null });
     Object.assign(film, { results_public: false, results_key: null });
     mountReport(film);
-    snack('Report turned off.');
-  } catch { snack('Could not do that.'); }
+    showSnack('Report turned off.');
+  } catch { showSnack('Could not do that.'); }
 }
 
 async function setReportMoney(filmId, show) {
@@ -1613,13 +1613,13 @@ async function setReportMoney(filmId, show) {
     await db.ref(`${DB_PREFIX}films/${filmId}/results_show_revenue`).set(!!show);
     const film = myFilms.find(x => x.id === filmId);
     if (film) film.results_show_revenue = !!show;
-    snack(show ? 'Revenue will show on the report.' : 'Revenue hidden from the report.');
-  } catch { snack('Could not save that.'); }
+    showSnack(show ? 'Revenue will show on the report.' : 'Revenue hidden from the report.');
+  } catch { showSnack('Could not save that.'); }
 }
 
 async function copyReport(url) {
   await navigator.clipboard.writeText(url);
-  snack('Link copied.');
+  showSnack('Link copied.');
 }
 
 /* ============================================================
@@ -2327,7 +2327,7 @@ async function acceptAgreement() {
       msg.textContent = d.message || 'Could not record that.';
       return;
     }
-    snack(`Agreement accepted. Your reference is ${d.reference}.`);
+    showSnack(`Agreement accepted. Your reference is ${d.reference}.`);
     checkAgreement();
   } finally {
     // Whatever happened, the button comes back.
@@ -2341,7 +2341,7 @@ async function submitFilm() {
 
   // Last line of defence — the gate hides the form, but never rely on that alone.
   const ready = await checkAgreement();
-  if (!ready) { snack('Please accept the distribution agreement first.'); return; }
+  if (!ready) { showSnack('Please accept the distribution agreement first.'); return; }
 
   const title = document.getElementById('up-title').value.trim().toUpperCase();
   const synopsis = document.getElementById('up-synopsis').value.trim();
