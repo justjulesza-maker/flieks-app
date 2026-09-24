@@ -179,7 +179,10 @@ async function buildFacts({ verifyPayments = true } = {}) {
     yesterday: userList.filter(u => u.created_at >= yesterday && u.created_at < today).length,
     last7days: joined(week).length,
     total: userList.length,
+    viewers: userList.filter(u => (u.role || 'viewer') === 'viewer').length,
     filmmakers: userList.filter(u => u.role === 'filmmaker').length,
+    filmmakersAwaitingApproval: userList.filter(u => u.role === 'filmmaker_pending').length,
+    admins: userList.filter(u => u.role === 'admin').length,
     recent: userList.filter(u => u.created_at).sort((a, b) => b.created_at - a.created_at).slice(0, 10)
       .map(u => ({ at: u.created_at, name: u.name || 'Someone', role: u.role || 'viewer', email: u.email || '' }))
   };

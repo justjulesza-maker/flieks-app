@@ -223,6 +223,19 @@ async function refresh() {
   const money = a => a.reduce((s, t) => s + Number(t.total || 0), 0);
   const newUsers = Object.values(users).filter(u => (u.created_at || 0) >= today).length;
 
+  /* Who is on the platform. Accounts with no role signed up before roles existed: viewers. */
+  const weekAgo = today - 6 * 86400000;
+  const roleOf = u => (u && u.role) || 'viewer';
+  const userVals = Object.values(users);
+  const headcount = {
+    viewers:        userVals.filter(u => roleOf(u) === 'viewer').length,
+    viewersWeek:    userVals.filter(u => roleOf(u) === 'viewer' && (u.created_at || 0) >= weekAgo).length,
+    filmmakers:     userVals.filter(u => roleOf(u) === 'filmmaker').length,
+    filmmakersWeek: userVals.filter(u => roleOf(u) === 'filmmaker' && (u.created_at || 0) >= weekAgo).length,
+    pending:        userVals.filter(u => roleOf(u) === 'filmmaker_pending').length,
+    buyers:         new Set(done.map(t => t.uid).filter(Boolean)).size
+  };
+
   /* ---- what is broken right now ----
      A payment that never completed means someone was charged and got nothing.
      During a launch this is the only number that genuinely matters. */
@@ -259,6 +272,16 @@ async function refresh() {
       <div class="cell"><p class="v">${done.length}</p><p class="k">Sales all time</p></div>
       <div class="cell"><p class="v">${rand(money(done))}</p><p class="k">Taken all time</p></div>
       <div class="cell"><p class="v">${Object.keys(users).length}</p><p class="k">Accounts</p></div>
+    </div>
+    <h2>People</h2>
+    <div class="grid">
+      <div class="cell"><p class="v">${headcount.viewers}</p><p class="k">Viewers</p>
+        ${headcount.viewersWeek ? `<span class="d up">+${headcount.viewersWeek} this week</span>` : ''}</div>
+      <div class="cell"><p class="v">${headcount.filmmakers}</p><p class="k">Filmmakers</p>
+        ${headcount.filmmakersWeek ? `<span class="d up">+${headcount.filmmakersWeek} this week</span>` : ''}</div>
+      <div class="cell"><p class="v">${headcount.pending}</p><p class="k">Awaiting approval</p></div>
+      <div class="cell"><p class="v">${headcount.buyers}</p><p class="k">Paying customers</p>
+        ${headcount.viewers ? `<span class="d">${Math.round(headcount.buyers / headcount.viewers * 100)}% of viewers</span>` : ''}</div>
     </div>`;
 
   /* ---- per film: where people fall out ---- */
