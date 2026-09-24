@@ -44,6 +44,7 @@ exports.handler = async event => {
     const profile = await ops.dbGet(`flieks_users/${u.localId}`) || {};
     const role = profile.role;
     const trusted = role === 'admin' || role === 'filmmaker';
+    const unlimited = role === 'admin' || !!(await ops.dbGet(`flieks_lab_unlimited/${u.localId}`));
 
     if (b.action === 'list') {
       const mine = await ops.dbGet(`flieks_script_coach_usage/${u.localId}`) || {};
@@ -51,10 +52,10 @@ exports.handler = async event => {
       const since = Date.now() - 30 * DAY;
       const items = Object.entries(mine).map(([jobId, at]) => ({ jobId, at, ...(done[jobId] || {}) }))
         .sort((x, y) => (y.at || 0) - (x.at || 0));
-      return reply(200, { items, limit: role === 'admin' ? null : LIMIT, used: Object.values(mine).filter(t => t >= since).length });
+      return reply(200, { items, limit: unlimited ? null : LIMIT, used: Object.values(mine).filter(t => t >= since).length });
     }
 
-    if (!trusted && !u.emailVerified) {
+    if (!trusted && !unlimited && !u.emailVerified) {
       return reply(403, { code: 'verify', message: 'Verify your email first: open the link we sent you, then try again.' });
     }
 
@@ -68,7 +69,7 @@ exports.handler = async event => {
       return reply(413, { message: 'That file is too big for Script Coach (about 4MB at most).' });
     }
 
-    if (role !== 'admin') {
+    if (!unlimited) {
       const used = await ops.dbGet(`flieks_script_coach_usage/${u.localId}`) || {};
       const since = Date.now() - 30 * DAY;
       if (Object.values(used).filter(t => t >= since).length >= LIMIT) {

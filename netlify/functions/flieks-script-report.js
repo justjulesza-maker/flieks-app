@@ -47,7 +47,10 @@ async function lookup(token) {
   const u = ((await r.json().catch(() => ({}))).users || [])[0];
   if (!u) return null;
   const profile = await ops.dbGet(`flieks_users/${u.localId}`) || {};
-  return { uid: u.localId, email: u.email || '', role: profile.role || 'viewer', name: profile.name || '', verified: !!u.emailVerified };
+  const role = profile.role || 'viewer';
+  // Admins, and partners given "Lab unlimited" in the admin panel, have no monthly limits.
+  const unlimited = role === 'admin' || !!(await ops.dbGet(`flieks_lab_unlimited/${u.localId}`));
+  return { uid: u.localId, email: u.email || '', role, name: profile.name || '', verified: !!u.emailVerified, unlimited };
 }
 
 const newId = () => crypto.randomBytes(15).toString('base64').replace(/[+/=]/g, '').slice(0, 20);
@@ -135,7 +138,7 @@ exports.handler = async event => {
         .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
       const since = Date.now() - 30 * DAY;
       const used = items.filter(r => (r.created_at || 0) >= since).length;
-      return reply(200, { items, limit: me.role === 'admin' ? null : LIMIT, used, role: me.role, verified: me.verified });
+      return reply(200, { items, limit: me.unlimited ? null : LIMIT, used, role: me.role, verified: me.verified || me.unlimited, unlimited: me.unlimited });
     }
 
     if (action === 'delete') {
@@ -152,7 +155,7 @@ exports.handler = async event => {
     /* ---- start one ---- */
     if (action === 'start') {
       // Any Lab member with a verified email; filmmakers and admins are already known.
-      if (me.role !== 'filmmaker' && me.role !== 'admin' && !me.verified) {
+      if (me.role !== 'filmmaker' && !me.unlimited && !me.verified) {
         return reply(403, { code: 'verify', message: 'Verify your email first: open the link we sent you, then try again.' });
       }
       const title = String(body.title || '').trim().slice(0, 120);
@@ -172,7 +175,7 @@ exports.handler = async event => {
         }
       }
 
-      if (me.role !== 'admin') {
+      if (!me.unlimited) {
         const mine = await ops.dbGet(`flieks_script_reports_by_user/${me.uid}`) || {};
         const since = Date.now() - 30 * DAY;
         const used = Object.values(mine).filter(r => (r.created_at || 0) >= since).length;
@@ -217,7 +220,7 @@ exports.handler = async event => {
       const pid = rec.pitch_id || newId();
       const prev = rec.pitch_id ? await ops.dbGet(`flieks_pitches/${pid}`) : null;
       const drafts = (prev && prev.drafts) || 0;
-      if (drafts >= MAX_PITCH_DRAFTS && me.role !== 'admin') {
+      if (drafts >= MAX_PITCH_DRAFTS && !me.unlimited) {
         return reply(429, { message: `That's ${MAX_PITCH_DRAFTS} drafts for this pitch. Edit the text by hand instead.` });
       }
       const now = Date.now();
@@ -259,7 +262,7 @@ exports.handler = async event => {
       const prev = rec.cast_match || {};
       if (prev.status === 'queued' || prev.status === 'working') return reply(200, { ok: true });
       const runs = prev.runs || 0;
-      if (runs >= MAX_MATCH_RUNS && me.role !== 'admin') {
+      if (runs >= MAX_MATCH_RUNS && !me.unlimited) {
         return reply(429, { message: `That's ${MAX_MATCH_RUNS} cast searches for this script. New actors join all the time, so try again next month.` });
       }
       await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match`, {
@@ -296,7 +299,7 @@ exports.handler = async event => {
 
       const day = new Date().toISOString().slice(0, 10);
       const countPath = `flieks_ops/talent_connect/${me.uid}/${day}`;
-      const count = me.role === 'admin' ? 0 : (await ops.dbGet(countPath)) || 0;
+      const count = me.unlimited ? 0 : (await ops.dbGet(countPath)) || 0;
       if (count >= CONNECT_PER_DAY) return reply(429, { message: `That's ${CONNECT_PER_DAY} requests today. Try again tomorrow.` });
 
       const from = me.name || rec.writer || 'A 4flieks filmmaker';
@@ -327,7 +330,7 @@ exports.handler = async event => {
         return reply(502, { message: 'The email could not be sent. Try again in a minute.' });
       }
       await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match/sent/${talentUid}`, { at: Date.now(), character });
-      if (me.role !== 'admin') await ops.dbWrite(countPath, count + 1);
+      if (!me.unlimited) await ops.dbWrite(countPath, count + 1);
       return reply(200, { ok: true });
     }
 
