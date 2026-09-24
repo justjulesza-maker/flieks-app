@@ -11,6 +11,8 @@
 /me/*            /me.html           200
 /script/*        /script.html       200
 /report/*        /results.html      200
+/lab             /lab.html          200
+/lab/*           /lab.html          200
 /privacy         /terms.html#privacy 302
 /refunds         /terms.html#refunds 302
 

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Script Report — 4flieks Lab</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F0E6; --card:#FBF8F1; --ink:#17110E; --ink-2:#5E564D; --ink-3:#8A8177;
+  --rule:#D9D1C2; --sunset:#C2501F; --ochre:#A87515; --green:#2E7D32;
+  --fb:'Archivo Black',sans-serif; --fn:'DM Sans',system-ui,sans-serif; --fm:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8E2D4;color:var(--ink);font-family:var(--fn);padding:28px 14px 70px;-webkit-font-smoothing:antialiased}
+.sheet{position:relative;max-width:860px;margin:0 auto;background:var(--paper);padding:46px 52px 40px;
+  box-shadow:0 1px 3px rgba(23,17,14,.08),0 12px 40px rgba(23,17,14,.09)}
+.sheet::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;
+  background:repeating-linear-gradient(90deg,var(--sunset) 0 15px,transparent 15px 24px)}
+@media (max-width:640px){.sheet{padding:34px 20px 30px}}
+.masthead{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:28px}
+.mark{font-family:var(--fb);font-size:15px;color:var(--ink);text-decoration:none}
+.mark em{color:var(--sunset);font-style:normal}
+.docref{font-family:var(--fm);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);text-align:right;line-height:1.7}
+h1{font-family:var(--fb);font-size:36px;line-height:1.1;letter-spacing:-.015em;margin-bottom:8px}
+h2{font-family:var(--fm);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--sunset);margin:34px 0 12px}
+h3{font-size:15px;font-weight:700;margin-bottom:4px}
+p{font-size:15px;line-height:1.6}
+.muted{color:var(--ink-2)} .small{font-size:13px} .tiny{font-size:12px;color:var(--ink-3);line-height:1.55}
+.meta{font-family:var(--fm);font-size:11.5px;letter-spacing:.06em;color:var(--ink-2);margin-bottom:22px}
+.logline{font-family:var(--fb);font-size:21px;line-height:1.35;border-left:4px solid var(--sunset);padding:4px 0 4px 16px;margin:6px 0 4px}
+.verdict{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--rule);padding:16px 18px;margin:22px 0 4px}
+.chip{flex:none;font-family:var(--fm);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border-radius:4px;color:#fff}
+@media (max-width:560px){.verdict{flex-direction:column;gap:10px}}
+.chip.strong{background:var(--green)} .chip.promising{background:var(--ochre)} .chip.needs{background:var(--sunset)}
+.srow{display:grid;grid-template-columns:130px 1fr 34px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--rule)}
+.srow .k{font-family:var(--fm);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.track{height:8px;background:#E4DCCB;border-radius:4px;overflow:hidden}
+.fill{height:100%;background:var(--sunset)}
+.srow .v{font-family:var(--fm);font-weight:700;text-align:right}
+.srow .why{grid-column:1/-1;font-size:13px;color:var(--ink-2);margin-top:-2px}
+@media (max-width:560px){.srow{grid-template-columns:100px 1fr 30px}}
+.stack{display:flex;height:34px;border-radius:4px;overflow:hidden;margin-bottom:8px}
+.stack div{display:flex;align-items:center;padding:0 10px;font-family:var(--fm);font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pill{font-size:12.5px;background:var(--card);border:1px solid var(--rule);padding:4px 10px;border-radius:999px}
+.chart{background:var(--card);border:1px solid var(--rule);padding:14px 14px 8px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:var(--ink-2)}
+.legend span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:5px;vertical-align:-1px}
+.moments{list-style:none;margin-top:10px;columns:2;column-gap:26px}
+.moments li{font-size:12.5px;line-height:1.45;padding:4px 0;break-inside:avoid;color:var(--ink-2)}
+.moments b{font-family:var(--fm);font-size:11px;color:var(--ink)}
+@media (max-width:560px){.moments{columns:1}}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.box{background:var(--card);border:1px solid var(--rule);padding:14px 16px}
+.box .lbl{font-family:var(--fm);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.beats{margin-top:12px}
+.beats div{display:grid;grid-template-columns:130px 1fr;gap:12px;padding:8px 0;border-top:1px solid var(--rule);font-size:14px;line-height:1.5}
+.beats div b{font-family:var(--fm);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);font-weight:400;padding-top:2px}
+@media (max-width:560px){.beats div{grid-template-columns:1fr;gap:2px}}
+.char{padding:14px 0;border-top:1px solid var(--rule)}
+.char .top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.char .role{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.share{display:flex;align-items:center;gap:8px;font-family:var(--fm);font-size:11px;color:var(--ink-2)}
+.share .track{width:90px}
+.char p{font-size:14px;margin-top:4px}
+.char .cast{font-size:13px;color:var(--ink-2);margin-top:4px}
+ul.plain{list-style:none}
+ul.plain li{font-size:14.5px;line-height:1.55;padding:8px 0 8px 18px;border-top:1px solid var(--rule);position:relative}
+ul.plain li::before{content:'—';position:absolute;left:0;color:var(--sunset)}
+.note{padding:10px 0;border-top:1px solid var(--rule)}
+.note .area{font-family:var(--fm);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sunset)}
+.note .where{font-family:var(--fm);font-size:10.5px;color:var(--ink-3);margin-left:8px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.facts div{background:var(--card);padding:12px 14px}
+.facts .n{font-family:var(--fb);font-size:22px}
+.facts .k{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-top:3px}
+.price{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.price div{background:var(--ink);color:var(--paper);padding:10px 16px}
+.price b{font-family:var(--fb);font-size:22px;display:block}
+.price span{font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.foot{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+button,.btn{font:700 13px var(--fn);padding:10px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink)}
+button.danger{background:transparent;color:var(--sunset);border-color:var(--sunset)}
+button:disabled{opacity:.5;cursor:default}
+/* workspace */
+label{display:block;font-family:var(--fm);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 6px}
+input[type=text]{width:100%;font:15px var(--fn);padding:11px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink)}
+.drop{border:1.5px dashed var(--rule);border-radius:8px;background:var(--card);padding:22px;text-align:center;cursor:pointer}
+.drop.has{border-style:solid;border-color:var(--ink)}
+.prog{height:6px;background:#E4DCCB;border-radius:3px;overflow:hidden;margin-top:12px;display:none}
+.prog div{height:100%;width:0;background:var(--sunset);transition:width .2s}
+.msg{font-size:13px;margin-top:10px;min-height:18px}
+.msg.err{color:var(--sunset)}
+.item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--rule)}
+.item a{color:var(--ink);font-weight:700;text-decoration:none}
+.item .st{font-family:var(--fm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.spin{width:28px;height:28px;border:3px solid var(--rule);border-top-color:var(--sunset);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 14px}
+@keyframes s{to{transform:rotate(360deg)}}
+.center{text-align:center;padding:40px 0}
+@media print{
+  body{background:#fff;padding:0}
+  .sheet{box-shadow:none;max-width:none;padding:24px 28px}
+  .noprint{display:none!important}
+  h2{break-after:avoid} .char,.note,.box,.chart{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <a class="mark" href="/lab">4<em>flieks</em> Lab</a>
+    <div class="docref" id="docref">SCRIPT REPORT</div>
+  </div>
+  <div id="app"><div class="center"><div class="spin"></div><p class="muted">Loading…</p></div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+
+const API = '/.netlify/functions/flieks-script-report';
+const app = document.getElementById('app');
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const call = async (action, extra = {}, withToken = true) => {
+  const body = { action, ...extra };
+  if (withToken && auth.currentUser) body.token = await auth.currentUser.getIdToken();
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  return { ok: r.ok, status: r.status, d };
+};
+const dateStr = ms => ms ? new Date(ms).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+
+/* /lab/r/<id> or ?r=<id> is a report; anything else is the workspace. */
+const reportId = (location.pathname.match(/^\/lab\/r\/([A-Za-z0-9]+)/) || [])[1] ||
+                 new URLSearchParams(location.search).get('r');
+
+const EMO = {
+  joy: ['Joy', '#D9A21B'], hope: ['Hope', '#5E8C3A'], love: ['Love', '#B8457A'], humour: ['Humour', '#E08A2E'],
+  tension: ['Tension', '#C2501F'], fear: ['Fear', '#6B4E9B'], sadness: ['Sadness', '#3E6E9E'],
+  anger: ['Anger', '#8E2A1B'], surprise: ['Surprise', '#2E8C84']
+};
+const GENRE_COLORS = ['#17110E', '#C2501F', '#A87515', '#5E564D'];
+
+/* ================= the report ================= */
+
+let pollTimer = null;
+async function showReport(id) {
+  clearTimeout(pollTimer);
+  const { ok, d } = await call('get', { id }, false);
+  if (!ok) {
+    app.innerHTML = `<div class="center"><h1>Report not found</h1><p class="muted">The link may be wrong, or the report was deleted.</p>
+      <p style="margin-top:16px"><a class="btn ghost" href="/lab">Go to 4flieks Lab</a></p></div>`;
+    return;
+  }
+  document.getElementById('docref').innerHTML = `SCRIPT REPORT<br>${esc(dateStr(d.finished_at || d.created_at))}`;
+  document.title = `${d.title} — Script Report — 4flieks Lab`;
+  if (d.status === 'queued' || d.status === 'working') {
+    app.innerHTML = `<div class="center"><div class="spin"></div><h1 style="font-size:26px">${esc(d.title)}</h1>
+      <p class="muted" style="margin-top:6px">${esc(d.stage || 'Working…')}</p>
+      <p class="tiny" style="margin-top:14px">You can leave this page. The report will be here when it’s done, under your reports in 4flieks Lab.</p></div>`;
+    pollTimer = setTimeout(() => showReport(id), 5000);
+    return;
+  }
+  if (d.status === 'error') {
+    app.innerHTML = `<div class="center"><h1 style="font-size:26px">${esc(d.title)}</h1>
+      <p style="color:var(--sunset);margin-top:8px">${esc(d.error)}</p>
+      <p style="margin-top:16px"><a class="btn ghost" href="/lab">Back to 4flieks Lab</a></p></div>`;
+    return;
+  }
+  renderReport(id, d.report);
+}
+
+function arcSvg(arc) {
+  if (!arc.length) return '';
+  const W = 760, H = 230, L = 34, R = 12, T = 14, B = 26;
+  const iw = W - L - R, ih = H - T - B;
+  const x = i => L + (arc.length === 1 ? iw / 2 : i * iw / (arc.length - 1));
+  const yI = v => T + ih - (v / 10) * ih;                // intensity 0..10
+  const yV = v => T + ih / 2 - (v / 5) * (ih / 2);        // valence -5..5
+  const area = `M${x(0)},${yI(0)} ` + arc.map((p, i) => `L${x(i)},${yI(p.intensity)}`).join(' ') + ` L${x(arc.length - 1)},${yI(0)} Z`;
+  const line = arc.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${yV(p.valence)}`).join(' ');
+  const grid = [0, 5, 10].map(v => `<line x1="${L}" x2="${W - R}" y1="${yI(v)}" y2="${yI(v)}" stroke="#D9D1C2" stroke-width="1"/>
+     <text x="${L - 8}" y="${yI(v) + 4}" font-size="10" text-anchor="end" fill="#8A8177" font-family="JetBrains Mono,monospace">${v}</text>`).join('');
+  const dots = arc.map((p, i) => `<circle cx="${x(i)}" cy="${yI(p.intensity)}" r="6" fill="${(EMO[p.emotion] || EMO.tension)[1]}" stroke="#FBF8F1" stroke-width="2">
+     <title>${esc(`${p.n}. ${p.moment} (${(EMO[p.emotion] || EMO.tension)[0]}, intensity ${p.intensity}/10)`)}</title></circle>`).join('');
+  const labels = arc.map((p, i) => (arc.length <= 14 || i % 2 === 0) ?
+    `<text x="${x(i)}" y="${H - 8}" font-size="10" text-anchor="middle" fill="#8A8177" font-family="JetBrains Mono,monospace">${p.n}</text>` : '').join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Emotion arc: intensity of each key moment across the script, with the emotional tone line">
+    ${grid}
+    <path d="${area}" fill="#C2501F" fill-opacity=".12" stroke="none"/>
+    <path d="${arc.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${yI(p.intensity)}`).join(' ')}" fill="none" stroke="#C2501F" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="${line}" fill="none" stroke="#17110E" stroke-width="1.5" stroke-dasharray="5 4"/>
+    ${dots}${labels}</svg>`;
+}
+
+function renderReport(id, r) {
+  const f = r.format || {};
+  const bits = [
+    { short: 'Short film', feature: 'Feature', episode: 'Episode' }[f.type] || '',
+    f.pages ? `${f.pages} pages` : '',
+    f.est_runtime_mins ? `about ${f.est_runtime_mins} min` : '',
+    (r.languages || []).join(', ')
+  ].filter(Boolean).join(' · ');
+  const vclass = { Strong: 'strong', Promising: 'promising', 'Needs work': 'needs' }[r.verdict.label] || 'promising';
+  const scoreNames = { concept: 'Concept', character: 'Characters', dialogue: 'Dialogue', structure: 'Structure', marketability: 'Market appeal' };
+  const usedEmo = [...new Set(r.emotion_arc.map(p => p.emotion))];
+  const pr = r.production, rel = r.release, au = r.audience, st = r.structure;
+
+  app.innerHTML = `
+    <h1>${esc(r.title)}</h1>
+    <p class="meta">${r.writer ? `WRITTEN BY ${esc(r.writer).toUpperCase()} · ` : ''}${esc(bits)}</p>
+    ${r.logline ? `<p class="logline">${esc(r.logline)}</p>` : ''}
+
+    <div class="verdict"><span class="chip ${vclass}">${esc(r.verdict.label)}</span><p>${esc(r.verdict.summary)}</p></div>
+
+    <h2>Scores</h2>
+    ${Object.entries(scoreNames).map(([k, n]) => `
+      <div class="srow"><span class="k">${n}</span>
+        <div class="track"><div class="fill" style="width:${r.scores[k].score * 10}%"></div></div>
+        <span class="v">${r.scores[k].score}</span>
+        ${r.scores[k].why ? `<p class="why">${esc(r.scores[k].why)}</p>` : ''}</div>`).join('')}
+
+    ${r.genres.length ? `<h2>Genre mix</h2>
+      <div class="stack">${r.genres.map((g, i) => `<div style="width:${g.pct}%;background:${GENRE_COLORS[i % 4]}" title="${esc(g.genre)} ${g.pct}%">${g.pct >= 12 ? esc(g.genre) + ' ' + g.pct + '%' : ''}</div>`).join('')}</div>
+      <p class="small muted">${r.genres.map(g => `${esc(g.genre)} ${g.pct}%`).join(' · ')}${r.tone ? ` — <i>${esc(r.tone)}</i>` : ''}</p>
+      ${r.themes.length ? `<div class="pills">${r.themes.map(t => `<span class="pill">${esc(t)}</span>`).join('')}</div>` : ''}` : ''}
+
+    ${r.emotion_arc.length ? `<h2>Emotion arc</h2>
+      <div class="chart">${arcSvg(r.emotion_arc)}
+        <div class="legend"><span style="--c:#C2501F">Intensity (solid)</span><span style="--c:#17110E">Tone, dark to light (dashed)</span>
+          ${usedEmo.map(e => `<span style="--c:${EMO[e][1]}">${EMO[e][0]}</span>`).join('')}</div>
+        <ol class="moments">${r.emotion_arc.map(p => `<li><b>${p.n}</b> ${esc(p.moment)} <span class="tiny">(${esc(EMO[p.emotion][0])}${p.pages ? ', p. ' + esc(p.pages) : ''})</span></li>`).join('')}</ol>
+      </div>` : ''}
+
+    ${r.synopsis ? `<h2>Synopsis</h2><p>${esc(r.synopsis)}</p>` : ''}
+
+    <h2>Structure</h2>
+    ${st.acts.length ? `<div class="acts">${st.acts.map(a => `<div class="box"><p class="lbl">${esc(a.name)}${a.pages ? ' · p. ' + esc(a.pages) : ''}</p><p class="small">${esc(a.summary)}</p></div>`).join('')}</div>` : ''}
+    <div class="beats">
+      ${st.inciting_incident ? `<div><b>Inciting incident</b><span>${esc(st.inciting_incident)}</span></div>` : ''}
+      ${st.midpoint ? `<div><b>Midpoint</b><span>${esc(st.midpoint)}</span></div>` : ''}
+      ${st.climax ? `<div><b>Climax</b><span>${esc(st.climax)}</span></div>` : ''}
+      ${st.pacing ? `<div><b>Pacing</b><span>${esc(st.pacing)}</span></div>` : ''}
+    </div>
+
+    ${r.characters.length ? `<h2>Characters</h2>
+      ${r.characters.map(c => `<div class="char">
+        <div class="top"><h3>${esc(c.name)} <span class="role">${esc(c.role)}</span></h3>
+          <span class="share"><span class="track"><span class="fill" style="display:block;width:${c.dialogue_share}%"></span></span>${c.dialogue_share}% of dialogue</span></div>
+        ${c.description ? `<p>${esc(c.description)}</p>` : ''}
+        ${c.arc ? `<p class="muted"><b>Arc:</b> ${esc(c.arc)}</p>` : ''}
+        ${c.casting ? `<p class="cast"><b>Casting:</b> ${esc(c.casting)}</p>` : ''}
+      </div>`).join('')}` : ''}
+
+    <h2>Audience</h2>
+    <div class="beats" style="margin-top:0">
+      ${au.primary ? `<div><b>Primary</b><span>${esc(au.primary)}</span></div>` : ''}
+      ${au.secondary ? `<div><b>Secondary</b><span>${esc(au.secondary)}</span></div>` : ''}
+      ${au.why ? `<div><b>Why</b><span>${esc(au.why)}</span></div>` : ''}
+      ${au.markets.length ? `<div><b>Markets</b><span>${au.markets.map(esc).join(' · ')}</span></div>` : ''}
+      ${au.age_rating ? `<div><b>Likely rating</b><span>${esc(au.age_rating)}</span></div>` : ''}
+    </div>
+
+    ${r.comparables.length ? `<h2>Comparable titles</h2>
+      <ul class="plain">${r.comparables.map(c => `<li><b>${esc(c.title)}</b>${c.year ? ` (${c.year})` : ''} — ${esc(c.why)}</li>`).join('')}</ul>
+      <p class="tiny" style="margin-top:8px">Suggested by AI. Check titles before quoting them to a funder.</p>` : ''}
+
+    ${r.strengths.length ? `<h2>What works</h2><ul class="plain">${r.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+
+    ${r.notes.length ? `<h2>Development notes</h2>
+      ${r.notes.map(n => `<div class="note"><span class="area">${esc(n.area)}</span>${n.where ? `<span class="where">${esc(n.where)}</span>` : ''}<p class="small" style="margin-top:3px">${esc(n.note)}</p></div>`).join('')}` : ''}
+
+    <h2>Production footprint</h2>
+    <div class="facts">
+      <div><p class="n">${pr.speaking_roles ?? '—'}</p><p class="k">Speaking roles</p></div>
+      <div><p class="n">${pr.locations ?? '—'}</p><p class="k">Locations</p></div>
+      <div><p class="n" style="text-transform:capitalize">${esc(pr.night_scenes)}</p><p class="k">Night scenes</p></div>
+      <div><p class="n" style="text-transform:capitalize">${esc(pr.budget_band)}</p><p class="k">Budget band</p></div>
+    </div>
+    ${pr.flags.length ? `<div class="pills">${pr.flags.map(x => `<span class="pill">${esc(x)}</span>`).join('')}</div>` : ''}
+
+    <h2>Releasing it on 4flieks</h2>
+    <div class="price"><div><span>Rent</span><b>R${rel.rent_price}</b></div><div><span>Own</span><b>R${rel.own_price}</b></div></div>
+    ${rel.why_price ? `<p class="small muted">${esc(rel.why_price)}</p>` : ''}
+    <div class="beats">
+      ${rel.trailer_moments.length ? `<div><b>Trailer moments</b><span>${rel.trailer_moments.map(esc).join('<br>')}</span></div>` : ''}
+      ${rel.poster_idea ? `<div><b>Poster idea</b><span>${esc(rel.poster_idea)}</span></div>` : ''}
+      ${rel.cast_link_plan ? `<div><b>Cast links</b><span>${esc(rel.cast_link_plan)}</span></div>` : ''}
+    </div>
+
+    <div class="foot">
+      <p class="tiny">AI coverage by 4flieks Lab${r.meta && r.meta.truncated ? '. The script was very long, so the last pages were not read' : ''}. A starting point for your own judgement, not a verdict. The screenplay itself stays private: only this report is shared, through its link.</p>
+      <div class="actions noprint">
+        <button onclick="copyLink(this)">Copy link</button>
+        <button class="ghost" onclick="window.print()">Save as PDF</button>
+        <a class="btn ghost" href="/lab">4flieks Lab</a>
+      </div>
+    </div>`;
+}
+
+function copyLink(btn) {
+  const url = `${location.origin}/lab/r/${reportId}`;
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+    .then(() => { btn.textContent = 'Link copied'; setTimeout(() => btn.textContent = 'Copy link', 2000); })
+    .catch(() => prompt('Copy this link', url));
+}
+
+/* ================= the workspace ================= */
+
+let chosen = null;
+function workspaceShell() {
+  app.innerHTML = `
+    <h1>Script Report</h1>
+    <p class="muted" style="margin-bottom:6px">Upload your screenplay and get professional-style coverage in a few minutes:
+      verdict and scores, emotion arc, structure, characters and casting, audience, development notes, and how to release it.</p>
+    <p class="tiny">Your script stays private. Only the report can be shared, by its link.</p>
+
+    <h2>New report</h2>
+    <label for="t">Title</label><input id="t" type="text" maxlength="120" placeholder="e.g. Where Have All the DVDs Gone?">
+    <label for="w">Writer (optional)</label><input id="w" type="text" maxlength="120" placeholder="Who wrote it">
+    <label>Screenplay (PDF, up to 30MB)</label>
+    <div class="drop" id="drop" onclick="document.getElementById('f').click()">
+      <p id="dropText">Tap to choose a PDF, or drop it here</p>
+      <input id="f" type="file" accept="application/pdf,.pdf" style="display:none">
+    </div>
+    <div class="prog" id="prog"><div id="progBar"></div></div>
+    <p class="msg" id="msg"></p>
+    <div class="actions"><button id="go" onclick="startReport()">Get my Script Report</button></div>
+    <p class="tiny" id="quota" style="margin-top:10px"></p>
+
+    <h2>Your reports</h2>
+    <div id="list"><p class="tiny">Loading…</p></div>`;
+  const f = document.getElementById('f'), drop = document.getElementById('drop');
+  f.addEventListener('change', () => pick(f.files[0]));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('has'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('has'));
+  drop.addEventListener('drop', e => { e.preventDefault(); pick(e.dataTransfer.files[0]); });
+}
+
+function pick(file) {
+  const msg = document.getElementById('msg');
+  msg.className = 'msg'; msg.textContent = '';
+  chosen = null;
+  if (!file) return;
+  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { msg.className = 'msg err'; msg.textContent = 'Please choose a PDF. Most screenwriting apps can export one.'; return; }
+  if (file.size > 30 * 1024 * 1024) { msg.className = 'msg err'; msg.textContent = 'That file is over 30MB.'; return; }
+  chosen = file;
+  document.getElementById('drop').classList.add('has');
+  document.getElementById('dropText').textContent = `${file.name} · ${(file.size / 1048576).toFixed(1)}MB`;
+  const t = document.getElementById('t');
+  if (!t.value.trim()) t.value = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
+}
+
+async function startReport() {
+  const msg = document.getElementById('msg'), go = document.getElementById('go');
+  const title = document.getElementById('t').value.trim(), writer = document.getElementById('w').value.trim();
+  msg.className = 'msg err';
+  if (!title) { msg.textContent = 'Give the script a title.'; return; }
+  if (!chosen) { msg.textContent = 'Choose the screenplay PDF.'; return; }
+  go.disabled = true; msg.className = 'msg'; msg.textContent = 'Uploading…';
+  const uid = auth.currentUser.uid;
+  const rand = Math.random().toString(36).slice(2, 8);
+  const ref = firebase.storage().ref(`flieks_scripts/lab_${uid}/${Date.now()}-${rand}.pdf`);
+  const prog = document.getElementById('prog'), bar = document.getElementById('progBar');
+  prog.style.display = 'block';
+  try {
+    const task = ref.put(chosen, { contentType: 'application/pdf', customMetadata: { owner: uid } });
+    task.on('state_changed', s => { bar.style.width = Math.round(s.bytesTransferred / s.totalBytes * 100) + '%'; });
+    await task;
+    const fileUrl = await ref.getDownloadURL();
+    msg.textContent = 'Starting the read…';
+    const { ok, d } = await call('start', { title, writer, fileUrl, fileName: chosen.name });
+    if (!ok) throw new Error(d.message || 'Could not start.');
+    location.href = `/lab/r/${d.id}`;
+  } catch (e) {
+    msg.className = 'msg err';
+    msg.textContent = e.message || 'Upload failed. Try again.';
+    go.disabled = false; prog.style.display = 'none'; bar.style.width = '0';
+  }
+}
+
+async function loadList() {
+  const el = document.getElementById('list'), q = document.getElementById('quota');
+  const { ok, d } = await call('list');
+  if (!ok) { el.innerHTML = `<p class="tiny">${esc(d.message || 'Could not load your reports.')}</p>`; return; }
+  if (d.limit) q.textContent = `${Math.max(0, d.limit - d.used)} of ${d.limit} reports left this month.`;
+  if (!d.items.length) { el.innerHTML = `<p class="tiny">None yet. Your reports will be listed here.</p>`; return; }
+  const label = s => ({ queued: 'Starting', working: 'Reading…', done: 'Ready', error: 'Failed' }[s.status] || s.status) + (s.verdict ? ` · ${s.verdict}` : '');
+  el.innerHTML = d.items.map(r => `<div class="item">
+      <div><a href="/lab/r/${esc(r.id)}">${esc(r.title)}</a><div class="st">${esc(label(r))} · ${esc(dateStr(r.created_at))}</div></div>
+      <button class="danger" onclick="removeReport('${esc(r.id)}', this)">Delete</button></div>`).join('');
+}
+
+async function removeReport(id, btn) {
+  // Two taps: the first arms it, the second deletes.
+  if (!btn.dataset.armed) {
+    btn.dataset.armed = '1'; btn.textContent = 'Tap again to delete';
+    setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = 'Delete'; } }, 4000);
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  const { ok, d } = await call('delete', { id });
+  if (ok && d.filePath) { try { await firebase.storage().ref(d.filePath).delete(); } catch (e) { /* file may already be gone */ } }
+  if (!ok) { btn.disabled = false; delete btn.dataset.armed; btn.textContent = d.message || 'Could not delete'; return; }
+  loadList();
+}
+
+function gate(html) { app.innerHTML = `<div class="center">${html}</div>`; }
+
+if (reportId) {
+  showReport(reportId);
+} else {
+  auth.onAuthStateChanged(async user => {
+    if (!user) {
+      gate(`<h1>Script Report</h1><p class="muted" style="margin:8px 0 18px">AI coverage for your screenplay, free for 4flieks filmmakers.</p>
+        <a class="btn" href="/filmmaker">Sign in to 4flieks</a>`);
+      return;
+    }
+    workspaceShell();
+    const { ok, d } = await call('list');
+    if (ok && d.role !== 'filmmaker' && d.role !== 'admin') {
+      gate(`<h1>Script Report</h1><p class="muted" style="margin:8px 0 18px">Script Report is for 4flieks filmmakers.</p>
+        <a class="btn" href="/filmmaker">Apply as a filmmaker</a>`);
+      return;
+    }
+    loadList();
+  });
+}
+</script>
+</body>
+</html>

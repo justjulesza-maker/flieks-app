@@ -4,6 +4,9 @@
 [functions."script-extract-background"]
   timeout = 900
 
+[functions."script-report-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 
