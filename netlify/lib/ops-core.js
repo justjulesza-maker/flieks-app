@@ -198,10 +198,17 @@ async function buildFacts({ verifyPayments = true } = {}) {
     `Possible double charge: ${t.email || 'a buyer'} paid ${rand(t.total)} for ${t.film_title || titleOf(t.film_id)} ${ago(now - t.created_at)} ago but already had access. Check Yoco and refund if charged twice.`,
     t.created_at, `${SITE}/admin`));
 
-  Object.entries(F).filter(([, f]) => f.status === 'review').forEach(([id, f]) => {
+  // A film in review with no video yet is waiting on the filmmaker, not on Julian.
+  const hasVideo = id => { const p = (priv || {})[id] || {}; return !!(p.video_url || p.bunny_id); };
+  const inReview = Object.entries(F).filter(([, f]) => f.status === 'review');
+  inReview.filter(([id]) => hasVideo(id)).forEach(([id, f]) => {
     const waited = now - (f.submitted_at || now);
     add(waited > 2 * DAY ? 'urgent' : 'todo', 'film-review',
       `${f.title || id} by ${f.filmmaker || 'a filmmaker'} is waiting for review (${ago(waited)})`, f.submitted_at, `${SITE}/admin`);
+  });
+  inReview.filter(([id]) => !hasVideo(id)).forEach(([id, f]) => {
+    add('fyi', 'awaiting-upload',
+      `${f.title || id} by ${f.filmmaker || 'a filmmaker'} — details in, film not uploaded yet (${ago(now - (f.submitted_at || now))})`, f.submitted_at, null);
   });
 
   Object.entries(apps || {}).filter(([, a]) => a && a.status === 'pending').forEach(([id, a]) => {
@@ -246,7 +253,8 @@ async function buildFacts({ verifyPayments = true } = {}) {
     signups,
     films: {
       live: Object.values(F).filter(f => f.status === 'live').length,
-      inReview: Object.values(F).filter(f => f.status === 'review').length,
+      inReview: inReview.filter(([id]) => hasVideo(id)).length,
+      awaitingUpload: inReview.filter(([id]) => !hasVideo(id)).length,
       titles: Object.entries(F).map(([id, f]) => ({ id, title: f.title, status: f.status, filmmaker: f.filmmaker,
         views: f.view_count || 0, owned: f.own_count || 0, rented: f.rent_count || 0, rating: f.rating_avg || null }))
     },
@@ -254,7 +262,7 @@ async function buildFacts({ verifyPayments = true } = {}) {
     // Ids of things that warrant an immediate alert, for the watcher.
     alertKeys: {
       paidNoAccess: paidNoAccess.map(t => t.id),
-      filmReview: Object.entries(F).filter(([, f]) => f.status === 'review').map(([id, f]) => `${id}:${f.submitted_at || ''}`),
+      filmReview: inReview.filter(([id]) => hasVideo(id)).map(([id, f]) => `${id}:${f.submitted_at || ''}`),
       application: Object.entries(apps || {}).filter(([, a]) => a && a.status === 'pending').map(([id]) => id),
       payout: Object.values(payouts || {}).flatMap(l => Object.entries(l || {}).filter(([, p]) => p && p.status === 'pending').map(([id]) => id)),
       support: Object.entries(support || {}).filter(([, s]) => s && s.status === 'open').map(([ref]) => ref)
