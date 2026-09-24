@@ -51,11 +51,18 @@ const reply = (code, obj) => ({
 
 const money = n => +Number(n || 0).toFixed(2);
 
+/* The cast share the filmmaker chose, as a percentage (0 if none/custom),
+   and what that comes to on a person's actual takings: their share of the
+   ex-VAT revenue their link brought in. Same formula flieks-cast-stats uses
+   for the cast member's own page, so both sides see the same figure. */
+const castSharePct = cs => ({ pct20: 20, pct15: 15, pct10: 10 }[(cs && cs.type) || 'none'] || 0);
+const castOwed = (cs, grossRevenue) => money((Number(grossRevenue) || 0) / 1.15 * castSharePct(cs) / 100);
+
 exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
   try {
-    const { key, token, filmId: askedFor } = JSON.parse(event.body || '{}');
+    const { key, token, filmId: askedFor, everyone } = JSON.parse(event.body || '{}');
 
     let filmId = null;
     let viaAdmin = false;
@@ -121,20 +128,38 @@ exports.handler = async event => {
     const timeline = Object.entries(byDay).sort().map(([date, n]) => ({ date, sales: n }));
 
     /* Who actually shifted tickets. Names only for people the filmmaker
-       already shows publicly on the film page. */
-    const people = Object.entries(refs).map(([slug, r]) => {
+       already shows publicly on the film page.
+
+       The filmmaker's own portal asks with `everyone`: then every cast and
+       crew member is listed, including those whose link hasn't been opened
+       yet (the most useful row there — "they haven't shared it"), hidden
+       crew keep their real names (it's the filmmaker looking), and each row
+       carries what that person is owed on the filmmaker's stated share. */
+    const ownerView = viaAdmin && !!everyone;
+    const sharePct = castSharePct(film.cast_share);
+    const rows = Object.entries(refs);
+    if (ownerView) Object.keys(cast || {}).forEach(slug => { if (!refs[slug]) rows.push([slug, {}]); });
+
+    const people = rows.map(([slug, r]) => {
       const person = (cast && cast[slug]) || {};
-      return {
-        name: person.hidden ? 'A crew member' : (person.name || slug),
-        role: person.hidden ? '' : (person.role || ''),
+      const hideName = person.hidden && !ownerView;
+      const row = {
+        name: hideName ? 'A crew member' : (person.name || slug),
+        role: hideName ? '' : (person.role || ''),
         clicks: r.clicks || 0,
         trailerPlays: r.trailerPlays || 0,
         sales: r.sales || 0,
         revenue: showMoney ? money(r.revenue) : null,
         conversion: r.clicks ? +((r.sales || 0) / r.clicks * 100).toFixed(1) : 0
       };
-    }).filter(p => p.clicks > 0)
-      .sort((a, b) => b.sales - a.sales || b.clicks - a.clicks);
+      if (ownerView) {
+        row.slug = slug;
+        row.kind = person.kind || 'cast';
+        row.owed = castOwed(film.cast_share, r.revenue);
+      }
+      return row;
+    }).filter(p => ownerView || p.clicks > 0)
+      .sort((a, b) => b.sales - a.sales || b.clicks - a.clicks || a.name.localeCompare(b.name));
 
     const reviewList = Object.values(reviews || {})
       .filter(r => r && !r.hidden && r.body && Number(r.rating) >= 4)
@@ -179,7 +204,11 @@ exports.handler = async event => {
             (t && t.film_id === filmId && t.status === 'complete' && t.mode !== 'test')
               ? sum + Number(t.filmmaker_share || 0) : sum, 0))
         : null,
-      people: people.slice(0, 12),
+      people: ownerView ? people : people.slice(0, 12),
+      ...(ownerView ? { castShare: {
+        pct: sharePct,
+        type: (film.cast_share && film.cast_share.type) || 'none'
+      } } : {}),
       reviews: reviewList
     });
 

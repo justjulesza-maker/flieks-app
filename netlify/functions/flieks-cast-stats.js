@@ -100,8 +100,12 @@ exports.handler = async event => {
       clicks: mine.clicks || 0,
       trailerPlays: mine.trailerPlays || 0,
       sales,
-      // What they are owed, on the filmmaker's stated terms.
-      earned: share.perSale ? +(share.perSale * sales).toFixed(2) : 0,
+      // What they are owed, on the filmmaker's stated terms: their share of
+      // the ex-VAT revenue their link actually brought in. (This used to be
+      // sales × the own-price share, which overstated it whenever the sale
+      // was a cheaper rental.) Same formula as the filmmaker sees in the
+      // portal via flieks-results, so both sides see the same number.
+      earned: share.pct ? +((Number(mine.revenue) || 0) / 1.15 * share.pct / 100).toFixed(2) : 0,
       share
     });
 

@@ -1310,6 +1310,13 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <p class="section-label" style="margin-bottom:4px">WHO'S SELLING YOUR FILM</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+        Every cast and crew link: how many people it brought to the film, and how many of them bought.</p>
+      <div id="cast-sales"><p style="font-size:13px;color:var(--dim)">Loading…</p></div>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
       <div id="castPanel"></div>
     </div>
 
@@ -1331,6 +1338,7 @@ function openFilmDetail(filmId) {
   `;
   nav('film-detail');
   mountCastPanel(f);
+  loadCastSales(f.id);
   mountScript(f);
   mountReport(f);
   mountShareOptions(f);
@@ -1916,6 +1924,74 @@ async function saveCastShare(filmId) {
     msg.style.color = 'var(--red)';
     msg.textContent = 'Could not save that.';
   }
+}
+
+/* ---- Who's selling the film ----
+   Per-link figures from flieks-results (the film's own filmmaker may ask
+   without a report key). "everyone" lists cast whose link hasn't been
+   opened yet too — knowing who hasn't shared is half the point. */
+async function loadCastSales(filmId) {
+  const box = document.getElementById('cast-sales');
+  if (!box) return;
+  let d;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-results', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, everyone: true })
+    });
+    d = await r.json();
+    if (!r.ok) throw new Error(d.message || r.status);
+  } catch (e) {
+    console.error('[filmmaker] cast sales:', e);
+    if (currentFilmId === filmId) box.innerHTML =
+      `<p style="font-size:13px;color:var(--dim)">Couldn't load link figures just now — try again in a moment.</p>`;
+    return;
+  }
+  if (currentFilmId !== filmId) return;           // they've opened another film since
+
+  const people = d.people || [];
+  if (!people.length) {
+    box.innerHTML = `<p style="font-size:13px;color:var(--dim);line-height:1.5">
+      Add your cast and crew below. Each person gets their own link, and what it brings in shows up here.</p>`;
+    return;
+  }
+
+  const rand = n => 'R' + Number(n || 0).toFixed(2);
+  const pct = (d.castShare && d.castShare.pct) || 0;
+  const viaLinks = people.reduce((s, p) => s + p.sales, 0);
+  const allSales = (d.headline && d.headline.buyers) || 0;
+  const owedTotal = people.reduce((s, p) => s + (p.owed || 0), 0);
+
+  box.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);
+                border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px">
+      ${[['Via links', `${viaLinks}${allSales ? ' of ' + allSales : ''}`],
+         ['Link opens', people.reduce((s, p) => s + p.clicks, 0)],
+         [pct ? `You owe (${pct}%)` : 'Cast share', pct ? rand(owedTotal) : (d.castShare && d.castShare.type === 'custom' ? 'Custom' : 'None')]]
+        .map(([k, v]) => `
+        <div style="background:var(--card);padding:10px 6px;text-align:center">
+          <p style="font-size:15px;font-weight:700;color:var(--text)">${v}</p>
+          <p style="font-size:9.5px;color:var(--muted);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">${k}</p>
+        </div>`).join('')}
+    </div>
+    ${people.map((p, i) => `
+      <div style="padding:10px 0;${i ? 'border-top:1px solid var(--border)' : ''}">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+          <p style="font-size:14px;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${esc(p.name)}${p.role ? `<span style="color:var(--dim);font-size:12px"> · ${esc(p.role)}</span>` : ''}</p>
+          <p style="font-size:13px;font-weight:700;color:${p.sales ? 'var(--amber)' : 'var(--dim)'};flex-shrink:0">
+            ${p.sales} sale${p.sales === 1 ? '' : 's'}${p.revenue ? ` · ${rand(p.revenue)}` : ''}</p>
+        </div>
+        <p style="font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45">${
+          p.clicks
+            ? `${p.clicks} opened the link · ${p.trailerPlays} watched the trailer · ${p.conversion}% bought` +
+              (pct && p.owed ? ` · <span style="color:var(--text)">you owe ${rand(p.owed)}</span>` : '')
+            : `<span style="color:var(--dim)">Link not opened yet — worth a nudge to share it.</span>`}</p>
+      </div>`).join('')}
+    ${allSales > viaLinks ? `<p style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5">
+      The other ${allSales - viaLinks} sale${allSales - viaLinks === 1 ? '' : 's'} came from people who found the film without a cast link.</p>` : ''}
+    ${pct ? `<p style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.5">
+      "You owe" is ${pct}% of the ex-VAT sales each link brought in — the same figure each person sees on their own page. You pay them directly.</p>` : ''}`;
 }
 
 function mountCastPanel(f) {
