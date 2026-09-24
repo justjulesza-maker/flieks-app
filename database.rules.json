@@ -4,10 +4,15 @@
       ".read": true,
       ".indexOn": ["filmmaker_uid", "status"],
       "$filmId": {
-        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'filmmaker' || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin')",
-        "view_count": { ".write": "auth != null" },
-        "rent_count": { ".write": false },
-        "own_count": { ".write": false }
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (root.child('flieks_users').child(auth.uid).child('role').val() === 'filmmaker' && (data.exists() ? data.child('filmmaker_uid').val() === auth.uid : newData.child('filmmaker_uid').val() === auth.uid) && (!newData.exists() || newData.child('filmmaker_uid').val() === auth.uid)))",
+        "status":     { ".validate": "newData.val() === data.val() || newData.val() === 'review' || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
+        "featured":   { ".validate": "newData.val() === data.val() || newData.val() === false || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
+        "view_count": {
+          ".write": "auth != null",
+          ".validate": "newData.isNumber() && (newData.val() === data.val() || newData.val() === (data.exists() ? data.val() : 0) + 1 || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin')"
+        },
+        "rent_count": { ".validate": "newData.val() === data.val() || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
+        "own_count":  { ".validate": "newData.val() === data.val() || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" }
       }
     },
     "flieks_users": {
