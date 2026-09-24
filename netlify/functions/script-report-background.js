@@ -73,7 +73,8 @@ exports.handler = async event => {
 
     const now = Date.now();
     await set({ status: 'done', stage: null, report, finished_at: now });
-    await ops.dbWrite(`flieks_script_reports_by_user/${rec.owner}/${id}`, { status: 'done', verdict: report.verdict.label }, 'PATCH');
+    await ops.dbWrite(`flieks_script_reports_by_user/${rec.owner}/${id}`, { status: 'done', verdict: report.verdict.label,
+      tokens: report.meta && report.meta.usage ? (report.meta.usage.input_tokens || 0) + (report.meta.usage.output_tokens || 0) : null }, 'PATCH');
     console.log('[script-report-bg] done', id, report.meta && report.meta.usage);
     return { statusCode: 200 };
   } catch (e) {

@@ -239,6 +239,7 @@ exports.handler = async event => {
         await ops.dbWrite(`flieks_pitches/${pid}`, { status: 'error', error: 'Could not start the writer. Try again.' }, 'PATCH');
         return reply(502, { message: 'Could not start the writer. Try again.' });
       }
+      await ops.logLabEvent('pitch', me.uid, { title: rec.title, report: body.id });
       return reply(200, { ok: true, pid });
     }
 
@@ -277,6 +278,7 @@ exports.handler = async event => {
         await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match`, { status: 'error', error: 'Could not start the search. Try again.' }, 'PATCH');
         return reply(502, { message: 'Could not start the search. Try again.' });
       }
+      await ops.logLabEvent('cast_search', me.uid, { title: rec.title, report: body.id });
       return reply(200, { ok: true });
     }
 
@@ -331,6 +333,7 @@ exports.handler = async event => {
       }
       await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match/sent/${talentUid}`, { at: Date.now(), character });
       if (!me.unlimited) await ops.dbWrite(countPath, count + 1);
+      await ops.logLabEvent('connect', me.uid, { title: rec.title, report: body.id });
       return reply(200, { ok: true });
     }
 

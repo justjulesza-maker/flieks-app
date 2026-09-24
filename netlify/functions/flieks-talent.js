@@ -75,6 +75,7 @@ exports.handler = async event => {
         suggest_at: clean.suggest ? (prev.suggest ? prev.suggest_at || now : now) : null,
         created_at: prev.created_at || now, updated_at: now
       });
+      if (clean.suggest && !prev.suggest) await ops.logLabEvent('opt_in', me.uid);
       return reply(200, { ok: true });
     }
 
@@ -108,6 +109,7 @@ exports.handler = async event => {
       await ops.dbWrite(`flieks_talent_claims/${b.filmId}/${b.castKey}/${me.uid}`, {
         name: profile.name, at: Date.now(), film_title: film.title || '', cast_name: cast.name || '', role: cast.role || ''
       });
+      await ops.logLabEvent('claim', me.uid, { title: film.title || '' });
       // Let the filmmaker know there is something to approve.
       const owner = film.filmmaker_uid ? await ops.dbGet(`flieks_users/${film.filmmaker_uid}`) : null;
       const to = (owner && owner.email) || film.filmmaker_email;

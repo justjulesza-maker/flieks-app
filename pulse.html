@@ -116,6 +116,21 @@ td small{display:block;font-family:var(--fm);font-size:10px;color:var(--dim);fon
   border:1px solid var(--border);background:transparent;color:var(--muted)}
 .channels{font-size:12px;color:var(--muted);margin:4px 0 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .gate{padding:60px 20px;text-align:center;color:var(--muted)}
+/* ---- 4flieks Lab ---- */
+#lab .grid{margin-bottom:12px}
+#lab .cell .v{font-size:22px}
+.labcols{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:820px){.labcols{grid-template-columns:1.25fr .75fr}}
+.labfeed .ev{padding:9px 12px}
+.labfeed .ev .body p{white-space:normal;font-size:13px;line-height:1.4}
+.labfeed a{color:inherit;text-decoration:none}
+.labfeed > a{display:block}
+.labfeed > *{border-bottom:1px solid var(--border)}
+.labfeed > *:last-child{border-bottom:0}
+.labfeed a .ev{border-bottom:0}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--border);font-size:13px}
+.kv:first-of-type{border-top:0}
+.kv b{font-family:var(--fm);font-weight:700}
 .muted{color:var(--muted);font-size:13px;padding:14px 0}
 </style>
 </head>
@@ -141,6 +156,11 @@ td small{display:block;font-family:var(--fm);font-size:10px;color:var(--dim);fon
         <button class="btn" id="brief-btn" onclick="freshBriefing()">Write a fresh one</button></div>
     </section>
   </div>
+  <section class="card" id="labcard" style="margin-bottom:14px">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">4flieks Lab
+      <a href="/lab" style="color:var(--amber);font-size:10px;text-decoration:none">OPEN THE LAB →</a></h2>
+    <div id="lab"><p class="muted">Loading…</p></div>
+  </section>
   <section class="card" style="margin-bottom:10px">
     <h2>Ask 4flieks</h2>
     <div class="chips" id="chips"></div>
@@ -413,12 +433,58 @@ async function loadOps() {
           a.link ? `<a href="${esc(a.link)}">Open →</a>` : ''}</div>`).join('')
       : `<p class="muted" style="padding:0">Nothing needs you right now.</p>`;
     renderBriefing(d.briefing);
+    renderLab(d.facts.lab);
     const c = d.channels || {};
     document.getElementById('channels').textContent =
       `Messages — WhatsApp: ${c.whatsapp || '?'} · Email: ${c.email || '?'} · Assistant: ${c.model || '?'}`;
   } catch (e) {
     document.getElementById('needs').innerHTML = `<p class="muted" style="padding:0">Couldn't load: ${esc(e.message)}</p>`;
   }
+}
+
+const LAB_ICON = { report: ['📄', 'rgba(242,166,35,.15)'], coach: ['🎭', 'rgba(31,111,168,.15)'], pitch: ['✉️', 'rgba(74,222,128,.15)'],
+  cast_search: ['🔎', 'rgba(242,166,35,.15)'], connect: ['🤝', 'rgba(74,222,128,.15)'], claim: ['🎬', 'rgba(31,111,168,.15)'],
+  opt_in: ['⭐', 'rgba(242,166,35,.15)'], join: ['👋', 'rgba(128,128,128,.15)'] };
+function renderLab(L) {
+  const box = document.getElementById('lab');
+  if (!L) { box.innerHTML = `<p class="muted" style="padding:0">No Lab data yet.</p>`; return; }
+  const n = v => Number(v || 0).toLocaleString('en-ZA');
+  const wk = v => v ? `<span class="d up">+${n(v)} this week</span>` : '';
+  const verdicts = Object.entries(L.reports.verdicts || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${esc(k)} ${v}`).join(' · ');
+  const tok = L.reports.aiTokensLast30days;
+  box.innerHTML = `
+    <div class="grid">
+      <div class="cell"><p class="v">${n(L.members.joinedViaLab)}</p><p class="k">Joined via the Lab</p>${wk(L.members.last7days)}</div>
+      <div class="cell"><p class="v">${n(L.members.activeLast30days)}</p><p class="k">Active this month</p></div>
+      <div class="cell"><p class="v">${n(L.reports.total)}</p><p class="k">Script Reports</p>${wk(L.reports.last7days)}</div>
+      <div class="cell"><p class="v">${n(L.pitches.total)}</p><p class="k">Pitches</p></div>
+      <div class="cell"><p class="v">${n(L.coach.total)}</p><p class="k">Coach uploads</p></div>
+      <div class="cell"><p class="v">${n(L.talent.actorsSuggestable)}</p><p class="k">Actors to suggest</p>
+        <span class="d">${n(L.talent.profiles)} profiles</span></div>
+    </div>
+    <div class="labcols">
+      <div>
+        <p class="k" style="font-family:var(--fm);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Latest in the Lab</p>
+        <div class="feed labfeed">${(L.recent || []).length ? L.recent.map(e => { const [ic, bg] = LAB_ICON[e.kind] || ['•', 'rgba(128,128,128,.15)'];
+          const inner = `<div class="ev"><span class="ico" style="background:${bg}">${ic}</span><div class="body"><p>${esc(e.text)}</p></div><span class="when">${ago(e.at)}</span></div>`;
+          return e.link ? `<a href="${esc(e.link)}" target="_blank" rel="noopener">${inner}</a>` : inner; }).join('')
+          : `<p class="muted" style="padding:12px 14px">Nothing yet. Share 4flieks.com/lab to get it going.</p>`}</div>
+      </div>
+      <div>
+        <p class="k" style="font-family:var(--fm);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Last 30 days</p>
+        <div class="kv"><span>Script Reports</span><b>${n(L.reports.last30days)}</b></div>
+        <div class="kv"><span>Pitches written</span><b>${n(L.pitches.last30days)}</b></div>
+        <div class="kv"><span>Cast searches</span><b>${n(L.castSearches.last30days)}</b></div>
+        <div class="kv"><span>Actors contacted</span><b>${n(L.connectRequests.last30days)}</b></div>
+        <div class="kv"><span>Coach uploads</span><b>${n(L.coach.uploadsLast30days)}</b></div>
+        <div class="kv"><span>AI used by reports</span><b>${tok ? (tok / 1e6).toFixed(tok < 1e5 ? 2 : 1) + 'M tokens' : '—'}</b></div>
+        <div class="kv"><span>Approved credits</span><b>${n(L.talent.approvedCredits)}</b></div>
+        <div class="kv"><span>Credit claims waiting</span><b>${n(L.talent.pendingClaims)}</b></div>
+        <div class="kv"><span>Partners (Lab unlimited)</span><b>${n(L.members.partnersWithUnlimited)}</b></div>
+        ${verdicts ? `<p style="font-size:12px;color:var(--muted);margin-top:8px">Verdicts so far: ${verdicts}</p>` : ''}
+        ${L.reports.failedLast7days ? `<p style="font-size:12px;color:var(--red);margin-top:6px">${L.reports.failedLast7days} failed this week</p>` : ''}
+      </div>
+    </div>`;
 }
 
 async function freshBriefing() {
@@ -459,7 +525,7 @@ async function ask(q) {
 }
 
 function renderChips() {
-  const qs = ['What needs me today?', 'How were sales this week?', 'Who signed up recently?', 'Which film is doing best?'];
+  const qs = ['What needs me today?', 'How were sales this week?', 'How is the Lab doing?', 'Who signed up recently?', 'Which film is doing best?'];
   document.getElementById('chips').innerHTML = qs.map(q =>
     `<button class="chip" type="button" data-q="${esc(q)}" onclick="ask(this.dataset.q)">${esc(q)}</button>`).join('');
 }
