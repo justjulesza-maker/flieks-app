@@ -230,6 +230,107 @@ async function showReport(id) {
   }
   renderReport(id, d.report);
   if (d.is_owner) ownerPanel(id, d);
+  if (d.is_owner) castPanel(id, d.cast_match);
+}
+
+/* ================= cast match (owner only) ================= */
+
+let castTimer = null, castData = null;
+function castPanel(id, cm) {
+  const box = document.getElementById('castbox');
+  if (!box) return;
+  clearTimeout(castTimer);
+  castData = cm;
+  const intro = `<p>4flieks suggests actors for these roles from people who have <b>opted in</b> on their talent profile.
+    You see their profile and their 4flieks record, never their email. If you ask to connect, they get your message and reply to you directly.</p>`;
+  if (!cm || cm.status === 'error') {
+    box.innerHTML = `<div class="panel" style="margin:18px 0 6px">
+      <h3>Find cast for these roles</h3>${intro}
+      ${cm && cm.error ? `<p style="color:#F2C7A8;margin-top:8px">${esc(cm.error)}</p>` : ''}
+      <p class="msg" id="cmmsg" style="color:#F2C7A8"></p>
+      <div class="actions"><button id="cmgo" onclick="startCast('${esc(id)}')">Find cast</button></div></div>`;
+    return;
+  }
+  if (cm.status === 'queued' || cm.status === 'working') {
+    box.innerHTML = `<div class="panel" style="margin:18px 0 6px"><h3>Finding cast…</h3>
+      <p>Reading the roles against the actors who opted in. This takes under a minute.</p></div>`;
+    castTimer = setTimeout(async () => { const { ok, d } = await call('get', { id }); if (ok) castPanel(id, d.cast_match); }, 4000);
+    return;
+  }
+  const people = cm.people || {}, sent = cm.sent || {};
+  const withPicks = (cm.matches || []).filter(m => m.picks && m.picks.length);
+  const body = !cm.pool
+    ? `<p>No actors have opted in yet. The directory is new: every actor with a cast link on 4flieks can create a profile at
+        <a href="/talent">4flieks.com/talent</a>. Send it to actors you know, and search again later.</p>`
+    : !withPicks.length
+    ? `<p>${cm.pool} ${cm.pool === 1 ? 'actor has' : 'actors have'} opted in so far, but none fit these roles well enough to suggest. Search again as more join.</p>`
+    : withPicks.map(m => `<h3 style="margin-top:18px">${esc(m.character)}</h3>` + m.picks.map(p => actorCard(id, m.character, p, people[p.id], sent[p.id])).join('')).join('');
+  box.innerHTML = `<div class="panel" style="margin:18px 0 6px">
+    <h3>Cast suggestions</h3>
+    <p class="tiny" style="color:#B9AF9F">From ${cm.pool || 0} opted-in ${cm.pool === 1 ? 'actor' : 'actors'} · ${esc(dateStr(cm.finished_at))}</p>
+    ${body}
+    <p class="msg" id="cmmsg" style="color:#F2C7A8"></p>
+    <div class="actions"><button class="ghost" id="cmgo" onclick="startCast('${esc(id)}')">Search again</button></div>
+    <p class="tiny" style="color:#B9AF9F;margin-top:12px">Suggestions are made by Claude, the AI made by Anthropic, from each actor's own profile
+      (playing age, languages, where they are, what they wrote about themselves) and their 4flieks record. It is a shortlist to look at, not an audition.</p>
+  </div>`;
+}
+
+function actorCard(id, character, pick, a, wasSent) {
+  if (!a) return '';
+  const rec = a.record || { films: [], clicks: 0, sales: 0 };
+  const facts = [a.playing_age && `Plays ${esc(a.playing_age)}`, (a.languages || []).length && esc(a.languages.join(', ')),
+    [a.city, a.province].filter(Boolean).map(esc).join(', ')].filter(Boolean).join(' · ');
+  const track = rec.films.length
+    ? `${rec.films.map(f => `<i>${esc(f.title)}</i>${f.role ? ' (' + esc(f.role) + ')' : ''}`).join(', ')} · ${rec.clicks} people via their link · ${rec.sales} bought`
+    : 'New to 4flieks: no approved credits yet';
+  const key = `${a.id}`.replace(/[^A-Za-z0-9_-]/g, '');
+  return `<div style="display:grid;grid-template-columns:72px 1fr;gap:14px;padding:14px 0;border-top:1px solid #4A3D34">
+    <div style="width:72px;height:90px;border-radius:6px;background:#241C18 ${a.photo_url ? `url('${esc(a.photo_url)}') center/cover` : ''}"></div>
+    <div>
+      <p style="color:var(--paper);font-size:15px"><b>${esc(a.name)}</b>
+        <span class="stage" style="border-color:${pick.fit === 'High' ? '#7FBF7F' : '#B9AF9F'};color:${pick.fit === 'High' ? '#9FD89F' : '#D9D1C2'}">${pick.fit === 'High' ? 'Strong fit' : 'Possible fit'}</span></p>
+      ${facts ? `<p class="small" style="color:#D9D1C2">${facts}</p>` : ''}
+      <p class="small" style="margin-top:6px">${esc(pick.why)}</p>
+      <p class="tiny" style="color:#B9AF9F;margin-top:6px">4flieks record: ${track}</p>
+      ${a.bio ? `<p class="tiny" style="color:#B9AF9F;margin-top:4px">${esc(a.bio)}</p>` : ''}
+      <div class="actions" style="margin-top:10px">
+        ${a.showreel ? `<a class="btn ghost" href="${esc(a.showreel)}" target="_blank" rel="noopener">Showreel</a>` : ''}
+        ${a.instagram ? `<a class="btn ghost" href="https://instagram.com/${encodeURIComponent(a.instagram)}" target="_blank" rel="noopener">Instagram</a>` : ''}
+        ${wasSent ? `<span class="small" style="color:#9FD89F;align-self:center">Asked to connect ✓</span>`
+          : `<button data-rid="${esc(id)}" data-uid="${key}" data-char="${esc(character)}" onclick="connectForm(this)">Ask to connect</button>`}
+      </div>
+      <div class="cform"></div>
+    </div></div>`;
+}
+
+function connectForm(btn) {
+  const id = btn.dataset.rid, uid = btn.dataset.uid, character = btn.dataset.char;
+  const box = btn.closest('div').parentElement.querySelector('.cform');
+  btn.disabled = true;
+  box.innerHTML = `<label>Your message to them</label>
+    <textarea maxlength="1200" placeholder="Who you are, the project, the role, dates and whether it is paid.">Hi, I'm casting "${esc(document.title.split(' — ')[0])}" and would like to talk to you about the role of ${esc(character)}. </textarea>
+    <p class="tiny" style="color:#B9AF9F;margin-top:6px">4flieks emails this to them. Your email is the reply address, so their answer comes straight to you.</p>
+    <p class="msg" style="color:#F2C7A8"></p>
+    <div class="actions"><button>Send</button><button class="ghost">Cancel</button></div>`;
+  const [send, cancel] = box.querySelectorAll('button');
+  const msg = box.querySelector('.msg');
+  cancel.onclick = () => { box.innerHTML = ''; btn.disabled = false; };
+  send.onclick = async () => {
+    send.disabled = true; msg.textContent = 'Sending…';
+    const { ok, d } = await call('connect', { id, talentUid: uid, character, message: box.querySelector('textarea').value });
+    if (!ok) { send.disabled = false; msg.textContent = d.message || 'Could not send.'; return; }
+    box.innerHTML = `<p class="small" style="color:#9FD89F">Sent. If they are interested, they will reply to your email.</p>`;
+    btn.outerHTML = `<span class="small" style="color:#9FD89F;align-self:center">Asked to connect ✓</span>`;
+  };
+}
+
+async function startCast(id) {
+  const btn = document.getElementById('cmgo'), msg = document.getElementById('cmmsg');
+  btn.disabled = true; msg.textContent = 'Starting…';
+  const { ok, d } = await call('match-start', { id });
+  if (!ok) { btn.disabled = false; msg.textContent = d.message || 'Could not start.'; return; }
+  castPanel(id, { status: 'queued' });
 }
 
 /* Only the report's owner sees this: turn the report into a funder pitch. */
@@ -468,7 +569,8 @@ function renderReport(id, r) {
         ${c.description ? `<p>${esc(c.description)}</p>` : ''}
         ${c.arc ? `<p class="muted"><b>Arc:</b> ${esc(c.arc)}</p>` : ''}
         ${c.casting ? `<p class="cast"><b>Casting:</b> ${esc(c.casting)}</p>` : ''}
-      </div>`).join('')}` : ''}
+      </div>`).join('')}
+      <div id="castbox" class="noprint"></div>` : ''}
 
     <h2>Audience</h2>
     <div class="beats" style="margin-top:0">

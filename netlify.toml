@@ -10,6 +10,9 @@
 [functions."pitch-writer-background"]
   timeout = 900
 
+[functions."cast-match-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 

@@ -690,7 +690,7 @@ function render() {
         <img class="fcp-face" src="${esc(c.photoUrl||'')}" alt="">
         <div>
           <div class="fcp-name">${esc(c.name)}<span class="fcp-pill ${c.hidden ? 'off' : 'on'}">${
-            c.hidden ? 'link only' : 'on film page'}</span></div>
+            c.hidden ? 'link only' : 'on film page'}</span>${c.talent_uid ? '<span class="fcp-pill on" title="This credit is on their 4flieks talent profile">talent profile</span>' : ''}</div>
           <div class="fcp-meta">${esc(c.role||'')}${c.reach?' · '+esc(c.reach)+' following':''}</div>
           <div class="fcp-link">${esc(url)}</div>
           <div class="fcp-tools">
@@ -721,12 +721,15 @@ function render() {
     <p class="fcp-hint">Everyone here gets their own link and QR code — cast, crew, anyone
     helping push the film. Sales through their link are recorded against them.
     Choose separately who appears on the public film page.</p>
+    <div id="fcpClaims"></div>
     <div id="fcpList">
       ${group('Cast', cast, 'Nobody added yet.')}
       ${group('Crew', crew, 'No crew yet. Editors and DOPs often convert better than leads — smaller audience, but it trusts them.')}
     </div>
     ${state.canEdit ? '<button class="fcp-b primary" id="fcpAdd" style="margin-top:14px">Add someone</button>' : ''}
     <div id="fcpEditor"></div>`;
+
+  loadClaims();
 
   state.el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => {
     navigator.clipboard.writeText(b.dataset.copy);
@@ -752,6 +755,46 @@ function render() {
     const add = state.el.querySelector('#fcpAdd');
     if (add) add.onclick = () => form(null);
   }
+}
+
+/* People who say "that credit is me" on their talent profile. The filmmaker confirms. */
+async function talentCall(action, extra) {
+  const u = firebase.auth().currentUser;
+  if (!u) return { ok: false, d: {} };
+  const r = await fetch('/.netlify/functions/flieks-talent', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, token: await u.getIdToken(), ...extra }) });
+  return { ok: r.ok, d: await r.json().catch(() => ({})) };
+}
+async function loadClaims() {
+  const box = state.el && state.el.querySelector('#fcpClaims');
+  if (!box || !state.canEdit) return;
+  let list = [];
+  try { const { ok, d } = await talentCall('claims', {}); if (ok) list = (d.claims || []).filter(c => c.filmId === state.filmId); } catch {}
+  if (!list.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="fcp-form" style="margin:0 0 16px">
+    <p class="fcp-group" style="margin-top:0;padding-top:0;border-top:0">Credit claims<span>${list.length}</span></p>
+    <p class="fcp-hint" style="margin-bottom:8px">These people say they are in your film and want the credit on their 4flieks talent profile.
+      Approve only if it is them. Their profile then shows the film and the people their link brought in.</p>
+    ${list.map(c => `<div class="fcp-row" style="grid-template-columns:58px 1fr">
+      <img class="fcp-face" src="${esc(c.photo_url || '')}" alt="">
+      <div><div class="fcp-name">${esc(c.name)}</div>
+        <div class="fcp-meta">says they are <b>${esc(c.cast_name)}</b>${c.role ? ' · ' + esc(c.role) : ''}${c.city ? ' · ' + esc(c.city) : ''}</div>
+        ${c.showreel ? `<div class="fcp-meta"><a href="${esc(c.showreel)}" target="_blank" rel="noopener">Showreel</a></div>` : ''}
+        <div class="fcp-btns" style="margin-top:8px">
+          <button class="fcp-b primary" data-claim="approve" data-k="${esc(c.castKey)}" data-u="${esc(c.uid)}">Approve</button>
+          <button class="fcp-b danger" data-claim="decline" data-k="${esc(c.castKey)}" data-u="${esc(c.uid)}">Not them</button>
+          <span class="fcp-msg"></span>
+        </div></div></div>`).join('')}
+  </div>`;
+  box.querySelectorAll('[data-claim]').forEach(b => b.onclick = async () => {
+    const msg = b.parentElement.querySelector('.fcp-msg');
+    b.parentElement.querySelectorAll('button').forEach(x => x.disabled = true);
+    msg.className = 'fcp-msg'; msg.textContent = 'Saving…';
+    const { ok, d } = await talentCall(b.dataset.claim, { filmId: state.filmId, castKey: b.dataset.k, uid: b.dataset.u });
+    if (!ok) { msg.className = 'fcp-msg bad'; msg.textContent = d.message || 'Could not save.';
+      b.parentElement.querySelectorAll('button').forEach(x => x.disabled = false); return; }
+    await load(); render();
+  });
 }
 
 function form(slug) {

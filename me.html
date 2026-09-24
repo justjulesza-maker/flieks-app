@@ -168,6 +168,15 @@ async function load() {
     ${d.clicks ? `<p class="note">${conv} out of every 100 people who open your link buy the film.
       ${d.sales ? 'That is a real number, not an estimate — every sale here came through you.' : ''}</p>` : ''}
 
+    <div class="card" style="margin-top:16px">
+      <p class="label">Get suggested for roles</p>
+      <p style="font-size:13.5px;line-height:1.5;color:var(--muted);margin-bottom:12px">Put this film on your 4flieks talent profile,
+        with the people your link brings in. Switch on suggestions and filmmakers casting on 4flieks can find you.
+        Your email is never shown.</p>
+      <a class="btn ghost" style="text-align:center;text-decoration:none"
+         href="/talent?film=${encodeURIComponent(d.filmSlug)}&cast=${encodeURIComponent(castSlug)}">CREATE MY TALENT PROFILE</a>
+    </div>
+
     <p class="note">Numbers update as they happen. Anything about payment is between
     you and the filmmaker — 4flieks measures, it doesn't pay.</p>`;
 

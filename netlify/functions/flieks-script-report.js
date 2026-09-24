@@ -12,6 +12,10 @@
  *   pitch-start { token, id, team, ask, contact, stage }  owner: (re)write the one-page pitch
  *   pitch-get   { pid, token? }                           a pitch by its own link (shareable)
  *   pitch-save  { token, pid, copy, details }             owner: save hand edits
+ *   match-start { token, id }                             owner: suggest opted-in actors for the roles
+ *   connect     { token, id, talentUid, character, message }  owner: email a suggested actor
+ *                                                          (their address is never shown; replies
+ *                                                          come straight to the filmmaker)
  *
  * The screenplay is uploaded by the browser to Storage (flieks_scripts/lab_<uid>/…,
  * owner-only under the Storage rules) and only its download link comes here.
@@ -47,6 +51,9 @@ async function lookup(token) {
 const newId = () => crypto.randomBytes(15).toString('base64').replace(/[+/=]/g, '').slice(0, 20);
 const validId = id => typeof id === 'string' && /^[A-Za-z0-9]{12,40}$/.test(id);
 const jobSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':script-report').digest('hex');
+const castSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':castmatch').digest('hex');
+const MAX_MATCH_RUNS = 10;                                             // per report, admins exempt
+const CONNECT_PER_DAY = parseInt(process.env.TALENT_CONNECT_PER_DAY || '20', 10);
 const pitchSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':pitch').digest('hex');
 const STAGES = ['Idea', 'Script', 'Financing', 'Pre-production', 'Shooting', 'Post-production', 'Finished'];
 const MAX_PITCH_DRAFTS = 10;
@@ -103,6 +110,7 @@ exports.handler = async event => {
         view.is_owner = true;
         view.pitch_id = rec.pitch_id || null;
         view.owner_email = rec.owner_email || '';
+        view.cast_match = rec.cast_match || null;
       }
       return reply(200, view);
     }
@@ -236,6 +244,87 @@ exports.handler = async event => {
       if (body.copy) fields.copy = normalisePitch(body.copy);
       if (body.details) fields.details = cleanDetails(body.details);
       await ops.dbWrite(`flieks_pitches/${body.pid}`, fields, 'PATCH');
+      return reply(200, { ok: true });
+    }
+
+    /* ---- cast match ---- */
+    if (action === 'match-start') {
+      if (!validId(body.id)) return reply(404, { message: 'Report not found.' });
+      const rec = await ops.dbGet(`flieks_script_reports/${body.id}`);
+      if (!rec || (rec.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Report not found.' });
+      if (rec.status !== 'done') return reply(409, { message: 'The report is not ready yet.' });
+      const prev = rec.cast_match || {};
+      if (prev.status === 'queued' || prev.status === 'working') return reply(200, { ok: true });
+      const runs = prev.runs || 0;
+      if (runs >= MAX_MATCH_RUNS && me.role !== 'admin') {
+        return reply(429, { message: `That's ${MAX_MATCH_RUNS} cast searches for this script. New actors join all the time, so try again next month.` });
+      }
+      await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match`, {
+        status: 'queued', runs: runs + 1, at: Date.now(), sent: prev.sent || null
+      });
+      const base = process.env.URL || 'https://4flieks.com';
+      const kick = await fetch(`${base}/.netlify/functions/cast-match-background`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-job-secret': castSecret() },
+        body: JSON.stringify({ id: body.id })
+      }).catch(() => ({ ok: false, status: 0 }));
+      if (!kick.ok && kick.status !== 202) {
+        await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match`, { status: 'error', error: 'Could not start the search. Try again.' }, 'PATCH');
+        return reply(502, { message: 'Could not start the search. Try again.' });
+      }
+      return reply(200, { ok: true });
+    }
+
+    if (action === 'connect') {
+      if (!validId(body.id)) return reply(404, { message: 'Report not found.' });
+      const talentUid = String(body.talentUid || '');
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(talentUid)) return reply(400, { message: 'Bad request.' });
+      const rec = await ops.dbGet(`flieks_script_reports/${body.id}`);
+      if (!rec || (rec.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Report not found.' });
+      const cm = rec.cast_match || {};
+      // Only someone this search actually suggested, who is still opted in.
+      if (!cm.people || !cm.people[talentUid]) return reply(404, { message: 'That actor is not in your suggestions.' });
+      if (cm.sent && cm.sent[talentUid]) return reply(409, { message: 'You have already asked them about this script.' });
+      const t = await ops.dbGet(`flieks_talent/${talentUid}`);
+      if (!t || t.suggest !== true || !t.email) return reply(410, { message: 'They are no longer taking suggestions.' });
+
+      const message = String(body.message || '').trim().slice(0, 1200);
+      const character = String(body.character || '').trim().slice(0, 80);
+      if (message.length < 20) return reply(400, { message: 'Say a little about the project and the role (a sentence or two).' });
+
+      const day = new Date().toISOString().slice(0, 10);
+      const countPath = `flieks_ops/talent_connect/${me.uid}/${day}`;
+      const count = me.role === 'admin' ? 0 : (await ops.dbGet(countPath)) || 0;
+      if (count >= CONNECT_PER_DAY) return reply(429, { message: `That's ${CONNECT_PER_DAY} requests today. Try again tomorrow.` });
+
+      const from = me.name || rec.writer || 'A 4flieks filmmaker';
+      const replyTo = me.email || rec.owner_email;
+      const lines = [
+        `Hi ${t.name},`,
+        '',
+        `${from} is casting "${rec.title}" and 4flieks suggested you${character ? ` for the role of ${character}` : ''}, because you switched on "Suggest me to filmmakers" on your talent profile.`,
+        '',
+        'Their message:',
+        '',
+        message,
+        '',
+        `Just reply to this email to answer them. It goes straight to ${from}${replyTo ? ` (${replyTo})` : ''}.`,
+        'Your email address was not shown to them; they will see it only if you reply.',
+        '',
+        `Not interested in suggestions any more? Switch it off at ${ops.SITE}/talent`,
+        '',
+        '4flieks'
+      ];
+      const sent = await ops.sendEmailTo({
+        to: t.email, replyTo,
+        subject: `Casting: ${rec.title}${character ? ` (${character})` : ''}`,
+        text: lines.join('\n')
+      });
+      if (!sent || !sent.ok) {
+        console.error('[connect] email failed', sent && sent.reason);
+        return reply(502, { message: 'The email could not be sent. Try again in a minute.' });
+      }
+      await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match/sent/${talentUid}`, { at: Date.now(), character });
+      if (me.role !== 'admin') await ops.dbWrite(countPath, count + 1);
       return reply(200, { ok: true });
     }
 

@@ -293,4 +293,43 @@ function normalisePitch(p) {
   };
 }
 
-module.exports = { analyse, normalise, writePitch, normalisePitch, EMOTIONS, MODEL };
+/* ---------- cast match: characters to opted-in actors ---------- */
+
+const MATCH_SYSTEM = `You are a casting director for 4flieks, an African independent film platform in South Africa.
+You get the characters from a script report and a list of actors who have opted in to be suggested
+for roles. For each character, suggest up to 3 actors who could genuinely play the part: playing age
+must plausibly fit, and language fit matters. Use each actor's 4flieks track record (films, people
+their links brought in, sales) as a secondary signal only. Suggest fewer, or none, rather than a poor
+fit. Never invent facts about an actor; use only what is in their profile.
+
+Return ONLY JSON, no fences:
+{"matches": [{"character": string (exactly as given), "picks": [{"id": string (an actor id from the list), "fit": "High" | "Medium", "why": string (max 25 words)}]}]}`;
+
+async function matchCast(characters, candidates) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
+  const user = `Characters:\n${JSON.stringify(characters)}\n\nActors who opted in:\n${JSON.stringify(candidates)}\n\nMatch them. JSON only.`;
+  const body = JSON.stringify({ model: MODEL, max_tokens: 4000, system: MATCH_SYSTEM, messages: [{ role: 'user', content: user }] });
+  const r = await request('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body),
+               'x-api-key': key, 'anthropic-version': '2023-06-01' }
+  }, body);
+  const d = JSON.parse(r.body || '{}');
+  if (d.error) throw new Error(d.error.message || 'model error');
+  const out = (d.content || []).map(b => b.text || '').join('');
+  const a = out.indexOf('{'), b = out.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error('The casting came back empty. Try again.');
+  let raw;
+  try { raw = JSON.parse(out.slice(a, b + 1)); } catch { throw new Error('The casting could not be read. Try again.'); }
+  const ids = new Set(candidates.map(c => c.id));
+  const names = new Set(characters.map(c => c.name));
+  return arr(raw.matches, 12).map(m => ({
+    character: str(m && m.character, 60),
+    picks: arr(m && m.picks, 3)
+      .filter(p => p && ids.has(String(p.id)))
+      .map(p => ({ id: String(p.id), fit: oneOf(p.fit, ['High', 'Medium'], 'Medium'), why: str(p.why, 220) }))
+  })).filter(m => names.has(m.character));
+}
+
+module.exports = { analyse, normalise, writePitch, normalisePitch, matchCast, EMOTIONS, MODEL };

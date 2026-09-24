@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Talent profile — 4flieks</title>
+<meta name="description" content="Actors and crew: put your 4flieks credits in one place and choose whether filmmakers can find you for roles.">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F0E6; --card:#FBF8F1; --ink:#17110E; --ink-2:#5E564D; --ink-3:#8A8177;
+  --rule:#D9D1C2; --sunset:#C2501F; --green:#2E7D32;
+  --fb:'Archivo Black',sans-serif; --fn:'DM Sans',system-ui,sans-serif; --fm:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8E2D4;color:var(--ink);font-family:var(--fn);padding:22px 12px 70px;-webkit-font-smoothing:antialiased}
+.sheet{position:relative;max-width:640px;margin:0 auto;background:var(--paper);padding:36px 30px 32px;box-shadow:0 1px 0 var(--rule)}
+.sheet::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;
+  background:repeating-linear-gradient(90deg,var(--sunset) 0 15px,transparent 15px 24px)}
+@media (max-width:520px){.sheet{padding:30px 18px 26px}}
+.masthead{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px;border-bottom:1px solid var(--rule);margin-bottom:24px}
+.mark{font-family:var(--fb);font-size:15px;color:var(--ink);text-decoration:none}
+.mark em{color:var(--sunset);font-style:normal}
+.docref{font-family:var(--fm);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-family:var(--fb);font-size:30px;line-height:1.1;margin-bottom:8px}
+h2{font-family:var(--fm);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--sunset);margin:30px 0 10px}
+p{font-size:15px;line-height:1.55}
+.muted{color:var(--ink-2)} .small{font-size:13px} .tiny{font-size:12px;color:var(--ink-3);line-height:1.55}
+label{display:block;font-family:var(--fm);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 6px}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=url],select,textarea{
+  width:100%;font:15px var(--fn);padding:11px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink)}
+textarea{min-height:90px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button,.btn{font:700 13px var(--fn);padding:11px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink)}
+button.danger{background:transparent;color:var(--sunset);border-color:var(--sunset)}
+button:disabled{opacity:.5;cursor:default}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.msg{font-size:13px;margin-top:10px;min-height:18px}
+.msg.err{color:var(--sunset)} .msg.ok{color:var(--green)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{margin:0;font:500 13px var(--fn);letter-spacing:0;text-transform:none;color:var(--ink);
+  border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:7px 12px;cursor:pointer}
+.chips input{display:none}
+.chips input:checked + span{font-weight:700}
+.chips label:has(input:checked){background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.consent{background:var(--ink);color:var(--paper);border-radius:8px;padding:16px 18px;margin-top:22px;display:flex;gap:14px;align-items:flex-start}
+.consent p{color:#D9D1C2;font-size:13px;margin-top:4px}
+.consent b{font-size:15px}
+.switch{position:relative;flex:none;width:46px;height:26px;margin-top:2px}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:#4A3D34;border-radius:13px;transition:.15s;cursor:pointer}
+.switch span::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.switch input:checked + span{background:var(--sunset)}
+.switch input:checked + span::before{transform:translateX(20px)}
+.head{display:flex;gap:14px;align-items:center}
+.photo{width:84px;height:84px;border-radius:8px;background:var(--card) center/cover no-repeat;border:1px solid var(--rule);flex:none;
+  display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:10px;color:var(--ink-3);text-align:center}
+.item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--rule);font-size:14px}
+.item .st{font-family:var(--fm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.facts div{background:var(--card);padding:12px 10px;text-align:center}
+.facts .n{font-family:var(--fb);font-size:22px}
+.facts .k{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-top:3px}
+.tabs{display:flex;gap:6px;margin:10px 0 4px}
+.tabs button{flex:1}
+.center{text-align:center;padding:40px 0}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <a class="mark" href="/">4<em>flieks</em></a>
+    <div class="docref">TALENT</div>
+  </div>
+  <div id="app"><div class="center"><p class="muted">Loading…</p></div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const API = '/.netlify/functions/flieks-talent';
+const app = document.getElementById('app');
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const call = async (action, extra = {}) => {
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, token, ...extra }) });
+  const d = await r.json().catch(() => ({}));
+  return { ok: r.ok, d };
+};
+const say = (id, text, kind) => { const m = $(id); if (m) { m.className = 'msg' + (kind ? ' ' + kind : ''); m.textContent = text || ''; } };
+
+const DISCIPLINES = ['Actor', 'Director', 'Writer', 'Producer', 'Camera / DOP', 'Editor', 'Sound', 'Production design',
+  'Wardrobe', 'Make-up', 'Music', 'Other crew'];
+const PROVINCES = ['Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape', 'Free State', 'Limpopo', 'Mpumalanga',
+  'North West', 'Northern Cape', 'Outside South Africa'];
+
+/* A cast link (/me/<film>/<person>) sends people here with ?film=&cast= so the claim is pre-filled. */
+const q = new URLSearchParams(location.search);
+const want = { film: q.get('film') || '', cast: q.get('cast') || '' };
+
+/* ---------------- signed out ---------------- */
+
+let mode = 'join', joining = false;
+function signedOut() {
+  app.innerHTML = `
+    <h1>Get found for roles</h1>
+    <p class="muted">Actors and crew: one profile for your 4flieks credits, with the people your cast links brought in.
+      Switch on <b>Suggest me to filmmakers</b> and 4flieks can put you forward when a filmmaker is casting.
+      Nobody is suggested unless they switch it on, and your email is never shown.</p>
+    <div class="tabs">
+      <button id="tj" class="${mode === 'join' ? '' : 'ghost'}" onclick="mode='join';signedOut()">New here</button>
+      <button id="ts" class="${mode === 'in' ? '' : 'ghost'}" onclick="mode='in';signedOut()">I have a 4flieks account</button>
+    </div>
+    ${mode === 'join' ? `<label for="an">Your name</label><input id="an" type="text" maxlength="80" autocomplete="name">` : ''}
+    <label for="ae">Email</label><input id="ae" type="email" autocomplete="email">
+    <label for="ap">Password</label><input id="ap" type="password" autocomplete="${mode === 'join' ? 'new-password' : 'current-password'}">
+    <p class="msg" id="amsg"></p>
+    <div class="actions">
+      <button id="ago" onclick="doAuth()">${mode === 'join' ? 'Create my account' : 'Sign in'}</button>
+      ${mode === 'in' ? `<button class="ghost" onclick="resetPw()">Forgot password</button>` : ''}
+    </div>
+    <p class="tiny" style="margin-top:18px">By creating an account you agree to the <a href="/terms">4flieks terms</a>.</p>`;
+}
+
+async function doAuth() {
+  const email = $('ae').value.trim(), pass = $('ap').value;
+  const btn = $('ago'); btn.disabled = true; say('amsg', 'One moment…');
+  try {
+    if (mode === 'join') {
+      const name = $('an').value.trim();
+      if (name.length < 2) throw { message: 'Add your name.' };
+      if (pass.length < 6) throw { message: 'Use a password of at least 6 characters.' };
+      joining = true;
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await cred.user.updateProfile({ displayName: name });
+      await db.ref(`flieks_users/${cred.user.uid}`).set({ name, email, role: 'viewer', created_at: Date.now() });
+      draft = { name };
+      joining = false;
+      load();
+    } else {
+      await auth.signInWithEmailAndPassword(email, pass);
+    }
+  } catch (e) {
+    if (joining) { joining = false; if (auth.currentUser) load(); }
+    btn.disabled = false;
+    const c = e.code || '';
+    say('amsg', c === 'auth/email-already-in-use' ? 'That email already has a 4flieks account. Sign in instead.'
+      : /wrong-password|user-not-found|invalid-login|invalid-credential/.test(c) ? 'Email or password is not right.'
+      : c === 'auth/invalid-email' ? 'Check the email address.'
+      : e.message || 'Could not sign in.', 'err');
+  }
+}
+async function resetPw() {
+  const email = $('ae').value.trim();
+  if (!email) return say('amsg', 'Type your email first.', 'err');
+  try { await auth.sendPasswordResetEmail(email); say('amsg', 'Check your inbox for a reset link.', 'ok'); }
+  catch { say('amsg', 'Could not send a reset link. Check the address.', 'err'); }
+}
+
+/* ---------------- the profile ---------------- */
+
+let me = null, draft = null;
+async function load() {
+  const { ok, d } = await call('me');
+  if (!ok) { app.innerHTML = `<div class="center"><p class="muted">${esc(d.message || 'Could not load your profile.')}</p></div>`; return; }
+  me = d;
+  const p = d.profile || {};
+  draft = { name: (draft && draft.name) || d.account.name || auth.currentUser.displayName || '', ...p };
+  if (!p.name && !draft.disciplines) draft.disciplines = ['Actor'];
+  render();
+}
+
+function render() {
+  const p = draft, rec = me.record || { films: [], clicks: 0, trailer: 0, sales: 0 };
+  const has = !!me.profile;
+  const credits = Object.entries((me.profile && me.profile.credits) || {});
+  app.innerHTML = `
+    <h1>${has ? esc(me.profile.name) : 'Your talent profile'}</h1>
+    <p class="muted small">${has ? (me.profile.suggest ? 'Filmmakers can be shown your profile when they are casting.' : 'Your profile is private. Switch on suggestions below to be found for roles.')
+      : 'Fill this in once. Filmmakers only ever see it if you switch on suggestions.'}</p>
+
+    ${has ? `<h2>Your 4flieks record</h2>
+      <div class="facts"><div><p class="n">${rec.films.length}</p><p class="k">Films</p></div>
+        <div><p class="n">${rec.clicks}</p><p class="k">Brought in</p></div>
+        <div><p class="n">${rec.sales}</p><p class="k">Bought</p></div></div>
+      <p class="tiny" style="margin-top:6px">From your cast links on films where the filmmaker approved your credit.</p>` : ''}
+
+    <h2>About you</h2>
+    <div class="head">
+      <div class="photo" id="ph" style="${p.photo_url ? `background-image:url('${esc(p.photo_url)}')` : ''}">${p.photo_url ? '' : 'NO<br>HEADSHOT'}</div>
+      <div><button class="ghost" onclick="$('pf').click()">${p.photo_url ? 'Change headshot' : 'Add a headshot'}</button>
+        <p class="tiny" style="margin-top:6px">A recent, clear photo of your face. JPG or PNG, under 10MB.</p>
+        <input type="file" id="pf" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="upPhoto(this.files[0])"></div>
+    </div>
+    <p class="msg" id="phmsg"></p>
+    <label for="fn">Name as filmmakers should see it</label><input id="fn" type="text" maxlength="80" value="${esc(p.name)}">
+    <label>What you do</label>
+    <div class="chips">${DISCIPLINES.map(x => `<label><input type="checkbox" name="disc" value="${esc(x)}" ${(p.disciplines || []).includes(x) ? 'checked' : ''}><span>${esc(x)}</span></label>`).join('')}</div>
+    <div class="row2">
+      <div><label for="amin">Playing age from</label><input id="amin" type="number" min="1" max="99" value="${p.playing_age_min || ''}"></div>
+      <div><label for="amax">to</label><input id="amax" type="number" min="1" max="99" value="${p.playing_age_max || ''}"></div>
+    </div>
+    <label for="fl">Languages you can perform in (comma between them)</label>
+    <input id="fl" type="text" maxlength="200" placeholder="isiZulu, English, Sesotho" value="${esc((p.languages || []).join(', '))}">
+    <div class="row2">
+      <div><label for="fc">City or town</label><input id="fc" type="text" maxlength="60" value="${esc(p.city)}"></div>
+      <div><label for="fp">Province</label><select id="fp"><option value="">Choose</option>${PROVINCES.map(x => `<option${p.province === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
+    </div>
+    <label for="fs">Showreel link (YouTube, Vimeo…)</label><input id="fs" type="url" maxlength="300" placeholder="https://" value="${esc(p.showreel)}">
+    <label for="fi">Instagram</label><input id="fi" type="text" maxlength="60" placeholder="@yourname" value="${esc(p.instagram ? '@' + p.instagram : '')}">
+    <label for="fb">A few lines about you</label><textarea id="fb" maxlength="400" placeholder="Training, recent work, what you want to do next">${esc(p.bio)}</textarea>
+
+    <div class="consent">
+      <label class="switch" style="margin:0"><input type="checkbox" id="sg" ${p.suggest ? 'checked' : ''}><span></span></label>
+      <div><b>Suggest me to filmmakers for roles</b>
+        <p>When a 4flieks filmmaker looks for cast, you may be suggested for a part that fits. They see this profile and your 4flieks record,
+          never your email. If they want to talk, 4flieks emails you their message and you decide whether to reply. Switch it off any time.</p></div>
+    </div>
+    <p class="msg" id="smsg"></p>
+    <div class="actions"><button id="sv" onclick="save()">${has ? 'Save changes' : 'Create my profile'}</button></div>
+
+    ${has ? `
+    <h2>Your credits</h2>
+    ${credits.length ? credits.map(([k, c]) => `<div class="item"><span><b>${esc(c.film_title)}</b> <span class="muted">${esc(c.cast_name)}${c.role ? ' · ' + esc(c.role) : ''}</span></span>
+        <button class="ghost" onclick="removeCredit('${esc(c.film_id)}','${esc(c.cast_key)}',this)">Remove</button></div>`).join('')
+      : `<p class="small muted">No credits yet. If you are in the cast or crew of a film on 4flieks, claim it below.</p>`}
+    ${me.pending.length ? me.pending.map(c => `<div class="item"><span><b>${esc(c.film_title)}</b> <span class="muted">${esc(c.cast_name)}</span>
+          <br><span class="st">Waiting for the filmmaker</span></span>
+        <button class="ghost" onclick="withdraw('${esc(c.filmId)}','${esc(c.castKey)}',this)">Withdraw</button></div>`).join('') : ''}
+
+    <h2>Claim a credit</h2>
+    <p class="small muted">Pick the film and your name in its cast or crew. The filmmaker approves it, then the film and your link's numbers show on your profile.</p>
+    <label for="cf">Film</label><select id="cf" onchange="pickFilm(this.value)"><option value="">Loading films…</option></select>
+    <label for="cc">You are</label><select id="cc" disabled><option value="">Pick a film first</option></select>
+    <p class="msg" id="cmsg"></p>
+    <div class="actions"><button id="cgo" onclick="claim()">Claim this credit</button></div>
+
+    <h2>Your profile</h2>
+    <p class="small muted">Signed in as ${esc(me.account.email)}.</p>
+    <div class="actions"><button class="ghost" onclick="auth.signOut()">Sign out</button>
+      <button class="danger" onclick="deleteProfile(this)">Delete my talent profile</button></div>` : ''}`;
+  if (has) loadFilms();
+}
+
+function collect() {
+  return {
+    name: $('fn').value, disciplines: [...document.querySelectorAll('input[name=disc]:checked')].map(i => i.value),
+    playing_age_min: $('amin').value, playing_age_max: $('amax').value,
+    languages: $('fl').value, city: $('fc').value, province: $('fp').value,
+    showreel: $('fs').value.trim(), instagram: $('fi').value, bio: $('fb').value,
+    photo_url: draft.photo_url || '', suggest: $('sg').checked
+  };
+}
+
+async function save() {
+  const prof = collect();
+  if (prof.showreel && !/^https:\/\//i.test(prof.showreel)) return say('smsg', 'The showreel link must start with https://', 'err');
+  if (prof.suggest && prof.disciplines.includes('Actor') && !(prof.playing_age_min && prof.playing_age_max)) {
+    return say('smsg', 'Add your playing age so you are suggested for parts that fit.', 'err');
+  }
+  $('sv').disabled = true; say('smsg', 'Saving…');
+  const { ok, d } = await call('save', { profile: prof });
+  $('sv').disabled = false;
+  if (!ok) return say('smsg', d.message || 'Could not save.', 'err');
+  draft = null; await load();
+  say('smsg', 'Saved.', 'ok');
+}
+
+async function upPhoto(file) {
+  if (!file) return;
+  if (!/^image\//.test(file.type)) return say('phmsg', 'That is not an image.', 'err');
+  if (file.size > 10 * 1024 * 1024) return say('phmsg', 'That photo is over 10MB.', 'err');
+  say('phmsg', 'Uploading…');
+  try {
+    Object.assign(draft, collect());
+    const uid = auth.currentUser.uid;
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const ref = firebase.storage().ref(`flieks_cast/talent_${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`);
+    await ref.put(file, { contentType: file.type, customMetadata: { owner: uid } });
+    draft.photo_url = await ref.getDownloadURL();
+    render();
+    say('smsg', 'Headshot added. Save to keep it.', 'ok');
+  } catch (e) {
+    console.error(e);
+    say('phmsg', 'Could not upload that photo. Try another.', 'err');
+  }
+}
+
+/* ---- credits ---- */
+let films = [];
+async function loadFilms() {
+  try {
+    const s = await db.ref('flieks_films').once('value');
+    films = Object.entries(s.val() || {}).filter(([, f]) => f && f.status === 'live')
+      .map(([id, f]) => ({ id, title: f.title || 'Untitled', slug: f.slug || id }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  } catch { films = []; }
+  const sel = $('cf'); if (!sel) return;
+  sel.innerHTML = `<option value="">Choose a film</option>` + films.map(f => `<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('');
+  if (want.film) {
+    const f = films.find(x => x.slug === want.film || x.id === want.film);
+    if (f) { sel.value = f.id; await pickFilm(f.id, want.cast); $('cf').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    want.film = '';
+  }
+}
+async function pickFilm(filmId, preselect) {
+  const sel = $('cc');
+  sel.disabled = true; sel.innerHTML = '<option>Loading…</option>';
+  if (!filmId) { sel.innerHTML = '<option value="">Pick a film first</option>'; return; }
+  const s = await db.ref(`flieks_cast/${filmId}`).once('value').catch(() => null);
+  const mine = auth.currentUser.uid;
+  const people = Object.entries((s && s.val()) || {}).filter(([, c]) => c && c.name && (!c.talent_uid || c.talent_uid === mine))
+    .sort(([, a], [, b]) => (a.order || 99) - (b.order || 99));
+  sel.innerHTML = people.length
+    ? `<option value="">Choose your name</option>` + people.map(([k, c]) => `<option value="${esc(k)}"${c.talent_uid ? ' disabled' : ''}>${esc(c.name)}${c.role ? ' — ' + esc(c.role) : ''}${c.talent_uid ? ' (on your profile)' : ''}</option>`).join('')
+    : `<option value="">No open credits on this film</option>`;
+  sel.disabled = !people.length;
+  if (preselect && people.some(([k]) => k === preselect)) sel.value = preselect;
+}
+async function claim() {
+  const filmId = $('cf').value, castKey = $('cc').value;
+  if (!filmId || !castKey) return say('cmsg', 'Pick the film and your name.', 'err');
+  $('cgo').disabled = true; say('cmsg', 'Sending…');
+  const { ok, d } = await call('claim', { filmId, castKey });
+  $('cgo').disabled = false;
+  if (!ok) return say('cmsg', d.message || 'Could not claim that.', 'err');
+  await load();
+  say('cmsg', 'Sent to the filmmaker to approve.', 'ok');
+}
+async function withdraw(filmId, castKey, btn) { btn.disabled = true; await call('withdraw', { filmId, castKey }); load(); }
+async function removeCredit(filmId, castKey, btn) { btn.disabled = true; await call('remove-credit', { filmId, castKey }); load(); }
+async function deleteProfile(btn) {
+  if (btn.dataset.sure !== '1') { btn.dataset.sure = '1'; btn.textContent = 'Tap again to delete'; return; }
+  btn.disabled = true;
+  const { ok } = await call('delete-profile');
+  if (ok) { draft = null; await load(); }
+}
+
+auth.onAuthStateChanged(u => { if (joining) return; if (u) load(); else { me = null; signedOut(); } });
+</script>
+</body>
+</html>
