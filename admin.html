@@ -353,8 +353,26 @@ async function approveFilm(filmId, queueId) {
   }
   await db.ref(DB+'films/'+filmId).update({ status: 'live', featured, published_at: Date.now() });
   if (queueId) await db.ref(DB+'admin_queue/'+queueId).update({ status: 'approved' });
-  snack('Film approved and live!');
+  snack('Film approved and live! Emailing the filmmaker…');
   nav('queue');
+  emailFilmLive(filmId);
+}
+
+/* Tell the filmmaker their film is live: link, cast links, next steps.
+   The server sends it once per film; force re-sends (the button in Films). */
+async function emailFilmLive(filmId, force = false) {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-film-live', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, force })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok && d.already) snack(`Go-live email already sent to ${d.to}.`);
+    else if (d.ok) snack(`Go-live email sent to ${d.to}.`);
+    else snack(`Go-live email not sent: ${d.reason || d.message || r.status}`);
+  } catch (e) {
+    snack('Go-live email not sent: ' + e.message);
+  }
 }
 
 async function rejectFilm(filmId, queueId) {
@@ -659,6 +677,8 @@ function renderFilmsList(films) {
         </button>
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E)"
           onclick="filmUpdate('${f.id}')">Update</button>
+        ${f.status === 'live' ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)"
+          onclick="emailFilmLive('${f.id}', true)">Send go-live email</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -674,6 +694,8 @@ async function toggleFilmStatus(id, status) {
   await db.ref(DB+'films/'+id).update({ status: newStatus, ...(newStatus === 'live' ? { published_at: Date.now() } : {}) });
   snack(`Film ${newStatus === 'live' ? 'published' : 'taken down'}.`);
   loadAllFilms();
+  // Only the first time a film goes live; putting it back up later sends nothing.
+  if (newStatus === 'live') emailFilmLive(id);
 }
 
 /* ---- USERS ---- */

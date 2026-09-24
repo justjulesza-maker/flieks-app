@@ -376,19 +376,32 @@ async function sendWhatsApp(kind, vars, plainText) {
   return { ok: true, via: 'whatsapp' };
 }
 
-async function sendEmail(subject, text) {
+/* Any email through Resend. Used for Julian's alerts and for mail to filmmakers. */
+async function sendEmailTo({ to, subject, text, html, replyTo }) {
   const key = process.env.RESEND_API_KEY;
-  const to = process.env.OPS_EMAIL_TO || process.env.SUPPORT_EMAIL;
-  if (!key || !to) return { ok: false, reason: 'email not configured' };
-  const body = JSON.stringify({
+  if (!key) return { ok: false, reason: 'RESEND_API_KEY is not set' };
+  if (!to) return { ok: false, reason: 'no recipient' };
+  const msg = {
     from: process.env.OPS_EMAIL_FROM || process.env.SUPPORT_FROM || '4flieks <support@4flieks.com>',
     to: [to], subject, text
-  });
+  };
+  if (html) msg.html = html;
+  if (replyTo) msg.reply_to = replyTo;
+  const body = JSON.stringify(msg);
   const r = await request('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), Authorization: `Bearer ${key}` }
   }, body);
-  return r.status < 300 ? { ok: true, via: 'email' } : { ok: false, reason: `resend ${r.status}` };
+  if (r.status < 300) return { ok: true, via: 'email' };
+  let why = '';
+  try { why = (JSON.parse(r.body || '{}').message || '').slice(0, 160); } catch {}
+  return { ok: false, reason: `resend ${r.status}${why ? ': ' + why : ''}` };
+}
+
+async function sendEmail(subject, text) {
+  const to = process.env.OPS_EMAIL_TO || process.env.SUPPORT_EMAIL;
+  if (!process.env.RESEND_API_KEY || !to) return { ok: false, reason: 'email not configured' };
+  return sendEmailTo({ to, subject, text });
 }
 
 /* WhatsApp first; email if WhatsApp isn't set up or fails, so nothing is lost. */
@@ -410,4 +423,4 @@ function channelStatus() {
   };
 }
 
-module.exports = { buildFacts, writeBriefing, parseBriefing, fallbackHeadline, answer, notify, channelStatus, verifyAdmin, dbGet, dbWrite, dayStart, SA };
+module.exports = { sendEmailTo, SITE, buildFacts, writeBriefing, parseBriefing, fallbackHeadline, answer, notify, channelStatus, verifyAdmin, dbGet, dbWrite, dayStart, SA };
