@@ -289,6 +289,11 @@ input,textarea{font-family:var(--fb)}
 /* ===================== LIBRARY ===================== */
 .lib-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:opacity .15s}
 .lib-card:active{opacity:.85}
+.lib-prog{height:3px;background:var(--border);border-radius:2px;margin-top:7px;overflow:hidden}
+.lib-prog div{height:100%;background:var(--amber);border-radius:2px}
+.resume-chip{align-items:center;gap:4px;margin:0 0 12px;font:inherit;font-size:12px;padding:7px 14px;
+  border-radius:99px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#ddd;cursor:pointer}
+.resume-chip b{color:var(--amber);font-weight:700}
 .lib-thumb{width:52px;height:64px;border-radius:8px;display:flex;align-items:flex-end;padding:5px;flex-shrink:0;overflow:hidden;background-size:cover;background-position:center;position:relative}
 .lib-thumb span{font-family:var(--fn);font-size:9px;color:var(--text);line-height:1.05;
   width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -488,6 +493,7 @@ input,textarea{font-family:var(--fb)}
       <span id="time-cur" style="font-size:12px;color:var(--muted);font-family:monospace">0:00</span>
       <span id="time-dur" style="font-size:12px;color:var(--dim);font-family:monospace">0:00</span>
     </div>
+    <div style="text-align:center"><button id="resume-chip" class="resume-chip" style="display:none" onclick="startOver()"></button></div>
     <!-- Controls -->
     <div class="ctrl-row">
       <button class="ctrl-btn skip-btn" onclick="skipVid(-15)" aria-label="Back 15 seconds">
@@ -547,6 +553,10 @@ input,textarea{font-family:var(--fb)}
   <div class="topbar">
     <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
     <span style="font-size:14px;color:var(--muted)">My Library</span>
+  </div>
+  <div id="continue-wrap" style="padding:16px 20px 0;display:none">
+    <p class="section-label">CONTINUE WATCHING</p>
+    <div id="continue-films"></div>
   </div>
   <div style="padding:16px 20px">
     <p class="section-label">OWNED FILMS</p>
@@ -1003,6 +1013,8 @@ let checkoutFilm = null;
 let checkoutType = null;
 let allFilms = [];
 let userPurchases = {};
+let userProgress = {};     // filmId -> { pos, dur, at, done } — where they got to
+let playing = null;        // { id, trailer, lastSaved } — what the player has loaded
 let navHistory = ['home'];
 
 /* ============================================================
@@ -1087,11 +1099,18 @@ function updateAvatars() {
    NAVIGATION
    ============================================================ */
 function nav(viewId, pushHistory = true) {
-  // Leaving the player? Stop the stream, or it keeps pulling data in the background.
-  if (viewId !== 'player' && typeof currentHls !== 'undefined' && currentHls) {
-    currentHls.destroy(); currentHls = null;
+  // Leaving the player? Remember where they got to, then stop the video.
+  // (This used to stop only adaptive streams — a plain MP4 or a trailer kept
+  // playing, sound and all, behind whatever page you went to next.)
+  if (viewId !== 'player') {
     const v = document.getElementById('flieks-video');
-    if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+    if (document.getElementById('view-player').classList.contains('active')) saveProgress();
+    if (typeof currentHls !== 'undefined' && currentHls) {
+      currentHls.destroy(); currentHls = null;
+      if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+    } else if (v && !v.paused) {
+      v.pause();
+    }
   }
   // A film's own colour theme belongs only on its own page — leaving it
   // behind (e.g. via the back button) used to leak that theme's dark
@@ -2315,6 +2334,7 @@ function guardPlayer() {
   v.addEventListener('contextmenu', e => e.preventDefault());
   v.addEventListener('play', syncPlayIcon);
   v.addEventListener('pause', syncPlayIcon);
+  v.addEventListener('pause', () => { if (!v.ended) saveProgress(); });
   v.addEventListener('volumechange', syncVolumeIcon);
   document.addEventListener('keydown', e => {
     const view = document.getElementById('view-player');
@@ -2323,9 +2343,26 @@ function guardPlayer() {
   });
 }
 
-function launchPlayer(film, isOwned) {
+function launchPlayer(film, isOwned, opts) {
+  opts = opts || {};
   guardPlayer();
   const video = document.getElementById('flieks-video');
+  saveProgress();                          // whatever was loaded before this
+  playing = { id: film.id, trailer: !!opts.trailer, lastSaved: Date.now() };
+  hideResumeChip();
+
+  // Pick up where they left off — once the stream knows its own length.
+  const saved = !playing.trailer && film.id && userProgress[film.id];
+  if (saved && !saved.done && saved.pos >= 10) {
+    video.addEventListener('loadedmetadata', function resumeOnce() {
+      video.removeEventListener('loadedmetadata', resumeOnce);
+      if (playing && playing.id === film.id && video.duration && saved.pos < video.duration - 30) {
+        video.currentTime = saved.pos;
+        showResumeChip(saved.pos);
+      }
+    });
+  }
+
   attachSource(video, film.video_url || '');
   video.poster = film.poster_url || '';
   document.getElementById('player-title').textContent = film.title;
@@ -2345,7 +2382,7 @@ function watchTrailer(filmId) {
   if (window.FlieksSocial) FlieksSocial.trailerPlayed(filmId);
   const f = allFilms.find(x => x.id === filmId) || currentFilm;
   if (!f || !f.trailer_url) { showSnack('Trailer not yet available'); return; }
-  launchPlayer({ ...f, video_url: f.trailer_url }, false);
+  launchPlayer({ ...f, video_url: f.trailer_url }, false, { trailer: true });
 }
 
 /* The video can be paused by tapping the picture, by the keyboard, or by the
@@ -2378,7 +2415,51 @@ function updateProgress() {
   document.getElementById('prog-fill').style.width = pct + '%';
   document.getElementById('time-cur').textContent = fmtTime(v.currentTime);
   document.getElementById('time-dur').textContent = fmtTime(v.duration);
+  if (playing && !v.paused && Date.now() - playing.lastSaved > 15000) saveProgress();
 }
+
+/* ---- Continue watching ----
+   Saved every 15s while playing, on pause, at the end, and when leaving the
+   player or the page. Trailers and signed-out viewing aren't saved. Within
+   the last 30 seconds (credits) counts as finished, so next time it starts
+   from the top rather than resuming into the credits. */
+function saveProgress(reason) {
+  const v = document.getElementById('flieks-video');
+  if (!playing || playing.trailer || !playing.id || !currentUser) return;
+  if (!v || !v.duration || !isFinite(v.duration)) return;
+  const pos = Math.floor(v.currentTime);
+  const dur = Math.floor(v.duration);
+  const done = reason === 'ended' || pos >= dur - 30;
+  if (pos < 5 && !done) return;                         // barely started
+  const rec = { pos: done ? 0 : pos, dur, at: Date.now(), done };
+  userProgress[playing.id] = rec;
+  playing.lastSaved = Date.now();
+  db.ref(`${DB_PREFIX}users/${currentUser.uid}/progress/${playing.id}`).set(rec)
+    .catch(e => console.warn('[progress] not saved:', e && e.message));
+}
+
+let _resumeChipTimer = null;
+function showResumeChip(pos) {
+  const chip = document.getElementById('resume-chip');
+  if (!chip) return;
+  chip.innerHTML = `Resumed at ${fmtTime(pos)} · <b>Start over</b>`;
+  chip.style.display = 'inline-flex';
+  clearTimeout(_resumeChipTimer);
+  _resumeChipTimer = setTimeout(hideResumeChip, 9000);
+}
+function hideResumeChip() {
+  const chip = document.getElementById('resume-chip');
+  if (chip) chip.style.display = 'none';
+}
+function startOver() {
+  const v = document.getElementById('flieks-video');
+  if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+  hideResumeChip();
+}
+
+// Closing the tab or switching apps mid-film still keeps their place.
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
+window.addEventListener('pagehide', () => saveProgress());
 
 function seekVideo(e) {
   const v = document.getElementById('flieks-video');
@@ -2396,6 +2477,7 @@ function skipVid(secs) {
 function videoEnded() {
   const icon = document.getElementById('play-icon');
   icon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+  saveProgress('ended');
 }
 
 function videoError() { showSnack('Video not yet available for this film.'); }
@@ -2560,6 +2642,12 @@ async function loadUserPurchases() {
     const snap = await db.ref(`${DB_PREFIX}purchases/${currentUser.uid}`).once('value');
     userPurchases = snap.val() || {};
   } catch(e) { userPurchases = {}; }
+  // Stored on the viewer's own account rather than this device, so a film
+  // started on a phone picks up where it left off on a laptop or TV.
+  try {
+    const p = await db.ref(`${DB_PREFIX}users/${currentUser.uid}/progress`).once('value');
+    userProgress = p.val() || {};
+  } catch(e) { userProgress = {}; }
 }
 
 async function loadLibrary() {
@@ -2579,6 +2667,15 @@ async function loadLibrary() {
   const owned = Object.entries(userPurchases).filter(([id, p]) => p.type === 'own');
   const rented = Object.entries(userPurchases).filter(([id, p]) => p.type === 'rent' && (!p.expires_at || p.expires_at > now));
 
+  // Part-watched: at least 10 seconds in and not finished.
+  const progressOf = filmId => {
+    const p = userProgress[filmId];
+    return p && !p.done && p.pos >= 10 && p.dur ? p : null;
+  };
+  const inProgress = [...owned, ...rented]
+    .filter(([id]) => progressOf(id))
+    .sort((a, b) => progressOf(b[0]).at - progressOf(a[0]).at);
+
   const renderLib = (items, container) => {
     if (!items.length) {
       document.getElementById(container).innerHTML = `<p style="color:var(--muted);font-size:14px">None yet.</p>`;
@@ -2586,6 +2683,10 @@ async function loadLibrary() {
     }
     document.getElementById(container).innerHTML = items.map(([filmId, purchase]) => {
       const f = allFilms.find(x => x.id === filmId) || { id: filmId, title: filmId.toUpperCase(), filmmaker: '', poster_bg: '#1A1A1A', duration_mins: '—' };
+      const pr = progressOf(filmId);
+      const progressHTML = pr ? `
+          <div class="lib-prog"><div style="width:${Math.min(100, Math.round(pr.pos / pr.dur * 100))}%"></div></div>
+          <p style="font-size:10px;color:var(--muted);margin-top:3px">${Math.max(1, Math.round((pr.dur - pr.pos) / 60))} min left</p>` : '';
       return `<div class="lib-card" onclick="playFilm('${f.id}')">
         <div class="lib-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'}${f.poster_url ? `;background-image:url('${f.poster_url}')` : ''}">${f.poster_url ? '' : `<span>${escHtml(f.title)}</span>`}</div>
         <div class="info">
@@ -2601,11 +2702,14 @@ async function loadLibrary() {
                     }</p>`
                   : `<p style="font-size:10px;color:var(--amber);margin-top:3px">Not started — 48h begins on play</p>`)
               : `<span class="tag tag-green" style="margin-top:4px;display:inline-block">Owned</span>`}
+          ${progressHTML}
         </div>
         <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.8;flex-shrink:0"><polygon points="5,3 19,12 5,21"/></svg>
       </div>`;
     }).join('');
   };
+  document.getElementById('continue-wrap').style.display = inProgress.length ? 'block' : 'none';
+  if (inProgress.length) renderLib(inProgress, 'continue-films');
   renderLib(owned, 'owned-films');
   renderLib(rented, 'rented-films');
 }
