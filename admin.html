@@ -167,6 +167,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
   <div id="review-content"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -212,6 +213,11 @@ auth.onAuthStateChanged(async user => {
 });
 
 function nav(v) {
+  // Leaving the review screen stops the preview rather than letting it play on hidden.
+  if (v !== 'review') {
+    const rp = document.getElementById('review-player'); if (rp) rp.pause();
+    if (reviewHls) { reviewHls.destroy(); reviewHls = null; }
+  }
   document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   document.querySelectorAll('.nb').forEach(b => b.classList.toggle('on', b.dataset.v === v));
@@ -267,6 +273,38 @@ async function loadQueue() {
   }
 }
 
+/* The film file lives in flieks_private, so the review screen asks the server
+   for a preview link (admins may preview without buying). */
+let reviewHls = null;
+async function loadReviewVideo(filmId) {
+  const box = document.getElementById('review-video');
+  if (!box) return;
+  if (reviewHls) { reviewHls.destroy(); reviewHls = null; }
+  const note = t => `<p style="color:var(--muted);font-size:14px;margin-bottom:8px">${t}</p>`;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-play', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, preview: true })
+    });
+    const d = await r.json();
+    if (!r.ok) { box.innerHTML = note('Could not load the film: ' + (d.message || r.status)); return; }
+    if (!d.url) { box.innerHTML = note('No film uploaded yet — only the details, poster and trailer are in.'); return; }
+    box.innerHTML = `<video id="review-player" controls playsinline class="video-preview"></video>
+      <p style="color:var(--muted);font-size:12px;margin-top:6px">${d.source === 'bunny' ? 'Adaptive stream (Bunny)' : 'Original upload — not prepared for adaptive streaming yet'}</p>`;
+    const v = document.getElementById('review-player');
+    const isHls = /\.m3u8(\?|$)/.test(d.url);
+    if (isHls && window.Hls && Hls.isSupported()) {
+      reviewHls = new Hls(); reviewHls.loadSource(d.url); reviewHls.attachMedia(v);
+      reviewHls.on(Hls.Events.ERROR, (e, data) => {
+        if (data.fatal && d.fallback) { reviewHls.destroy(); reviewHls = null; v.src = d.fallback; }
+      });
+    } else v.src = d.url;
+    v.addEventListener('error', () => { box.insertAdjacentHTML('beforeend', note('The file would not play — it may be missing or still processing.')); }, { once: true });
+  } catch (e) {
+    box.innerHTML = note('Could not load the film: ' + e.message);
+  }
+}
+
 async function openReview(filmId, queueId) {
   const snap = await db.ref(DB+'films/'+filmId).once('value');
   const f = { id: filmId, ...snap.val() };
@@ -275,7 +313,7 @@ async function openReview(filmId, queueId) {
       <p style="font-size:24px;font-weight:700;color:var(--amber)">${f.title}</p>
       <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.filmmaker_email} · ${f.duration_mins} min · ${f.language}</p>
     </div>
-    ${f.video_url ? `<video src="${f.video_url}" controls class="video-preview"></video>` : `<p style="color:var(--muted);font-size:14px;margin-bottom:8px">No video URL available yet</p>`}
+    <div id="review-video"><p style="color:var(--muted);font-size:14px;margin-bottom:8px">Loading the film…</p></div>
     <div class="card" style="margin-top:12px">
       <p class="sl">SYNOPSIS</p>
       <p style="font-size:14px;color:#999;line-height:1.6">${f.synopsis||'—'}</p>
@@ -302,6 +340,7 @@ async function openReview(filmId, queueId) {
       <button class="btn btn-r" onclick="rejectFilm('${filmId}','${queueId}')">✗ REJECT</button>
     </div>
   `;
+  loadReviewVideo(filmId);
   nav('review');
 }
 

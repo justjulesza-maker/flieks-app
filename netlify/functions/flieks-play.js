@@ -8,6 +8,7 @@
  * Runs server-side because flieks_purchases is not client-writable.
  *
  * POST { token, filmId }
+ * POST { token, filmId, preview: true }  -> admin / own filmmaker: { url, source } without buying
  *   -> { ok, type, expiresAt, hoursLeft }
  *   -> 403 if they have no access, or the rental has run out
  */
@@ -91,10 +92,30 @@ exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
   try {
-    const { token, filmId } = JSON.parse(event.body || '{}');
+    const { token, filmId, preview } = JSON.parse(event.body || '{}');
     if (!token || !filmId) return reply(400, { message: 'Missing details.' });
 
     const user = await verifyToken(token);
+
+    /* Preview: an admin reviewing a film (or the filmmaker checking their own)
+       gets a link without buying and without touching any purchase record. */
+    if (preview) {
+      const [profile, film, priv] = await Promise.all([
+        dbGet(`flieks_users/${user.localId}`),
+        dbGet(`flieks_films/${filmId}`),
+        dbGet(`flieks_private/${filmId}`)
+      ]);
+      const allowed = (profile && profile.role === 'admin') || (film && film.filmmaker_uid === user.localId);
+      if (!allowed) return reply(403, { message: 'Only an admin or the filmmaker can preview this film.' });
+      const pv = priv || {};
+      let url = null, source = 'none';
+      if (pv.bunny_id && BUNNY_HOST) { url = signedBunnyUrl(pv.bunny_id); source = 'bunny'; }
+      else if (pv.video_url) { url = pv.video_url; source = 'firebase'; }
+      else if (film && film.video_url) { url = film.video_url; source = 'firebase-legacy'; }
+      return reply(200, { ok: true, preview: true, url, source,
+        streaming: !!pv.bunny_ready, fallback: pv.video_url || null });
+    }
+
     const p = await dbGet(`flieks_purchases/${user.localId}/${filmId}`);
 
     if (!p) return reply(403, { message: 'You have not bought this film.' });
