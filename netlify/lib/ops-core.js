@@ -89,18 +89,20 @@ const ago = ms => {
    clear answer comes back as 'unknown', which never triggers an alarm. */
 async function yocoCheckoutState(checkoutId) {
   const key = (process.env.YOCO_SECRET_KEY || '').trim();
-  if (!key || !checkoutId) return 'unknown';
+  if (!key || !checkoutId) return { state: 'unknown' };
   try {
     const r = await request(`https://payments.yoco.com/api/checkouts/${encodeURIComponent(checkoutId)}`, {
       method: 'GET', headers: { Authorization: `Bearer ${key}` }
     });
-    if (r.status !== 200) return 'unknown';
+    if (r.status !== 200) return { state: 'unknown', raw: `http ${r.status}` };
     const c = JSON.parse(r.body || '{}');
     const s = String(c.status || '').toLowerCase();
-    if (c.paymentId || s === 'completed' || s === 'succeeded' || s === 'paid') return 'paid';
-    if (s) return 'not-paid';
-    return 'unknown';
-  } catch { return 'unknown'; }
+    // Only a completed checkout means money moved. A paymentId alone can be a declined or
+    // abandoned card attempt, so it is not proof of payment.
+    if (s === 'completed' || s === 'succeeded' || s === 'paid') return { state: 'paid', raw: s };
+    if (s) return { state: 'not-paid', raw: s };
+    return { state: 'unknown' };
+  } catch { return { state: 'unknown' }; }
 }
 
 /* ---------- the facts ---------- */
@@ -152,11 +154,18 @@ async function buildFacts({ verifyPayments = true } = {}) {
   /* Checkouts started but not completed in the last 2 days. */
   const pending = all.filter(t => t.status === 'pending'
     && now - (t.created_at || 0) > 10 * 60e3 && now - (t.created_at || 0) < 2 * DAY);
-  let paidNoAccess = [], unverified = 0, abandoned = 0;
+  let paidNoAccess = [], paidHasAccess = [], unverified = 0, abandoned = 0;
   if (verifyPayments) {
     for (const t of pending.slice(0, 20)) {
-      const state = await yocoCheckoutState(t.checkout_id);
-      if (state === 'paid') paidNoAccess.push(t);
+      const { state, raw } = await yocoCheckoutState(t.checkout_id);
+      if (state === 'paid') {
+        // Someone may already be able to watch (e.g. they redeemed a gift instead). Only
+        // rentals/purchases can be checked this way; gifts go to the buyer as a code.
+        const has = t.type !== 'gift' && t.uid && t.film_id
+          ? await dbGet(`flieks_purchases/${t.uid}/${t.film_id}`) : null;
+        if (has && has.status === 'complete') paidHasAccess.push({ ...t, yoco: raw });
+        else paidNoAccess.push({ ...t, yoco: raw });
+      }
       else if (state === 'not-paid') abandoned++;
       else unverified++;
     }
@@ -181,6 +190,9 @@ async function buildFacts({ verifyPayments = true } = {}) {
 
   paidNoAccess.forEach(t => add('urgent', 'paid-no-access',
     `Paid but no access: ${t.email || 'a buyer'} for ${t.film_title || titleOf(t.film_id)} (${rand(t.total)}), ${ago(now - t.created_at)} ago. Grant it by hand — see README "Someone paid and got nothing".`,
+    t.created_at, `${SITE}/admin`));
+  paidHasAccess.forEach(t => add('todo', 'double-charge',
+    `Possible double charge: ${t.email || 'a buyer'} paid ${rand(t.total)} for ${t.film_title || titleOf(t.film_id)} ${ago(now - t.created_at)} ago but already had access. Check Yoco and refund if charged twice.`,
     t.created_at, `${SITE}/admin`));
 
   Object.entries(F).filter(([, f]) => f.status === 'review').forEach(([id, f]) => {
@@ -219,7 +231,7 @@ async function buildFacts({ verifyPayments = true } = {}) {
   // Most urgent first; within a level, money problems before everything
   // else (someone who paid and can't watch comes before a review queue).
   const order = { urgent: 0, todo: 1, fyi: 2 };
-  const kindFirst = { 'paid-no-access': 0, payout: 1, 'film-review': 2, application: 3, support: 4 };
+  const kindFirst = { 'paid-no-access': 0, 'double-charge': 1, payout: 1, 'film-review': 2, application: 3, support: 4 };
   attention.sort((a, b) => order[a.level] - order[b.level]
     || (kindFirst[a.kind] ?? 9) - (kindFirst[b.kind] ?? 9)
     || (a.since || 0) - (b.since || 0));
@@ -227,7 +239,7 @@ async function buildFacts({ verifyPayments = true } = {}) {
   return {
     generatedAt: now,
     sales,
-    checkouts: { notCompleted: pending.length, abandoned, paidNoAccess: paidNoAccess.length, unverified },
+    checkouts: { notCompleted: pending.length, abandoned, paidNoAccess: paidNoAccess.length, possibleDoubleCharge: paidHasAccess.length, unverified },
     signups,
     films: {
       live: Object.values(F).filter(f => f.status === 'live').length,
@@ -289,13 +301,29 @@ Write this morning's briefing. Return JSON only: {"headline": "...", "briefing":
   (urgent first, say what to do), yesterday's sales vs the day before and the week, sign-ups,
   anything notable (a film or cast link doing well, drop-off, abandoned checkouts). If it was a
   quiet day, say so in one line rather than padding.`,
-    [{ role: 'user', content: JSON.stringify(factsForModel(facts)) }], 700);
-  try {
-    const j = JSON.parse(text.replace(/^```(json)?|```$/g, '').trim());
-    return { headline: String(j.headline || '').slice(0, 140), briefing: String(j.briefing || '').slice(0, 2000) };
-  } catch {
-    return { headline: fallbackHeadline(facts), briefing: text.slice(0, 2000) };
+    [{ role: 'user', content: JSON.stringify(factsForModel(facts)) }], 1500);
+  return parseBriefing(text, facts);
+}
+
+/* Models sometimes wrap JSON in prose or fences, or run long and get cut off. Recover what we can
+   so the page and WhatsApp never show raw JSON. */
+function parseBriefing(text, facts) {
+  const clean = s => String(s || '').trim();
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a >= 0 && b > a) {
+    try {
+      const j = JSON.parse(text.slice(a, b + 1));
+      if (j.headline || j.briefing) return { headline: clean(j.headline).slice(0, 140) || fallbackHeadline(facts), briefing: clean(j.briefing).slice(0, 2000) };
+    } catch {}
   }
+  const field = k => {
+    const m = text.match(new RegExp(`"${k}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)("|$)`));
+    if (!m) return '';
+    try { return JSON.parse(`"${m[1].replace(/\\$/, '')}"`); } catch { return m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'); }
+  };
+  const headline = field('headline'), briefing = field('briefing');
+  if (headline || briefing) return { headline: clean(headline).slice(0, 140) || fallbackHeadline(facts), briefing: clean(briefing).slice(0, 2000) };
+  return { headline: fallbackHeadline(facts), briefing: text.startsWith('{') ? '' : text.slice(0, 2000) };
 }
 
 /* Used when the model is unavailable, so the morning message still goes. */
@@ -365,9 +393,10 @@ function channelStatus() {
   const wa = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM', 'OPS_WHATSAPP_TO'].every(k => process.env[k]);
   return {
     whatsapp: wa ? (process.env.TWILIO_TEMPLATE_BRIEFING && process.env.TWILIO_TEMPLATE_ALERT ? 'ready' : 'set up, templates missing') : 'not set up',
-    email: process.env.RESEND_API_KEY && (process.env.OPS_EMAIL_TO || process.env.SUPPORT_EMAIL) ? 'ready' : 'not set up',
+    email: !process.env.RESEND_API_KEY ? 'not set up (RESEND_API_KEY missing)'
+         : !(process.env.OPS_EMAIL_TO || process.env.SUPPORT_EMAIL) ? 'not set up (add OPS_EMAIL_TO in Netlify)' : 'ready',
     model: process.env.ANTHROPIC_API_KEY ? 'ready' : 'not set up'
   };
 }
 
-module.exports = { buildFacts, writeBriefing, fallbackHeadline, answer, notify, channelStatus, verifyAdmin, dbGet, dbWrite, dayStart, SA };
+module.exports = { buildFacts, writeBriefing, parseBriefing, fallbackHeadline, answer, notify, channelStatus, verifyAdmin, dbGet, dbWrite, dayStart, SA };
