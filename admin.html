@@ -661,6 +661,7 @@ function renderFilmsList(films) {
         <div class="row" style="margin-bottom:4px">
           <p style="font-size:14px;font-weight:700">${f.title}</p>
           <span class="tag ${statusTag[f.status]||'tag-m'}">${(f.status||'').toUpperCase()}</span>
+          ${f.featured && f.status === 'live' ? `<span class="tag tag-a">★ ON HOME</span>` : ''}
         </div>
         <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
         <p style="font-size:11px;margin-top:3px" id="stream-${f.id}">checking…</p>
@@ -677,6 +678,8 @@ function renderFilmsList(films) {
         </button>
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E)"
           onclick="filmUpdate('${f.id}')">Update</button>
+        ${f.status === 'live' && !f.featured ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)"
+          onclick="featureFilm('${f.id}', this)">★ Feature on home</button>` : ''}
         ${f.status === 'live' ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)"
           onclick="emailFilmLive('${f.id}', true)">Send go-live email</button>` : ''}
       </div>
@@ -687,6 +690,25 @@ function renderFilmsList(films) {
 function searchFilms(q) {
   const term = q.toLowerCase();
   renderFilmsList(allFilmsCache.filter(f => f.title.toLowerCase().includes(term) || f.filmmaker.toLowerCase().includes(term)));
+}
+
+/* One featured film: the big hero on the home page. Switched in a single
+   update so there is never a moment with two, or none. */
+async function featureFilm(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Featuring…'; }
+  try {
+    const films = await readNode('films');
+    const changes = { [`${id}/featured`]: true };
+    Object.entries(films || {}).forEach(([fid, f]) => {
+      if (fid !== id && f && f.featured) changes[`${fid}/featured`] = false;
+    });
+    await db.ref(DB+'films').update(changes);
+    const title = (films[id] && films[id].title) || 'That film';
+    snack(`${title} is now the featured film on the home page.`);
+  } catch (e) {
+    snack('Could not change the featured film: ' + e.message);
+  }
+  loadAllFilms();
 }
 
 async function toggleFilmStatus(id, status) {
