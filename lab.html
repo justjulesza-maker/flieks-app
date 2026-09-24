@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Script Report — 4flieks Lab</title>
-<meta name="robots" content="noindex">
+<title>4flieks Lab — AI tools for African filmmakers</title>
+<meta name="description" content="Free AI tools for writers, filmmakers and actors: Script Report, a one-page pitch, cast match and Script Coach. From 4flieks, the home of African film.">
+<meta name="robots" content="noindex" id="robots">
 <link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -129,6 +130,65 @@ input[type=text]{width:100%;font:15px var(--fn);padding:11px 12px;border:1px sol
 .team p{padding:6px 0;border-top:1px solid var(--rule);font-size:14px}
 [contenteditable=true]{outline:1.5px dashed var(--sunset);outline-offset:3px;background:#FFF9EE}
 .stage{display:inline-block;font-family:var(--fm);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--ink);padding:4px 9px;border-radius:3px;margin-left:8px;vertical-align:4px}
+/* ---------- Lab nav ---------- */
+.labnav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:-14px 0 26px;padding-bottom:2px}
+.labnav::-webkit-scrollbar{display:none}
+.labnav a{flex:none;font-family:var(--fm);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);
+  text-decoration:none;padding:7px 10px;border:1px solid transparent;border-radius:4px;white-space:nowrap}
+.labnav a:hover{color:var(--ink);border-color:var(--rule)}
+.labnav a.on{color:var(--ink);border-color:var(--ink)}
+.labnav a.acct{margin-left:auto;background:var(--ink);color:var(--paper)}
+/* ---------- Lab home ---------- */
+body.home .sheet{max-width:1040px}
+.hero{background:var(--ink);color:var(--paper);margin:0 -52px;padding:46px 52px 40px;position:relative;overflow:hidden}
+@media (max-width:640px){.hero{margin:0 -20px;padding:34px 20px 30px}}
+.hero .eyebrow{font-family:var(--fm);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#F2C7A8;margin-bottom:14px}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.02;letter-spacing:-.02em;max-width:14ch;color:var(--paper)}
+.hero h1 em{font-style:normal;color:var(--sunset)}
+.hero p.lead{font-size:17px;line-height:1.55;color:#D9D1C2;max-width:56ch;margin:18px 0 22px}
+.hero .actions button,.hero .actions .btn{background:var(--sunset);border-color:var(--sunset);color:#fff;padding:13px 20px;font-size:14px}
+.hero .actions .ghost{background:transparent;border-color:#6B5A4E;color:var(--paper)}
+.hero .reel{position:absolute;right:-30px;top:30px;width:230px;opacity:.14;pointer-events:none}
+@media (max-width:760px){.hero .reel{display:none}}
+.proof{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;font-family:var(--fm);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#B9AF9F}
+.proof b{color:var(--paper);font-weight:700}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.tool{background:var(--card);border:1px solid var(--rule);border-top:3px solid var(--ink);padding:20px 20px 18px;display:flex;flex-direction:column;border-radius:2px}
+.tool .num{font-family:var(--fm);font-size:10px;letter-spacing:.18em;color:var(--ink-3);margin-bottom:10px}
+.tool h3{font-family:var(--fb);font-size:21px;line-height:1.15;margin-bottom:3px}
+.tool .tag{font-family:var(--fm);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sunset);margin-bottom:10px}
+.tool .desc{font-size:14px;line-height:1.55;color:var(--ink-2);flex:1}
+.tool .go{margin-top:16px;align-self:flex-start}
+.tool.lead{border-top-color:var(--sunset)}
+.tool.soon{background:transparent;border-style:dashed;border-top:1px dashed var(--rule)}
+.tool.soon h3{color:var(--ink-2)} .tool.soon .tag{color:var(--ink-3)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.steps div{background:var(--card);padding:16px 16px 14px}
+.steps b{display:block;font-family:var(--fb);font-size:15px;margin:4px 0 4px}
+.steps span{font-family:var(--fm);font-size:10px;letter-spacing:.16em;color:var(--sunset)}
+.steps p{font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.join{display:grid;grid-template-columns:1fr 1fr;gap:34px;background:var(--card);border:1px solid var(--rule);padding:26px 26px 22px}
+@media (max-width:760px){.join{grid-template-columns:1fr;gap:18px;padding:20px 18px}}
+.join h3{font-family:var(--fb);font-size:24px;line-height:1.15;margin-bottom:8px}
+.join ul{list-style:none;margin-top:12px}
+.join li{font-size:14px;padding:6px 0 6px 20px;position:relative;color:var(--ink-2)}
+.join li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:700}
+.join input[type=email],.join input[type=password]{width:100%;font:15px var(--fn);padding:11px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink)}
+.join input[type=text]{background:var(--paper)}
+.seg{display:flex;border:1px solid var(--ink);border-radius:6px;overflow:hidden;margin-bottom:4px}
+.seg button{flex:1;border:0;border-radius:0;background:transparent;color:var(--ink);padding:10px}
+.seg button.on{background:var(--ink);color:var(--paper)}
+.banner{background:#FFF3E6;border:1px solid #F0C9A6;border-left:4px solid var(--sunset);padding:13px 16px;margin:0 0 18px;font-size:14px;line-height:1.5}
+.banner button{margin-top:8px;padding:7px 12px;font-size:12px}
+.work{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.work .box h3{font-family:var(--fm);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);font-weight:700;margin-bottom:4px}
+.work .item:first-of-type{border-top:0}
+.work .item a{font-size:14px}
+.mini{font-family:var(--fm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.homefoot{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:center;background:var(--ink);color:var(--paper);padding:20px 22px;margin-top:34px}
+.homefoot b{font-family:var(--fb);font-size:17px;display:block;margin-bottom:2px}
+.homefoot p{color:#D9D1C2;font-size:13.5px}
+.homefoot .btn{background:var(--sunset);border-color:var(--sunset);color:#fff}
 @media print{
   @page{size:A4;margin:12mm}
   body.pitch .sheet{padding:10px 4px}
@@ -156,6 +216,14 @@ input[type=text]{width:100%;font:15px var(--fn);padding:11px 12px;border:1px sol
     <a class="mark" href="/lab">4<em>flieks</em> Lab</a>
     <div class="docref" id="docref">SCRIPT REPORT</div>
   </div>
+  <nav class="labnav noprint" id="labnav">
+    <a href="/lab" data-k="home">Lab</a>
+    <a href="/lab/report" data-k="report">Script Report</a>
+    <a href="/script-upload.html" data-k="coach">Script Coach</a>
+    <a href="/talent" data-k="talent">Talent</a>
+    <a href="/" data-k="watch">Watch films</a>
+    <a href="/lab#join" class="acct" id="navAcct">Join free</a>
+  </nav>
   <div id="app"><div class="center"><div class="spin"></div><p class="muted">Loading…</p></div></div>
 </div>
 
@@ -783,26 +851,250 @@ async function removeReport(id, btn) {
 
 function gate(html) { app.innerHTML = `<div class="center">${html}</div>`; }
 
+/* ================= the Lab home ================= */
+
+const DB_URL = FIREBASE_CONFIG.databaseURL;
+const TOOLS = [
+  { k: 'report', lead: true, name: 'Script Report', tag: 'Coverage in minutes', href: '/lab/report', cta: 'Get a report',
+    text: 'Upload a screenplay, treatment or story. Get a verdict and scores, an emotion arc, structure, characters, audience and development notes, the way a senior script reader writes them, plus how to adapt it and how to release it.' },
+  { k: 'pitch', name: 'Pitch', tag: 'One page for funders', href: '/lab/report', cta: 'Start from a report',
+    text: 'Turn any report into a one-page pitch for funders, co-producers and festivals. Add your team and your ask, edit every word, save it as a PDF or share the link.' },
+  { k: 'cast', name: 'Cast match', tag: 'Actors who opted in', href: '/lab/report', cta: 'Start from a report',
+    text: 'Suggestions for every role from actors who asked to be found, with their playing age, languages, city and the audience their 4flieks links bring in. Ask to connect by email.' },
+  { k: 'coach', name: 'Script Coach', tag: 'Learn your lines', href: '/script-upload.html', cta: 'Upload a script',
+    text: 'Upload a script and every character gets a line coach: scene breakdown, cue cards and a line quiz that checks what you say. Send each actor their own link.' },
+  { k: 'talent', name: 'Talent profile', tag: 'For actors and crew', href: '/talent', cta: 'Make my profile',
+    text: 'One profile for your credits and the people your cast links brought in. Switch on suggestions and filmmakers casting in the Lab can find you. Your email stays private.' }
+];
+const SOON = [
+  ['Budget builder', 'A production budget built from your script: cast, locations, days.'],
+  ['Screenwriting course', 'Learn to write for the screen, with AI feedback on every exercise.'],
+  ['Masterclasses', 'Podcasts and sessions with South African filmmakers, free in the Lab.']
+];
+
+const isReportTool = /^\/lab\/report\/?$/.test(location.pathname);
+function setNav(user, k) {
+  document.querySelectorAll('#labnav a[data-k]').forEach(a => a.classList.toggle('on', a.dataset.k === k));
+  const acct = document.getElementById('navAcct');
+  if (acct) { acct.textContent = user ? 'My work' : 'Join free'; acct.href = user ? '/lab#work' : '/lab#join'; }
+}
+
+function showHome(user) {
+  document.body.classList.add('home');
+  document.getElementById('docref').innerHTML = 'TOOLS FOR<br>AFRICAN FILM';
+  document.title = '4flieks Lab — AI tools for African filmmakers';
+  const robots = document.getElementById('robots'); if (robots) robots.remove();
+  const n = i => String(i + 1).padStart(2, '0');
+  app.innerHTML = `
+    <section class="hero">
+      <svg class="reel" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="#F4F0E6" stroke-width="4"/>
+        ${[0, 72, 144, 216, 288].map(a => `<circle cx="${50 + 25 * Math.cos(a * Math.PI / 180)}" cy="${50 + 25 * Math.sin(a * Math.PI / 180)}" r="10" fill="#F4F0E6"/>`).join('')}
+        <circle cx="50" cy="50" r="6" fill="#F4F0E6"/></svg>
+      <p class="eyebrow">4flieks Lab</p>
+      <h1>Where African films get <em>made.</em></h1>
+      <p class="lead">Free AI tools for writers, filmmakers and actors. Get expert-style coverage on your script, a pitch for funders,
+        cast from actors who want to be found, and a coach for your lines. Then release the finished film on 4flieks.</p>
+      <div class="actions">
+        ${user ? `<a class="btn" href="/lab/report">New Script Report</a><a class="btn ghost" href="#work">My work</a>`
+               : `<a class="btn" href="#join" onclick="focusJoin();return false">Join the Lab, free</a><a class="btn ghost" href="#tools">See the tools</a>`}
+      </div>
+      <p class="proof"><span><b>Free</b> to join</span><span>Built for <b>South African</b> film</span><span>Your writing stays <b>private</b></span></p>
+    </section>
+
+    ${user ? `<h2 id="work">Your work</h2><div id="workbox"><p class="tiny">Loading…</p></div>` : ''}
+
+    <h2 id="tools">The tools</h2>
+    <div class="tools">
+      ${TOOLS.map((t, i) => `<div class="tool${t.lead ? ' lead' : ''}">
+        <p class="num">${n(i)}</p><h3>${esc(t.name)}</h3><p class="tag">${esc(t.tag)}</p><p class="desc">${esc(t.text)}</p>
+        <a class="btn go${t.lead ? '' : ' ghost'}" href="${user ? t.href : '#join'}" ${user ? '' : 'onclick="focusJoin();return false"'}>${esc(t.cta)}</a></div>`).join('')}
+      ${SOON.map(([name, text]) => `<div class="tool soon"><p class="num">SOON</p><h3>${esc(name)}</h3><p class="tag">Coming to the Lab</p><p class="desc">${esc(text)}</p></div>`).join('')}
+    </div>
+
+    <h2>From page to screen</h2>
+    <div class="steps">
+      <div><span>01</span><b>Write</b><p>Get a Script Report on every draft and see what to fix next.</p></div>
+      <div><span>02</span><b>Pitch</b><p>Turn the report into a one-page pitch and go find the money.</p></div>
+      <div><span>03</span><b>Cast and rehearse</b><p>Find actors who opted in, then send them their lines in Script Coach.</p></div>
+      <div><span>04</span><b>Release</b><p>Put the finished film on 4flieks, where your cast's links sell tickets.</p></div>
+    </div>
+
+    ${user ? '' : `<h2 id="join">Join the Lab</h2>
+    <div class="join">
+      <div>
+        <h3>Free for writers, filmmakers and actors.</h3>
+        <p class="small muted">One 4flieks account for everything. Already watch or release films on 4flieks? Sign in with the same account.</p>
+        <ul>
+          <li>5 Script Reports a month</li>
+          <li>A one-page pitch from every report</li>
+          <li>Cast suggestions for every role</li>
+          <li>5 Script Coach uploads a month</li>
+          <li>Your writing is never shared or published</li>
+        </ul>
+      </div>
+      <div id="authbox"></div>
+    </div>`}
+
+    <div class="homefoot">
+      <div><b>Finished a film?</b><p>Release it on 4flieks, the home of African film. Keep your copyright, earn 70% of every sale, and let your cast's links sell it.</p></div>
+      <a class="btn" href="/filmmaker?tab=register">Apply to release</a>
+    </div>
+    <p class="tiny" style="margin-top:14px">The Lab's AI tools are built on Claude, the AI made by Anthropic, with briefs written by 4flieks for African film.
+      Each report explains how it is made. <a href="/terms" style="color:var(--ink-2)">Terms and privacy</a></p>`;
+  if (!user) authForm();
+  if (location.hash === '#join' && !user) setTimeout(focusJoin, 50);
+  if (location.hash === '#work' && user) setTimeout(() => document.getElementById('work').scrollIntoView(), 50);
+}
+
+function focusJoin() {
+  const j = document.getElementById('join');
+  if (j) { j.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => { const f = document.getElementById('jn') || document.getElementById('je'); if (f) f.focus({ preventScroll: true }); }, 400); }
+}
+
+/* ---- join / sign in ---- */
+let joinMode = 'join', joining = false;
+function authForm() {
+  const box = document.getElementById('authbox'); if (!box) return;
+  const j = joinMode === 'join';
+  box.innerHTML = `
+    <div class="seg"><button class="${j ? 'on' : ''}" onclick="joinMode='join';authForm()">Create account</button>
+      <button class="${j ? '' : 'on'}" onclick="joinMode='in';authForm()">Sign in</button></div>
+    ${j ? `<label for="jn">Your name</label><input id="jn" type="text" maxlength="80" autocomplete="name">` : ''}
+    <label for="je">Email</label><input id="je" type="email" autocomplete="email">
+    <label for="jp">Password</label><input id="jp" type="password" autocomplete="${j ? 'new-password' : 'current-password'}"
+      onkeydown="if(event.key==='Enter')doJoin()">
+    <p class="msg" id="jmsg"></p>
+    <div class="actions" style="margin-top:8px"><button id="jgo" onclick="doJoin()">${j ? 'Create my free account' : 'Sign in'}</button>
+      ${j ? '' : `<button class="ghost" onclick="resetPw()">Forgot password</button>`}</div>
+    ${j ? `<p class="tiny" style="margin-top:10px">We'll email you a link to confirm your address. By joining you agree to the <a href="/terms" style="color:var(--ink-2)">terms</a>.</p>` : ''}`;
+}
+const jsay = (t, err) => { const m = document.getElementById('jmsg'); if (m) { m.className = 'msg' + (err ? ' err' : ''); m.textContent = t; } };
+
+async function doJoin() {
+  const email = document.getElementById('je').value.trim(), pass = document.getElementById('jp').value;
+  const btn = document.getElementById('jgo'); btn.disabled = true; jsay('One moment…');
+  try {
+    if (joinMode === 'join') {
+      const name = document.getElementById('jn').value.trim();
+      if (name.length < 2) throw { message: 'Add your name.' };
+      if (pass.length < 6) throw { message: 'Use a password of at least 6 characters.' };
+      joining = true;
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await cred.user.updateProfile({ displayName: name });
+      const token = await cred.user.getIdToken();
+      await fetch(`${DB_URL}/flieks_users/${cred.user.uid}.json?auth=${token}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, role: 'viewer', created_at: Date.now(), joined_via: 'lab' })
+      });
+      await sendVerify(cred.user);
+      joining = false;
+      startHome(cred.user);
+    } else {
+      await auth.signInWithEmailAndPassword(email, pass);
+    }
+  } catch (e) {
+    if (joining) { joining = false; if (auth.currentUser) startHome(auth.currentUser); }
+    btn.disabled = false;
+    const c = e.code || '';
+    jsay(c === 'auth/email-already-in-use' ? 'That email already has a 4flieks account. Choose "Sign in".'
+      : /wrong-password|user-not-found|invalid-login|invalid-credential/.test(c) ? 'Email or password is not right.'
+      : c === 'auth/invalid-email' ? 'Check the email address.'
+      : c === 'auth/too-many-requests' ? 'Too many tries. Wait a minute and try again.'
+      : e.message || 'Could not sign in.', true);
+  }
+}
+async function sendVerify(user) {
+  try { await user.sendEmailVerification({ url: 'https://4flieks.com/lab' }); }
+  catch (e) { try { await user.sendEmailVerification(); } catch (e2) { console.warn('verify email', e2); return false; } }
+  return true;
+}
+async function resetPw() {
+  const email = document.getElementById('je').value.trim();
+  if (!email) return jsay('Type your email first.', true);
+  try { await auth.sendPasswordResetEmail(email); jsay('Check your inbox for a reset link.'); }
+  catch { jsay('Could not send a reset link. Check the address.', true); }
+}
+async function resendVerify(btn) {
+  btn.disabled = true;
+  const ok = await sendVerify(auth.currentUser);
+  btn.textContent = ok ? 'Sent. Check your inbox (and spam).' : 'Could not send. Try again in a minute.';
+}
+
+/* The banner shown until the email is confirmed. Filmmakers and admins never see it. */
+function verifyBanner(d) {
+  if (!d || d.verified || d.role === 'filmmaker' || d.role === 'admin') return '';
+  return `<div class="banner"><b>One step left: confirm your email.</b> We sent a link to ${esc(auth.currentUser.email)}.
+    Open it, then come back here to start using the tools.<br>
+    <button class="ghost" onclick="resendVerify(this)">Send the link again</button>
+    <button class="ghost" onclick="location.reload()">I've confirmed it</button></div>`;
+}
+
+/* ---- your work ---- */
+const post = async (url, body) => {
+  const token = await auth.currentUser.getIdToken();
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) });
+  return { ok: r.ok, d: await r.json().catch(() => ({})) };
+};
+async function loadWork() {
+  const box = document.getElementById('workbox'); if (!box) return;
+  const [rep, coach, tal] = await Promise.all([
+    call('list'),
+    post('/.netlify/functions/script-coach-start', { action: 'list' }).catch(() => ({ ok: false, d: {} })),
+    post('/.netlify/functions/flieks-talent', { action: 'me' }).catch(() => ({ ok: false, d: {} }))
+  ]);
+  const rd = rep.ok ? rep.d : { items: [] }, cd = coach.ok ? coach.d : { items: [] }, td = tal.ok ? tal.d : {};
+  const label = s => ({ queued: 'Starting', working: 'Reading…', done: 'Ready', error: 'Failed' }[s.status] || s.status) + (s.verdict ? ` · ${s.verdict}` : '');
+  const left = (d, what) => d.limit ? `${Math.max(0, d.limit - (d.used || 0))} of ${d.limit} ${what} left this month` : 'No monthly limit';
+  const reports = (rd.items || []).slice(0, 6);
+  const scripts = (cd.items || []).filter(x => x.filmSlug).slice(0, 6);
+  const pending = (cd.items || []).filter(x => !x.filmSlug && Date.now() - (x.at || 0) < 20 * 60e3).length;
+  const tp = td.profile;
+  box.innerHTML = `${verifyBanner(rd)}
+    <div class="work">
+      <div class="box"><h3>Script Reports</h3><p class="mini">${esc(left(rd, 'reports'))}</p>
+        ${reports.length ? reports.map(r => `<div class="item"><div><a href="/lab/r/${esc(r.id)}">${esc(r.title)}</a><div class="st">${esc(label(r))} · ${esc(dateStr(r.created_at))}</div></div></div>`).join('')
+          : `<p class="small muted" style="margin:10px 0">No reports yet.</p>`}
+        <div class="actions"><a class="btn" href="/lab/report">New report</a>${(rd.items || []).length > 6 ? `<a class="btn ghost" href="/lab/report">All ${rd.items.length}</a>` : ''}</div></div>
+      <div class="box"><h3>Script Coach</h3><p class="mini">${esc(left(cd, 'uploads'))}</p>
+        ${scripts.length ? scripts.map(x => `<div class="item"><div><a href="/script-coach.html?film=${encodeURIComponent(x.filmSlug)}">${esc(x.title)}</a>
+            <div class="st">${x.characters || 0} characters · ${x.listed ? 'Listed in Script Coach' : 'Private: share the link'}</div></div></div>`).join('')
+          : `<p class="small muted" style="margin:10px 0">${pending ? 'Your script is being read. It will appear here when it is ready.' : 'No scripts yet.'}</p>`}
+        <div class="actions"><a class="btn ghost" href="/script-upload.html">Upload a script</a></div></div>
+      <div class="box"><h3>Talent profile</h3>
+        ${tp ? `<p class="small" style="margin:8px 0 4px"><b>${esc(tp.name)}</b></p>
+            <p class="small muted">${tp.suggest ? 'Suggestions on: filmmakers can find you.' : 'Suggestions off: your profile is private.'}
+              ${Object.keys(tp.credits || {}).length} approved credit${Object.keys(tp.credits || {}).length === 1 ? '' : 's'}.</p>`
+          : `<p class="small muted" style="margin:10px 0">Act or work on crew? Make a profile and choose whether filmmakers can find you.</p>`}
+        <div class="actions"><a class="btn ghost" href="/talent">${tp ? 'Edit profile' : 'Make my profile'}</a></div>
+        <p class="tiny" style="margin-top:14px">Signed in as ${esc(auth.currentUser.email)} · <a href="#" onclick="auth.signOut();return false" style="color:var(--ink-2)">Sign out</a></p></div>
+    </div>`;
+}
+
+function startHome(user) { setNav(user, 'home'); showHome(user); if (user) loadWork(); }
+
+/* ================= routing ================= */
+
 if (pitchId) {
-  authReady.then(() => showPitch(pitchId));
+  setNav(null, 'report');
+  authReady.then(u => { setNav(u, 'report'); showPitch(pitchId); });
 } else if (reportId) {
-  authReady.then(() => showReport(reportId));
-} else {
+  setNav(null, 'report');
+  authReady.then(u => { setNav(u, 'report'); showReport(reportId); });
+} else if (isReportTool) {
   auth.onAuthStateChanged(async user => {
+    setNav(user, 'report');
     if (!user) {
-      gate(`<h1>Script Report</h1><p class="muted" style="margin:8px 0 18px">AI coverage for your screenplay, free for 4flieks filmmakers.</p>
-        <a class="btn" href="/filmmaker">Sign in to 4flieks</a>`);
+      gate(`<h1>Script Report</h1><p class="muted" style="margin:8px 0 18px">Expert-style coverage for your screenplay or story. Free in 4flieks Lab.</p>
+        <a class="btn" href="/lab#join">Join or sign in</a>`);
       return;
     }
     workspaceShell();
     const { ok, d } = await call('list');
-    if (ok && d.role !== 'filmmaker' && d.role !== 'admin') {
-      gate(`<h1>Script Report</h1><p class="muted" style="margin:8px 0 18px">Script Report is for 4flieks filmmakers.</p>
-        <a class="btn" href="/filmmaker">Apply as a filmmaker</a>`);
-      return;
-    }
+    if (ok) { const b = verifyBanner(d); if (b) app.insertAdjacentHTML('afterbegin', b); }
     loadList();
   });
+} else {
+  auth.onAuthStateChanged(user => { if (joining) return; startHome(user); });
 }
 </script>
 </body>

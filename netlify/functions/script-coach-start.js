@@ -8,6 +8,11 @@
  * secret the browser never sees.
  *
  * POST { token, title, writers, storyBy, fileBase64, fileName, jobId } -> { ok }
+ * POST { token, action: 'list' } -> { items, limit, used }   my Coach scripts
+ *
+ * Open to any 4flieks Lab member with a verified email. Filmmakers' and admins'
+ * scripts go on the public Script Coach picker as before; everyone else's are
+ * private, reachable only through the links on their own Lab page.
  */
 const crypto = require('crypto');
 const ops = require('../lib/ops-core');
@@ -38,8 +43,19 @@ exports.handler = async event => {
     if (!u) return reply(401, { message: 'Please sign in.' });
     const profile = await ops.dbGet(`flieks_users/${u.localId}`) || {};
     const role = profile.role;
-    if (role !== 'admin' && role !== 'filmmaker') {
-      return reply(403, { message: 'Script upload is for 4flieks filmmakers.' });
+    const trusted = role === 'admin' || role === 'filmmaker';
+
+    if (b.action === 'list') {
+      const mine = await ops.dbGet(`flieks_script_coach_usage/${u.localId}`) || {};
+      const done = await ops.dbGet(`flieks_coach_by_user/${u.localId}`) || {};
+      const since = Date.now() - 30 * DAY;
+      const items = Object.entries(mine).map(([jobId, at]) => ({ jobId, at, ...(done[jobId] || {}) }))
+        .sort((x, y) => (y.at || 0) - (x.at || 0));
+      return reply(200, { items, limit: role === 'admin' ? null : LIMIT, used: Object.values(mine).filter(t => t >= since).length });
+    }
+
+    if (!trusted && !u.emailVerified) {
+      return reply(403, { code: 'verify', message: 'Verify your email first: open the link we sent you, then try again.' });
     }
 
     const title = String(b.title || '').trim().slice(0, 120);
@@ -67,7 +83,8 @@ exports.handler = async event => {
       headers: { 'Content-Type': 'application/json', 'x-job-secret': coachSecret() },
       body: JSON.stringify({
         title, writers: String(b.writers || '').slice(0, 300), storyBy: String(b.storyBy || '').slice(0, 300),
-        fileBase64: b.fileBase64, fileName, jobId
+        fileBase64: b.fileBase64, fileName, jobId,
+        owner: u.localId, listed: trusted, canReplace: role === 'admin'
       })
     }).catch(e => ({ ok: false, status: 0 }));
     if (kick.status !== 202 && !kick.ok) return reply(502, { message: 'Could not start the extraction. Try again.' });

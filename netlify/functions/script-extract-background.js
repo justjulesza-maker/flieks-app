@@ -24,6 +24,11 @@ async function fbWrite(path, data, firebaseUrl, firebaseSecret) {
   return res;
 }
 
+async function fbGet(path, firebaseUrl, firebaseSecret) {
+  const res = await fetch(`${firebaseUrl}/${path}.json?auth=${firebaseSecret}`);
+  return res.ok ? res.json() : null;
+}
+
 async function fbPatch(path, data, firebaseUrl, firebaseSecret) {
   const res = await fetch(`${firebaseUrl}/${path}.json?auth=${firebaseSecret}`, {
     method: "PATCH",
@@ -59,7 +64,7 @@ exports.handler = async (event) => {
   let jobId, filmSlug;
 
   try {
-    const { title, writers, storyBy, fileBase64, fileName, jobId: clientJobId } = JSON.parse(event.body);
+    const { title, writers, storyBy, fileBase64, fileName, jobId: clientJobId, owner, listed, canReplace } = JSON.parse(event.body);
 
     if (!title || !fileBase64 || !fileName || !clientJobId) {
       console.error("Missing required fields");
@@ -67,7 +72,17 @@ exports.handler = async (event) => {
     }
 
     jobId = clientJobId;
-    filmSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    filmSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "script";
+    // Lab members' scripts are private: an unguessable slug, and never in the public picker.
+    // A listed script also gets its own slug if the title is already someone else's,
+    // so one upload can never overwrite another person's script. Admins may replace
+    // the older scripts that were uploaded before owners were recorded.
+    const taken = await fbGet(`flieks_coach_owner/${filmSlug}`, firebaseUrl, firebaseSecret);
+    const legacy = !taken && await fbGet(`script_coach/films/${filmSlug}/meta/title`, firebaseUrl, firebaseSecret);
+    if (listed === false || (taken && taken !== owner) || (legacy && !canReplace)) {
+      filmSlug = `${filmSlug}-${crypto.randomBytes(8).toString("hex")}`;
+    }
+    if (owner) await fbWrite(`flieks_coach_owner/${filmSlug}`, owner, firebaseUrl, firebaseSecret);
 
     // Mark job as processing
     await fbWrite(`script_coach/jobs/${jobId}`, {
@@ -304,7 +319,7 @@ Return ONLY valid JSON (no markdown fences, no commentary):
         lineCount: char.lines.length,
         createdAt: new Date().toISOString()
       };
-      await fbWrite(`script_coach/index/${indexKey}`, indexEntry, firebaseUrl, firebaseSecret);
+      if (listed !== false) await fbWrite(`script_coach/index/${indexKey}`, indexEntry, firebaseUrl, firebaseSecret);
 
       characterResults.push({
         name: char.name,
@@ -337,6 +352,13 @@ Return ONLY valid JSON (no markdown fences, no commentary):
       characters: characterResults,
       finishedAt: new Date().toISOString()
     }, firebaseUrl, firebaseSecret);
+
+    if (owner) {
+      await fbWrite(`flieks_coach_by_user/${owner}/${jobId}`, {
+        title, filmSlug, listed: listed !== false, characters: characterResults.length,
+        finished_at: Date.now()
+      }, firebaseUrl, firebaseSecret);
+    }
 
     console.log(`✅ Script extraction complete: ${title} — ${characterResults.length} characters`);
     return { statusCode: 200 };

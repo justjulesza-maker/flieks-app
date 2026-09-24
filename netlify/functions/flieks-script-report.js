@@ -17,6 +17,8 @@
  *                                                          (their address is never shown; replies
  *                                                          come straight to the filmmaker)
  *
+ * Open to any 4flieks Lab member with a verified email (filmmakers and admins always).
+ *
  * The screenplay is uploaded by the browser to Storage (flieks_scripts/lab_<uid>/…,
  * owner-only under the Storage rules) and only its download link comes here.
  * The reading itself happens in script-report-background, which can run for
@@ -45,7 +47,7 @@ async function lookup(token) {
   const u = ((await r.json().catch(() => ({}))).users || [])[0];
   if (!u) return null;
   const profile = await ops.dbGet(`flieks_users/${u.localId}`) || {};
-  return { uid: u.localId, email: u.email || '', role: profile.role || 'viewer', name: profile.name || '' };
+  return { uid: u.localId, email: u.email || '', role: profile.role || 'viewer', name: profile.name || '', verified: !!u.emailVerified };
 }
 
 const newId = () => crypto.randomBytes(15).toString('base64').replace(/[+/=]/g, '').slice(0, 20);
@@ -133,7 +135,7 @@ exports.handler = async event => {
         .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
       const since = Date.now() - 30 * DAY;
       const used = items.filter(r => (r.created_at || 0) >= since).length;
-      return reply(200, { items, limit: me.role === 'admin' ? null : LIMIT, used, role: me.role });
+      return reply(200, { items, limit: me.role === 'admin' ? null : LIMIT, used, role: me.role, verified: me.verified });
     }
 
     if (action === 'delete') {
@@ -149,8 +151,9 @@ exports.handler = async event => {
 
     /* ---- start one ---- */
     if (action === 'start') {
-      if (me.role !== 'filmmaker' && me.role !== 'admin') {
-        return reply(403, { message: 'Script Report is for 4flieks filmmakers. Apply at 4flieks.com/filmmaker.' });
+      // Any Lab member with a verified email; filmmakers and admins are already known.
+      if (me.role !== 'filmmaker' && me.role !== 'admin' && !me.verified) {
+        return reply(403, { code: 'verify', message: 'Verify your email first: open the link we sent you, then try again.' });
       }
       const title = String(body.title || '').trim().slice(0, 120);
       const writer = String(body.writer || '').trim().slice(0, 120);

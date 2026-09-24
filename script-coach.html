@@ -600,6 +600,20 @@ async function checkAnswer() {
     return;
   }
 
+  // One script, all its characters: ?film=slug (private Lab scripts are reached this way)
+  if (filmParam) {
+    try {
+      const r = await fetch(`${FIREBASE_DB}/script_coach/films/${encodeURIComponent(filmParam)}/meta.json`);
+      const m = r.ok ? await r.json() : null;
+      if (m && m.characters && m.characters.length) {
+        fullIndex.length = 0;
+        m.characters.forEach(c => fullIndex.push({ film: filmParam, character_slug: c.slug, title: m.title, character: c.name, lineCount: c.lineCount, dynamic: true }));
+        renderPicker();
+        return;
+      }
+    } catch (e) { console.warn("Could not load that script:", e.message); }
+  }
+
   // Direct static file link: ?script=filename.json
   const directScript = params.get("script");
   if (directScript) {

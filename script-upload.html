@@ -338,6 +338,8 @@
 <body>
 
 <div class="container">
+  <p style="font:700 11px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;margin:0 0 18px">
+    <a href="/lab" style="color:inherit;text-decoration:none">← 4flieks Lab</a></p>
 
   <!-- ── Upload Form ── -->
   <div id="formSection">
@@ -401,7 +403,7 @@
   </div>
 
   <div class="footer">
-    <a href="index.html">4Flieks</a> · Script Coach
+    <a href="/lab">4flieks Lab</a> · Script Coach · Your scripts are listed on your Lab page
   </div>
 
 </div>
@@ -418,7 +420,7 @@ firebase.initializeApp({
   messagingSenderId: "392470139152",
   appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
 });
-// Uploading runs the AI on a whole screenplay, so it needs a signed-in filmmaker.
+// Uploading runs the AI on a whole screenplay, so it needs a signed-in 4flieks Lab member.
 firebase.auth().onAuthStateChanged(user => {
   const form = document.getElementById("formSection");
   let note = document.getElementById("signinNote");
@@ -427,7 +429,7 @@ firebase.auth().onAuthStateChanged(user => {
       note = document.createElement("p");
       note.id = "signinNote";
       note.style.cssText = "margin:0 0 16px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card-bg)";
-      note.innerHTML = 'Sign in to 4flieks as a filmmaker to upload scripts. <a href="/filmmaker" style="color:var(--accent)">Sign in</a>';
+      note.innerHTML = 'Script Coach is part of 4flieks Lab, free to join. <a href="/lab#join" style="color:var(--accent)">Join or sign in</a>';
       form.parentNode.insertBefore(note, form);
     }
     form.style.opacity = ".45"; form.style.pointerEvents = "none";
