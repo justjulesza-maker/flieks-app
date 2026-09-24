@@ -557,9 +557,8 @@ async function checkAnswer() {
       })
     });
 
-    if (!res.ok) throw new Error(`Server returned ${res.status}`);
-    const fb = await res.json();
-    if (fb.error) throw new Error(fb.error);
+    const fb = await res.json().catch(() => ({}));
+    if (!res.ok || fb.error) throw new Error(fb.error || `Server returned ${res.status}`);
 
     const col = scoreColor(fb.score);
     stats.attempts++;

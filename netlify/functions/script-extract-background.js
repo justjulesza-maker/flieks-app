@@ -6,6 +6,10 @@
 // Env vars required: ANTHROPIC_API_KEY, FIREBASE_DB_URL, FIREBASE_DB_SECRET
 
 const pdfParse = require("pdf-parse");
+const crypto = require("crypto");
+
+// Only script-coach-start (which checks who is asking) may start a job.
+const coachSecret = () => crypto.createHash("sha256").update(String(process.env.FIREBASE_DB_SECRET) + ":script-coach").digest("hex");
 
 // ── Firebase helper ──
 async function fbWrite(path, data, firebaseUrl, firebaseSecret) {
@@ -33,6 +37,13 @@ async function fbPatch(path, data, firebaseUrl, firebaseSecret) {
 }
 
 exports.handler = async (event) => {
+  const given = String((event.headers || {})["x-job-secret"] || "");
+  const want = coachSecret();
+  if (given.length !== want.length || !crypto.timingSafeEqual(Buffer.from(given), Buffer.from(want))) {
+    console.warn("script-extract-background: refused, not called by script-coach-start");
+    return { statusCode: 403 };
+  }
+
   // Background functions ignore the return value — Netlify sends 202 immediately.
   // All results go to Firebase so the client can poll.
 

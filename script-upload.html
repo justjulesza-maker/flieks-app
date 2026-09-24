@@ -406,9 +406,40 @@
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+});
+// Uploading runs the AI on a whole screenplay, so it needs a signed-in filmmaker.
+firebase.auth().onAuthStateChanged(user => {
+  const form = document.getElementById("formSection");
+  let note = document.getElementById("signinNote");
+  if (!user) {
+    if (!note) {
+      note = document.createElement("p");
+      note.id = "signinNote";
+      note.style.cssText = "margin:0 0 16px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card-bg)";
+      note.innerHTML = 'Sign in to 4flieks as a filmmaker to upload scripts. <a href="/filmmaker" style="color:var(--accent)">Sign in</a>';
+      form.parentNode.insertBefore(note, form);
+    }
+    form.style.opacity = ".45"; form.style.pointerEvents = "none";
+  } else {
+    if (note) note.remove();
+    form.style.opacity = ""; form.style.pointerEvents = "";
+  }
+});
+</script>
 <script>
 (function () {
-  const EXTRACT_URL = "/.netlify/functions/script-extract-background";
+  const EXTRACT_URL = "/.netlify/functions/script-coach-start";
   const FIREBASE_DB  = "https://flieks-app-default-rtdb.firebaseio.com";
 
   // ── Elements ──
@@ -516,7 +547,7 @@
 
   // ── Generate a unique job ID ──
   function makeJobId(title) {
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
     return slug + "-" + Date.now();
   }
 
@@ -598,6 +629,9 @@
     });
 
     const jobId = makeJobId(title);
+    const user = firebase.auth().currentUser;
+    if (!user) { showError("Please sign in to 4flieks first."); return; }
+    const token = await user.getIdToken();
 
     showSection("progress");
     startProgress();
@@ -607,6 +641,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          token,
           title,
           writers,
           storyBy,
@@ -616,8 +651,8 @@
         })
       });
 
-      // Background functions return 202 — that's success
-      if (res.status === 202) {
+      // The gate checks who you are, then starts the extraction in the background.
+      if (res.ok) {
         // Function accepted — now poll Firebase for results
         progressStatus.textContent = "Script accepted — AI is working…";
         progressDetail.textContent = "This usually takes 30–90 seconds for a full screenplay";
@@ -625,12 +660,10 @@
         return;
       }
 
-      // If we got something else, the function might not be deployed as background
       stopProgress();
-      const text = await res.text();
-      console.error("Unexpected response:", res.status, text.substring(0, 500));
+      const d = await res.json().catch(() => ({}));
       showSection("form");
-      showError(`Server returned ${res.status} instead of 202. Make sure script-extract-background.js is deployed.`);
+      showError(d.message || `Could not start (error ${res.status}). Try again.`);
 
     } catch (err) {
       stopProgress();
