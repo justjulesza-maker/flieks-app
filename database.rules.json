@@ -16,30 +16,36 @@
       }
     },
     "flieks_users": {
-      ".read": "auth != null",
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
       "$uid": {
-        ".write": "$uid === auth.uid || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'"
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+        "role": { ".validate": "newData.val() === data.val() || (!data.exists() && (newData.val() === 'viewer' || newData.val() === 'filmmaker_pending')) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" }
       }
     },
     "flieks_purchases": {
-      ".read": "auth != null",
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
       "$uid": {
+        ".read": "$uid === auth.uid",
         ".write": false
       }
     },
     "flieks_transactions": {
-      ".read": "auth != null",
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
       ".indexOn": ["filmmaker_uid", "uid"],
-      "$txId": { ".write": "auth != null && !data.exists()" }
+      "$txId": { ".write": false }
     },
     "flieks_admin_queue": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      ".indexOn": ["status"]
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      ".indexOn": ["status"],
+      "$qid": { ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (!data.exists() && newData.child('filmmaker_uid').val() === auth.uid))" }
     },
     "flieks_filmmaker_applications": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      "$appId": {
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || ((data.exists() ? data.child('uid').val() === auth.uid : newData.child('uid').val() === auth.uid) && (!newData.exists() || newData.child('uid').val() === auth.uid)))",
+        "status": { ".validate": "newData.val() === data.val() || newData.val() === 'pending' || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" }
+      }
     },
     "flieks_payouts": {
       ".read": false,
@@ -63,7 +69,7 @@
     "flieks_film_slugs": {
       ".read": true,
       "$slug": {
-        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_users').child(auth.uid).child('role').val() === 'filmmaker')",
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (root.child('flieks_users').child(auth.uid).child('role').val() === 'filmmaker' && (!data.exists() || root.child('flieks_films').child(data.val()).child('filmmaker_uid').val() === auth.uid) && (!newData.exists() || root.child('flieks_films').child(newData.val()).child('filmmaker_uid').val() === auth.uid)))",
         ".validate": "newData.isString()"
       }
     },
