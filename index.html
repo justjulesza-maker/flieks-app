@@ -75,11 +75,37 @@ html[data-mode="light"] .player-controls{background:#0D0D0D;color:#F0EDE8}
 html[data-mode="light"] .player-controls *{color:inherit}
 
 /* Poster overlays assume a dark page behind them. */
-html[data-mode="light"] .f-overlay,
-html[data-mode="light"] .hero-poster .overlay{
+html[data-mode="light"] .f-overlay{
   background:linear-gradient(to top,rgba(0,0,0,.72) 0%,transparent 55%)}
-html[data-mode="light"] .film-thumb .f-title,
-html[data-mode="light"] .hero-poster .f-title{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+html[data-mode="light"] .film-thumb .f-title{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+
+/* Text laid over poster artwork (hero card, film page header). Many
+   posters carry their own title and credits, so our text needs a real
+   scrim under it — not a light fade — or the two collide. The scrim is
+   strong at the bottom (title), light at the top (badges), and clear
+   through the middle so the artwork still reads. Always white, in Day
+   and Night mode alike: the artwork is dark either way. */
+.poster-scrim{position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.6) 32%,rgba(0,0,0,0) 62%),
+    linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 26%)}
+.poster-title{color:#fff !important;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+.poster-byline{text-shadow:0 1px 6px rgba(0,0,0,.8)}
+/* Badges on artwork need a solid fill — the translucent tag style
+   disappears into whatever credits the poster has up there. */
+.poster-badge{background:var(--amber) !important;color:#111 !important;border-color:transparent !important}
+.poster-chip{background:rgba(0,0,0,.6) !important;color:#eee !important;border:1px solid rgba(255,255,255,.18) !important}
+
+/* While a poster is still downloading, show a soft moving sheen instead of
+   a flat black card — on slow mobile data a plain black tile reads as
+   broken. trackPosters() removes the class the moment the image lands (or
+   fails), and skips it entirely for images already in the cache. ::before
+   comes first in the element, so the title and badges still paint on top. */
+.poster-loading::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.07) 42%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.07) 58%,transparent 80%);
+  background-size:220% 100%;animation:poster-sheen 1.3s ease-in-out infinite}
+@keyframes poster-sheen{from{background-position:130% 0}to{background-position:-30% 0}}
+@media (prefers-reduced-motion:reduce){.poster-loading::before{animation:none;background:rgba(255,255,255,.06)}}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
 body{max-width:480px;margin:0 auto;position:relative}
@@ -189,11 +215,6 @@ input,textarea{font-family:var(--fb)}
 /* ===================== CHECKOUT ===================== */
 .summary-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
 .summary-row{display:flex;justify-content:space-between;margin-bottom:8px}
-.pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.pay-opt{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:border-color .2s}
-.pay-opt.on{border-color:var(--amber)}
-.pay-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s}
-.pay-opt.on .pay-dot{background:var(--amber)}
 
 /* ===================== PLAYER ===================== */
 .video-wrap{background:#000;position:relative;flex-shrink:0}
@@ -441,7 +462,7 @@ input,textarea{font-family:var(--fb)}
     <video id="flieks-video" playsinline
            poster=""
            x-webkit-airplay="allow"
-           controlsList="nodownload noplaybackrate noremoteplayback"
+           controlsList="nodownload noplaybackrate"
            disablepictureinpicture="false"
            oncontextmenu="return false"
            onclick="togglePlay()"
@@ -449,6 +470,9 @@ input,textarea{font-family:var(--fb)}
            ontimeupdate="updateProgress()"
            onended="videoEnded()">
     </video>
+    <button class="fs-btn" id="cast-btn" onclick="toggleCast()" aria-label="Play on TV" style="display:none;right:56px">
+      <svg viewBox="0 0 24 24"><path d="M2 20h.01M2 16a4 4 0 0 1 4 4M2 12a8 8 0 0 1 8 8"/><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
+    </button>
     <button class="fs-btn" onclick="toggleFullscreen()" aria-label="Fullscreen">
       <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m11-5v3a2 2 0 0 1-2 2h-3"/></svg>
     </button>
@@ -1149,21 +1173,21 @@ function renderHome(genre = 'all') {
 function heroHTML(f) {
   const rating = f.rating_avg ? f.rating_avg.toFixed(1) : '—';
   return `<div class="hero-card" onclick="openFilm('${f.id}')">
-    <div class="hero-poster" style="background:${f.poster_bg||'#1C1A10'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:top center':''}">
-      <div class="grain"></div>
-      <div class="overlay"></div>
-      <div style="position:absolute;top:12px;left:12px" class="tag tag-amber">FEATURED</div>
-      <div style="position:absolute;top:12px;right:12px;background:var(--scrim);padding:3px 8px;border-radius:4px;display:flex;align-items:center;gap:4px">
-        <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:#888;fill:none;stroke-width:2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span style="font-size:10px;color:#AAA">${f.duration_mins} min</span>
+    <div class="hero-poster${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1C1A10'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:top center':''}">
+      ${f.poster_url ? '' : '<div class="grain"></div>'}
+      <div class="poster-scrim"></div>
+      <div style="position:absolute;top:12px;left:12px;z-index:1" class="tag tag-amber poster-badge">FEATURED</div>
+      <div style="position:absolute;top:12px;right:12px;z-index:1;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:4px;display:flex;align-items:center;gap:4px">
+        <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:#ccc;fill:none;stroke-width:2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span style="font-size:10px;color:#ddd">${f.duration_mins} min</span>
       </div>
       <div style="position:relative;z-index:1">
-        <p class="bbn" style="font-size:32px;color:var(--text);line-height:1">${f.title}</p>
-        <p style="font-size:10px;color:var(--amber);margin-top:3px;letter-spacing:1px">${f.filmmaker.toUpperCase()} · ${(f.filmmaker_location||'').toUpperCase()}</p>
+        <p class="bbn poster-title" style="font-size:32px;line-height:1">${escHtml(f.title)}</p>
+        <p class="poster-byline" style="font-size:10px;color:var(--amber);margin-top:3px;letter-spacing:1px">${escHtml([f.filmmaker, f.filmmaker_location].filter(Boolean).join(' · ').toUpperCase())}</p>
       </div>
     </div>
     <div class="hero-meta">
-      <div class="pill-row">${(f.genre||[]).map(g=>`<span class="tag tag-gray">${g}</span>`).join('')} <span class="tag tag-gray">${f.language||''}</span></div>
+      <div class="pill-row">${(f.genre||[]).map(g=>`<span class="tag tag-gray">${escHtml(g)}</span>`).join('')} <span class="tag tag-gray">${escHtml(f.language||'')}</span></div>
       <div class="price-row">
         ${f.free ? '<span style="color:var(--green);font-size:12px;font-weight:700">FREE</span>' : `<span style="color:var(--muted);font-size:12px">R${f.price_rent} watch</span><span style="color:var(--amber);font-size:12px;font-weight:700">R${f.price_own} own</span>`}
       </div>
@@ -1174,13 +1198,13 @@ function heroHTML(f) {
 function filmCardHTML(f) {
   const owned = userPurchases[f.id];
   return `<div class="film-card" onclick="openFilm('${f.id}')">
-    <div class="film-thumb" style="background:${f.poster_bg||'#1A1A1A'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:center':''}">
+    <div class="film-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:center':''}">
       <div class="f-overlay"></div>
       ${f.is_new ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-red">NEW</div>` : ''}
       <span class="dur">${f.duration_mins}m</span>
-      <span class="f-title">${f.title}</span>
+      <span class="f-title">${escHtml(f.title)}</span>
     </div>
-    <p class="fmaker">${f.filmmaker}</p>
+    <p class="fmaker">${escHtml(f.filmmaker)}</p>
     <p class="fprice ${f.free?'free':''}">${owned ? '✓ Owned' : f.free ? 'FREE' : `R${f.price_rent} watch`}</p>
   </div>`;
 }
@@ -1210,28 +1234,29 @@ function renderFilmDetail() {
   const purchased = userPurchases[f.id];
   const rating = f.rating_avg ? f.rating_avg.toFixed(1) : '—';
   const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : f.view_count || 0;
-  const genres = (f.genre||[]).map(g=>`<span class="tag tag-gray">${g}</span>`).join(' ');
   const html = `
-    <div class="film-poster-lg" style="background:${f.poster_bg||'#1C1A10'}${
+    <div class="film-poster-lg${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1C1A10'}${
       f.poster_url ? `;background-image:url('${f.poster_url}');background-size:cover;background-position:center` : ''}">
       ${!f.poster_url ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0,transparent 1px,transparent 4px);opacity:.5"></div>` : ''}
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 50%)"></div>
+      <div class="poster-scrim"></div>
       ${!purchased ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
         <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(245,166,35,.5);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="watchTrailer('${f.id}')">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--amber);stroke:none;margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
         </div>
       </div>` : ''}
       <div style="position:relative;z-index:1">
-        <div style="display:flex;gap:6px;margin-bottom:8px">${genres} <span class="tag tag-gray">${f.language||''}</span></div>
-        <p class="bbn" style="font-size:44px;color:var(--text);line-height:1">${f.title}</p>
+        <div style="display:flex;gap:6px;margin-bottom:8px">${
+          [...(f.genre||[]), f.language].filter(Boolean)
+            .map(g => `<span class="tag poster-chip">${escHtml(g)}</span>`).join('')}</div>
+        <p class="bbn poster-title" style="font-size:44px;line-height:1">${escHtml(f.title)}</p>
       </div>
     </div>
     <div style="padding:0 20px 14px;display:flex;justify-content:space-between;align-items:center">
       <div class="filmmaker-row">
-        <div class="filmmaker-avatar" style="background:var(--red);color:#fff">${f.filmmaker.charAt(0)}</div>
+        <div class="filmmaker-avatar" style="background:var(--red);color:#fff">${escHtml((f.filmmaker||'?').charAt(0))}</div>
         <div>
-          <p style="font-size:14px;font-weight:600;color:var(--text)">${f.filmmaker}</p>
-          <p style="font-size:12px;color:var(--muted)">${f.filmmaker_location||''}</p>
+          <p style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(f.filmmaker)}</p>
+          <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker_location||'')}</p>
         </div>
       </div>
       <div class="stats-row">
@@ -1243,7 +1268,7 @@ function renderFilmDetail() {
     <div class="divider"></div>
     <div style="padding:14px 20px">
       <p class="section-label">SYNOPSIS</p>
-      <p style="color:#999;font-size:14px;line-height:1.7">${f.synopsis||''}</p>
+      <p style="color:#999;font-size:14px;line-height:1.7">${escHtml(f.synopsis||'')}</p>
     </div>
     <div id="film-cast-wall"></div>
     <div id="film-reviews"></div>
@@ -2099,11 +2124,11 @@ function renderCheckout() {
     </div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;margin-bottom:14px">
       <div style="width:48px;height:58px;border-radius:8px;background:${f.poster_bg||'#1A1A1A'};display:flex;align-items:flex-end;padding:5px;flex-shrink:0">
-        <span style="font-family:var(--fn);font-size:12px;color:var(--text);line-height:1.1">${f.title}</span>
+        <span style="font-family:var(--fn);font-size:12px;color:var(--text);line-height:1.1">${escHtml(f.title)}</span>
       </div>
       <div>
-        <p style="font-size:14px;font-weight:600;color:var(--text)">${f.title}</p>
-        <p style="font-size:12px;color:var(--muted);margin-top:2px">${f.filmmaker} · ${f.duration_mins} min</p>
+        <p style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(f.title)}</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:2px">${escHtml(f.filmmaker)} · ${f.duration_mins} min</p>
         <span class="tag ${type==='own'?'tag-amber':'tag-gray'}" style="margin-top:4px;display:inline-block">${label}</span>
       </div>
     </div>
@@ -2121,31 +2146,12 @@ function renderCheckout() {
       <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <p>Payments secured by Yoco. <strong style="color:var(--amber)">70%</strong> of every purchase goes directly to the filmmaker.</p>
     </div>
-    <p class="section-label" style="margin-bottom:10px">PAY WITH</p>
-    <div class="pay-methods" id="pay-methods">
-      <div class="pay-opt on" onclick="selectPayMethod(this,'card')"><div class="pay-dot"></div><span style="font-size:14px;font-weight:600;color:var(--text)">Card</span></div>
-      <div class="pay-opt" onclick="selectPayMethod(this,'eft')"><div class="pay-dot"></div><span style="font-size:14px;color:var(--muted)">Ozow EFT</span></div>
-    </div>
-    <div class="pay-opt" style="margin-bottom:16px" onclick="selectPayMethod(this,'snapscan')"><div class="pay-dot"></div><span style="font-size:14px;color:var(--muted)">SnapScan / Yoco</span></div>
     <button class="btn btn-amber" onclick="processPayment(${amount},${total})" style="margin-bottom:10px">PAY R${total.toFixed(2)}</button>
     <p style="text-align:center;color:var(--dim);font-size:12px;line-height:1.6">
-      You'll be redirected to Yoco to complete payment securely.<br>
+      You'll choose how to pay — card, EFT or SnapScan — on Yoco's secure payment page next.<br>
       By paying you agree to our <a href="/terms" style="color:var(--muted);text-decoration:underline">terms</a>
       and <a href="/terms#refunds" style="color:var(--muted);text-decoration:underline">refund policy</a>.</p>
   `;
-}
-
-function selectPayMethod(el, method) {
-  document.querySelectorAll('.pay-opt').forEach(o => {
-    o.classList.remove('on');
-    o.querySelector('.pay-dot').style.background = 'var(--border)';
-    o.querySelector('span').style.color = 'var(--muted)';
-    o.querySelector('span').style.fontWeight = '400';
-  });
-  el.classList.add('on');
-  el.querySelector('.pay-dot').style.background = 'var(--amber)';
-  el.querySelector('span').style.color = 'var(--text)';
-  el.querySelector('span').style.fontWeight = '600';
 }
 
 async function processPayment(amount, total, extra) {
@@ -2327,6 +2333,7 @@ function launchPlayer(film, isOwned) {
   document.getElementById('own-badge').style.display = isOwned ? 'flex' : 'none';
   nav('player');
   syncVolumeIcon();
+  initCastButton(video);
   video.play().catch(() => {});
   // Increment view count
   if (film.id) {
@@ -2452,6 +2459,52 @@ function toggleFullscreen() {
   }
 }
 
+/* AirPlay (Safari on iPhone, iPad, Mac) and Cast (Chrome) via the
+   browsers' own remote-playback APIs — no Google Cast SDK, and it works
+   with our custom controls because it targets the <video> element itself.
+
+   The button is driven by *availability*, not by whether the API exists:
+   it appears only when a TV is actually reachable AND the current stream
+   can be sent to it. That matters on Chrome, where Bunny's adaptive
+   streams play through hls.js (MediaSource), which Chrome cannot cast —
+   an "API exists" check would show a button there that always fails. */
+function initCastButton(video) {
+  const btn = document.getElementById('cast-btn');
+  if (!btn) return;
+  btn.style.display = 'none';
+
+  // Safari: tells us when an AirPlay target is on the network.
+  if (window.WebKitPlaybackTargetAvailabilityEvent) {
+    if (!video._airplayWatched) {
+      video._airplayWatched = true;
+      video.addEventListener('webkitplaybacktargetavailabilitychanged', e => {
+        btn.style.display = e.availability === 'available' ? 'flex' : 'none';
+      });
+    }
+    return;
+  }
+
+  // Chrome: reports false (or rejects) for anything it can't cast.
+  if (video.remote && typeof video.remote.watchAvailability === 'function') {
+    video.remote.cancelWatchAvailability().catch(() => {});
+    video.remote.watchAvailability(available => {
+      btn.style.display = available ? 'flex' : 'none';
+    }).catch(() => { btn.style.display = 'none'; });
+  }
+}
+
+function toggleCast() {
+  const v = document.getElementById('flieks-video');
+  if (!v) return;
+  if (typeof v.webkitShowPlaybackTargetPicker === 'function') {
+    v.webkitShowPlaybackTargetPicker();
+  } else if (v.remote) {
+    v.remote.prompt().catch(() => showSnack('No TV or speaker found to cast to.'));
+  } else {
+    showSnack('Casting is not supported in this browser.');
+  }
+}
+
 function fmtTime(secs) {
   if (!secs || isNaN(secs)) return '0:00';
   const m = Math.floor(secs / 60);
@@ -2534,10 +2587,10 @@ async function loadLibrary() {
     document.getElementById(container).innerHTML = items.map(([filmId, purchase]) => {
       const f = allFilms.find(x => x.id === filmId) || { id: filmId, title: filmId.toUpperCase(), filmmaker: '', poster_bg: '#1A1A1A', duration_mins: '—' };
       return `<div class="lib-card" onclick="playFilm('${f.id}')">
-        <div class="lib-thumb" style="background:${f.poster_bg||'#1A1A1A'}${f.poster_url ? `;background-image:url('${f.poster_url}')` : ''}">${f.poster_url ? '' : `<span>${f.title}</span>`}</div>
+        <div class="lib-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'}${f.poster_url ? `;background-image:url('${f.poster_url}')` : ''}">${f.poster_url ? '' : `<span>${escHtml(f.title)}</span>`}</div>
         <div class="info">
-          <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${f.title}</p>
-          <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.duration_mins} min</p>
+          <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${escHtml(f.title)}</p>
+          <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker)} · ${f.duration_mins} min</p>
           ${purchase.type === 'rent'
               ? (purchase.expires_at
                   ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">${
@@ -2629,6 +2682,48 @@ function escHtml(v) {
   d.textContent = v ?? '';
   return d.innerHTML;
 }
+
+/* ---- Poster loading sheen ----
+   Templates mark a poster tile with class "poster-loading" and its URL in
+   data-poster. This preloads each URL once and clears the sheen when the
+   image arrives or fails. An image the browser already has is cleared
+   straight away, so returning visitors never see the sheen at all. */
+function posterData(url) {
+  return url ? ` data-poster="${String(url).replace(/"/g, '%22')}"` : '';
+}
+
+const _posterState = new Map();   // url -> 'loading' | 'done'
+
+function trackPosters(root) {
+  (root || document).querySelectorAll('.poster-loading[data-poster]').forEach(el => {
+    const url = el.dataset.poster;
+    const done = () => {
+      _posterState.set(url, 'done');
+      document.querySelectorAll('.poster-loading[data-poster]').forEach(x => {
+        if (x.dataset.poster === url) x.classList.remove('poster-loading');
+      });
+    };
+    if (_posterState.get(url) === 'done') { el.classList.remove('poster-loading'); return; }
+    if (_posterState.get(url) === 'loading') return;
+    _posterState.set(url, 'loading');
+    const img = new Image();
+    img.onload = img.onerror = done;
+    img.src = url;
+    if (img.complete) done();
+  });
+}
+
+// Every screen renders with innerHTML, so watch for new tiles rather than
+// remembering to call trackPosters() after each render.
+// (Only reacts to added elements that contain a poster tile — the player's
+// clock rewrites text several times a second and shouldn't trigger a scan.)
+new MutationObserver(muts => {
+  for (const m of muts) for (const n of m.addedNodes) {
+    if (n.nodeType === 1 && (n.matches('.poster-loading') || n.querySelector('.poster-loading'))) {
+      trackPosters(); return;
+    }
+  }
+}).observe(document.documentElement, { childList: true, subtree: true });
 
 function resendGift(g) {
   const film = allFilms.find(f => f.id === g.filmId);
