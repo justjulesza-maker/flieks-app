@@ -6,3 +6,10 @@
 
 [functions."line-coach"]
   timeout = 10
+
+# Control centre agent. 05:00 UTC is 07:00 in Johannesburg.
+[functions."flieks-ops-daily"]
+  schedule = "0 5 * * *"
+
+[functions."flieks-ops-watch"]
+  schedule = "*/15 * * * *"

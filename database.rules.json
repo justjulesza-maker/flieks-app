@@ -100,6 +100,11 @@
       ".write": false
     },
 
+    "flieks_ops": {
+      ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": false
+    },
+
     "flieks_moderation": {
       ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
       ".write": false

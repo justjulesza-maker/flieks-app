@@ -85,6 +85,36 @@ td small{display:block;font-family:var(--fm);font-size:10px;color:var(--dim);fon
 .bar{height:3px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--amber)}
 
+/* ---- control centre: needs you, briefing, ask ---- */
+.ops-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:14px}
+@media (min-width:820px){.ops-grid{grid-template-columns:1.1fr .9fr}}
+.card{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:14px 16px}
+.card h2{margin:0 0 10px}
+.need{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border);font-size:13.5px;line-height:1.45}
+.need:first-of-type{border-top:0;padding-top:2px}
+.need i{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--dim)}
+.need.urgent i{background:var(--red)} .need.todo i{background:var(--amber)}
+.need.urgent{color:var(--text);font-weight:600}
+.need.fyi{color:var(--muted);font-size:12.5px}
+.need a{color:var(--amber);white-space:nowrap;font-size:12px;margin-left:auto;padding-left:8px}
+.brief{font-size:13.5px;line-height:1.6;white-space:pre-wrap}
+.brief-head{font-weight:700;margin-bottom:8px;line-height:1.4}
+.meta{font-family:var(--fm);font-size:10px;color:var(--dim);margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border);background:transparent;color:var(--text)}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn.amber{background:var(--amber);border-color:var(--amber);color:#111}
+.chat{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin-bottom:10px}
+.msg{font-size:13.5px;line-height:1.5;padding:9px 12px;border-radius:10px;max-width:88%;white-space:pre-wrap}
+.msg.me{align-self:flex-end;background:var(--amber);color:#111}
+.msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--border)}
+.askrow{display:flex;gap:8px}
+.askrow input{flex:1;font:inherit;font-size:16px;padding:10px 12px;border-radius:9px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{font:inherit;font-size:11.5px;padding:5px 10px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--border);background:transparent;color:var(--muted)}
+.channels{font-size:12px;color:var(--muted);margin:4px 0 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .gate{padding:60px 20px;text-align:center;color:var(--muted)}
 .muted{color:var(--muted);font-size:13px;padding:14px 0}
 </style>
@@ -92,8 +122,36 @@ td small{display:block;font-family:var(--fm);font-size:10px;color:var(--dim);fon
 <body>
 
 <div class="top">
-  <h1>4<span>flieks</span> pulse</h1>
+  <h1>4<span>flieks</span> control centre</h1>
   <p class="live"><span class="dot"></span><span id="ticker">connecting</span></p>
+</div>
+
+<!-- Kept separate from #app, which is redrawn every 30 seconds, so a
+     question you're typing or an answer you're reading isn't wiped. -->
+<div id="ops" style="display:none">
+  <div class="ops-grid">
+    <section class="card">
+      <h2>Needs you</h2>
+      <div id="needs"><p class="muted">Checking…</p></div>
+    </section>
+    <section class="card">
+      <h2>This morning's briefing</h2>
+      <div id="brief"><p class="muted">Loading…</p></div>
+      <div class="meta"><span id="brief-at"></span>
+        <button class="btn" id="brief-btn" onclick="freshBriefing()">Write a fresh one</button></div>
+    </section>
+  </div>
+  <section class="card" style="margin-bottom:10px">
+    <h2>Ask 4flieks</h2>
+    <div class="chips" id="chips"></div>
+    <div class="chat" id="chat"></div>
+    <form class="askrow" onsubmit="event.preventDefault();ask()">
+      <input id="q" placeholder="e.g. How did METAMORPH do this week?" autocomplete="off" maxlength="600">
+      <button class="btn amber" id="ask-btn">Ask</button>
+    </form>
+  </section>
+  <p class="channels"><span id="channels"></span>
+    <button class="btn" id="test-btn" onclick="testMessage()">Send a test message</button></p>
 </div>
 
 <div id="app"><div class="gate">Checking your account…</div></div>
@@ -288,10 +346,109 @@ async function refresh() {
       }).join('') || '<p class="muted" style="padding:16px">Nothing yet today.</p>'}
     </div>`;
 
-  document.getElementById('app').innerHTML = alertHtml + cells + funnel + cast + feed;
+  // (alertHtml is no longer shown: it treated every abandoned checkout as a
+  // possibly failed payment. "Needs you" above checks with Yoco instead.)
+  document.getElementById('app').innerHTML = cells + funnel + cast + feed;
   first = false;
   document.getElementById('ticker').textContent =
     'updated ' + new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+}
+
+/* ============================================================
+   CONTROL CENTRE — needs you, the briefing, ask, messages.
+   All through flieks-ops (admin only, server side).
+   ============================================================ */
+async function opsCall(action, extra) {
+  const r = await fetch('/.netlify/functions/flieks-ops', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...(extra || {}) })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || `error ${r.status}`);
+  return d;
+}
+
+const when = t => t ? new Date(t).toLocaleString('en-ZA', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+function renderBriefing(b) {
+  const box = document.getElementById('brief');
+  if (!b || !b.briefing) {
+    box.innerHTML = `<p class="muted">No briefing yet — the first arrives tomorrow at 07:00, or write one now.</p>`;
+    document.getElementById('brief-at').textContent = '';
+    return;
+  }
+  box.innerHTML = `<p class="brief-head">${esc(b.headline)}</p><div class="brief">${esc(b.briefing)}</div>`;
+  document.getElementById('brief-at').textContent = 'Written ' + when(b.at);
+}
+
+async function loadOps() {
+  try {
+    const d = await opsCall('facts');
+    const items = d.facts.attention || [];
+    document.getElementById('needs').innerHTML = items.length
+      ? items.map(a => `<div class="need ${a.level}"><i></i><span>${esc(a.text)}</span>${
+          a.link ? `<a href="${esc(a.link)}">Open →</a>` : ''}</div>`).join('')
+      : `<p class="muted" style="padding:0">Nothing needs you right now.</p>`;
+    renderBriefing(d.briefing);
+    const c = d.channels || {};
+    document.getElementById('channels').textContent =
+      `Messages — WhatsApp: ${c.whatsapp || '?'} · Email: ${c.email || '?'} · Assistant: ${c.model || '?'}`;
+  } catch (e) {
+    document.getElementById('needs').innerHTML = `<p class="muted" style="padding:0">Couldn't load: ${esc(e.message)}</p>`;
+  }
+}
+
+async function freshBriefing() {
+  const btn = document.getElementById('brief-btn');
+  btn.disabled = true; btn.textContent = 'Writing…';
+  try { renderBriefing((await opsCall('briefing-now')).briefing); }
+  catch (e) { document.getElementById('brief').innerHTML = `<p class="muted">Couldn't write one: ${esc(e.message)}</p>`; }
+  btn.disabled = false; btn.textContent = 'Write a fresh one';
+}
+
+const chatHistory = [];
+function addMsg(role, text) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'me' : 'bot');
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+async function ask(q) {
+  const input = document.getElementById('q');
+  const question = (q || input.value).trim();
+  if (!question) return;
+  input.value = '';
+  addMsg('user', question);
+  const thinking = addMsg('assistant', '…');
+  const btn = document.getElementById('ask-btn'); btn.disabled = true;
+  try {
+    const d = await opsCall('ask', { question, history: chatHistory.slice(-6) });
+    thinking.textContent = d.answer;
+    chatHistory.push({ role: 'user', content: question }, { role: 'assistant', content: d.answer });
+  } catch (e) {
+    thinking.textContent = 'Couldn’t answer that just now: ' + e.message;
+  }
+  btn.disabled = false; input.focus();
+}
+
+function renderChips() {
+  const qs = ['What needs me today?', 'How were sales this week?', 'Who signed up recently?', 'Which film is doing best?'];
+  document.getElementById('chips').innerHTML = qs.map(q =>
+    `<button class="chip" type="button" data-q="${esc(q)}" onclick="ask(this.dataset.q)">${esc(q)}</button>`).join('');
+}
+
+async function testMessage() {
+  const btn = document.getElementById('test-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const d = await opsCall('test-message');
+    btn.textContent = d.via === 'whatsapp' ? 'Sent on WhatsApp ✓' : 'Sent by email ✓ (WhatsApp not set up yet)';
+  } catch (e) { btn.textContent = 'Failed: ' + e.message; }
+  setTimeout(() => { btn.disabled = false; btn.textContent = 'Send a test message'; }, 6000);
 }
 
 auth.onAuthStateChanged(async user => {
@@ -314,10 +471,15 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
+  document.getElementById('ops').style.display = 'block';
+  renderChips();
+  loadOps();
   await refresh();
   // Often enough to feel live during a launch, rarely enough not to hammer the
   // database. Pauses when the tab is hidden.
   setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+  // "Needs you" checks pending payments with Yoco, so it refreshes less often.
+  setInterval(() => { if (!document.hidden) loadOps(); }, 120000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 });
 </script>
