@@ -348,7 +348,7 @@ function actorCard(id, character, pick, a, wasSent) {
   if (!a) return '';
   const rec = a.record || { films: [], clicks: 0, sales: 0 };
   const facts = [a.playing_age && `Plays ${esc(a.playing_age)}`, (a.languages || []).length && esc(a.languages.join(', ')),
-    [a.city, a.province].filter(Boolean).map(esc).join(', ')].filter(Boolean).join(' · ');
+    [a.city, a.province, a.country].filter(Boolean).map(esc).join(', ')].filter(Boolean).join(' · ');
   const track = rec.films.length
     ? `${rec.films.map(f => `<i>${esc(f.title)}</i>${f.role ? ' (' + esc(f.role) + ')' : ''}`).join(', ')} · ${rec.clicks} people via their link · ${rec.sales} bought`
     : 'New to 4flieks: no approved credits yet';

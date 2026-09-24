@@ -11,8 +11,21 @@ const ops = require('./ops-core');
 
 const DISCIPLINES = ['Actor', 'Director', 'Writer', 'Producer', 'Camera / DOP', 'Editor', 'Sound', 'Production design',
   'Wardrobe', 'Make-up', 'Music', 'Other crew'];
+// Talent anywhere in Africa. Provinces are asked for South Africa only.
+const COUNTRIES = [
+  'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cameroon',
+  'Central African Republic', 'Chad', 'Comoros', "Côte d'Ivoire", 'Democratic Republic of the Congo',
+  'Djibouti', 'Egypt', 'Equatorial Guinea', 'Eritrea', 'Eswatini', 'Ethiopia', 'Gabon', 'Gambia', 'Ghana',
+  'Guinea', 'Guinea-Bissau', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali',
+  'Mauritania', 'Mauritius', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 'Republic of the Congo',
+  'Rwanda', 'São Tomé and Príncipe', 'Senegal', 'Seychelles', 'Sierra Leone', 'Somalia', 'South Africa',
+  'South Sudan', 'Sudan', 'Tanzania', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe', 'Outside Africa'
+];
 const PROVINCES = ['Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape', 'Free State', 'Limpopo', 'Mpumalanga',
-  'North West', 'Northern Cape', 'Outside South Africa'];
+  'North West', 'Northern Cape'];
+
+/* Profiles made before countries were asked for only have a province. */
+const countryOf = p => (p && COUNTRIES.includes(p.country)) ? p.country : (p && PROVINCES.includes(p.province) ? 'South Africa' : '');
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const int = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : null; };
@@ -31,7 +44,8 @@ function cleanProfile(p) {
     languages: (Array.isArray(p.languages) ? p.languages : String(p.languages || '').split(','))
       .map(l => str(l, 30)).filter(Boolean).slice(0, 8),
     city: str(p.city, 60),
-    province: PROVINCES.includes(p.province) ? p.province : '',
+    country: countryOf(p),
+    province: countryOf(p) === 'South Africa' && PROVINCES.includes(p.province) ? p.province : '',
     showreel: url(p.showreel),
     instagram: str(p.instagram, 60).replace(/^@/, ''),
     bio: str(p.bio, 400),
@@ -55,11 +69,11 @@ async function record(profile) {
 /* What a filmmaker may see about a suggested actor. Never the email. */
 function card(uid, p, rec) {
   return {
-    id: uid, name: p.name, photo_url: p.photo_url || '', city: p.city || '', province: p.province || '',
+    id: uid, name: p.name, photo_url: p.photo_url || '', city: p.city || '', province: p.province || '', country: countryOf(p),
     playing_age: p.playing_age_min && p.playing_age_max ? `${p.playing_age_min}–${p.playing_age_max}` : '',
     languages: p.languages || [], showreel: p.showreel || '', instagram: p.instagram || '', bio: p.bio || '',
     disciplines: p.disciplines || [], record: rec
   };
 }
 
-module.exports = { DISCIPLINES, PROVINCES, cleanProfile, record, card };
+module.exports = { DISCIPLINES, COUNTRIES, PROVINCES, countryOf, cleanProfile, record, card };

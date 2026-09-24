@@ -110,8 +110,21 @@ const say = (id, text, kind) => { const m = $(id); if (m) { m.className = 'msg' 
 
 const DISCIPLINES = ['Actor', 'Director', 'Writer', 'Producer', 'Camera / DOP', 'Editor', 'Sound', 'Production design',
   'Wardrobe', 'Make-up', 'Music', 'Other crew'];
+// Talent anywhere in Africa. Provinces are asked for South Africa only.
+const COUNTRIES = [
+  'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cameroon',
+  'Central African Republic', 'Chad', 'Comoros', "Côte d'Ivoire", 'Democratic Republic of the Congo',
+  'Djibouti', 'Egypt', 'Equatorial Guinea', 'Eritrea', 'Eswatini', 'Ethiopia', 'Gabon', 'Gambia', 'Ghana',
+  'Guinea', 'Guinea-Bissau', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali',
+  'Mauritania', 'Mauritius', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 'Republic of the Congo',
+  'Rwanda', 'São Tomé and Príncipe', 'Senegal', 'Seychelles', 'Sierra Leone', 'Somalia', 'South Africa',
+  'South Sudan', 'Sudan', 'Tanzania', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe', 'Outside Africa'
+];
 const PROVINCES = ['Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape', 'Free State', 'Limpopo', 'Mpumalanga',
-  'North West', 'Northern Cape', 'Outside South Africa'];
+  'North West', 'Northern Cape'];
+/* Profiles made before countries were asked for only have a province. */
+const countryOf = p => COUNTRIES.includes(p.country) ? p.country : (PROVINCES.includes(p.province) ? 'South Africa' : '');
+function countryChanged() { $('provbox').style.display = $('fk').value === 'South Africa' ? '' : 'none'; }
 
 /* A cast link (/me/<film>/<person>) sends people here with ?film=&cast= so the claim is pre-filled. */
 const q = new URLSearchParams(location.search);
@@ -220,11 +233,13 @@ function render() {
       <div><label for="amax">to</label><input id="amax" type="number" min="1" max="99" value="${p.playing_age_max || ''}"></div>
     </div>
     <label for="fl">Languages you can perform in (comma between them)</label>
-    <input id="fl" type="text" maxlength="200" placeholder="isiZulu, English, Sesotho" value="${esc((p.languages || []).join(', '))}">
+    <input id="fl" type="text" maxlength="200" placeholder="English, isiZulu, Yoruba, Swahili" value="${esc((p.languages || []).join(', '))}">
     <div class="row2">
+      <div><label for="fk">Country</label><select id="fk" onchange="countryChanged()"><option value="">Choose</option>${COUNTRIES.map(x => `<option${countryOf(p) === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
       <div><label for="fc">City or town</label><input id="fc" type="text" maxlength="60" value="${esc(p.city)}"></div>
-      <div><label for="fp">Province</label><select id="fp"><option value="">Choose</option>${PROVINCES.map(x => `<option${p.province === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
     </div>
+    <div id="provbox" style="${countryOf(p) === 'South Africa' ? '' : 'display:none'}"><label for="fp">Province</label>
+      <select id="fp"><option value="">Choose</option>${PROVINCES.map(x => `<option${p.province === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
     <label for="fs">Showreel link (YouTube, Vimeo…)</label><input id="fs" type="url" maxlength="300" placeholder="https://" value="${esc(p.showreel)}">
     <label for="fi">Instagram</label><input id="fi" type="text" maxlength="60" placeholder="@yourname" value="${esc(p.instagram ? '@' + p.instagram : '')}">
     <label for="fb">A few lines about you</label><textarea id="fb" maxlength="400" placeholder="Training, recent work, what you want to do next">${esc(p.bio)}</textarea>
@@ -265,7 +280,7 @@ function collect() {
   return {
     name: $('fn').value, disciplines: [...document.querySelectorAll('input[name=disc]:checked')].map(i => i.value),
     playing_age_min: $('amin').value, playing_age_max: $('amax').value,
-    languages: $('fl').value, city: $('fc').value, province: $('fp').value,
+    languages: $('fl').value, city: $('fc').value, country: $('fk').value, province: $('fk').value === 'South Africa' ? $('fp').value : '',
     showreel: $('fs').value.trim(), instagram: $('fi').value, bio: $('fb').value,
     photo_url: draft.photo_url || '', suggest: $('sg').checked
   };

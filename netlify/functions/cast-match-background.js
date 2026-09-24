@@ -38,7 +38,7 @@ exports.handler = async event => {
     let matches = [];
     if (opted.length && characters.length) {
       const candidates = Object.values(cards).map(c => ({
-        id: c.id, playing_age: c.playing_age, languages: c.languages, city: c.city, province: c.province, bio: c.bio,
+        id: c.id, playing_age: c.playing_age, languages: c.languages, city: c.city, province: c.province, country: c.country, bio: c.bio,
         films: c.record.films.length, people_via_link: c.record.clicks, sales_via_link: c.record.sales
       }));
       matches = await matchCast(characters, candidates);
