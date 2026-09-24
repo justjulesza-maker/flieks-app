@@ -320,7 +320,18 @@ function renderReport(id, r) {
     </div>
 
     <div class="foot">
-      <p class="tiny">AI coverage by 4flieks Lab${r.meta && r.meta.truncated ? '. The script was very long, so the last pages were not read' : ''}. A starting point for your own judgement, not a verdict. Your writing itself stays private: only this report is shared, through its link.</p>
+      <h2 style="margin-top:0">How this report is made</h2>
+      <p class="small muted" style="margin-bottom:8px">This report is written by Claude, the AI made by Anthropic, reading the uploaded
+        ${isScript ? 'screenplay' : 'document'} in full against a brief written by 4flieks for African film: judge it the way a senior script reader
+        and development executive would, with South African audiences, languages and low-budget production in mind. Every observation,
+        score and page reference comes from the text itself.</p>
+      <p class="small muted" style="margin-bottom:8px">Scores are expert-style judgement with the reasons given, not statistical predictions. There is
+        no box-office forecast. Comparable titles come from the AI’s general knowledge of film, so check them before quoting them.
+        Release suggestions follow 4flieks pricing. As more films are released on 4flieks, reports will add what we measure:
+        what African audiences actually open, watch and buy.</p>
+      <p class="tiny">${r.meta && r.meta.truncated ? 'The document was very long, so the last pages were not read. ' : ''}A starting point for your own
+        judgement, not a verdict. The writing itself stays private: it is sent to the AI only to write this report, and only the report
+        is shared, through its link.</p>
       <div class="actions noprint">
         <button onclick="copyLink(this)">Copy link</button>
         <button class="ghost" onclick="window.print()">Save as PDF</button>
