@@ -59,7 +59,7 @@ how the platform works and unblock themselves without waiting on a person.
 
 FACTS ABOUT HOW 4FLIEKS WORKS FOR FILMMAKERS — treat all of this as true and current:
 
-- Films are 10-15 minute short films, any African language, any genre.
+- African films: shorts and features, any African language, any genre.
 - The release flow: filmmaker uploads film + poster + trailer -> admin reviews it ->
   admin approves and takes it live -> filmmaker adds cast links -> cast share their
   links -> viewers pay -> filmmaker sees earnings -> filmmaker requests a payout.
