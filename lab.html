@@ -869,7 +869,7 @@ const TOOLS = [
 const SOON = [
   ['Budget builder', 'A production budget built from your script: cast, locations, days.'],
   ['Screenwriting course', 'Learn to write for the screen, with AI feedback on every exercise.'],
-  ['Masterclasses', 'Podcasts and sessions with South African filmmakers, free in the Lab.']
+  ['Masterclasses', 'Podcasts and sessions with African filmmakers, free in the Lab.']
 ];
 
 const isReportTool = /^\/lab\/report\/?$/.test(location.pathname);
@@ -898,7 +898,7 @@ function showHome(user) {
         ${user ? `<a class="btn" href="/lab/report">New Script Report</a><a class="btn ghost" href="#work">My work</a>`
                : `<a class="btn" href="#join" onclick="focusJoin();return false">Join the Lab, free</a><a class="btn ghost" href="#tools">See the tools</a>`}
       </div>
-      <p class="proof"><span><b>Free</b> to join</span><span>Built for <b>South African</b> film</span><span>Your writing stays <b>private</b></span></p>
+      <p class="proof"><span><b>Free</b> to join</span><span>Built for <b>African</b> film</span><span>Your writing stays <b>private</b></span></p>
     </section>
 
     ${user ? `<h2 id="work">Your work</h2><div id="workbox"><p class="tiny">Loading…</p></div>` : ''}
