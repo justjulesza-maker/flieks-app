@@ -905,8 +905,15 @@ const auth = firebase.auth();
 const db = firebase.database();
 const storage = firebase.storage();
 
+/* The cast-panel module below has its own copy of this, scoped to itself.
+   This one is for the rest of the file — anywhere a filmmaker's own title,
+   synopsis or bio gets dropped into innerHTML. */
+const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+
 let currentUser = null;
 let myFilms = [];
+let earningsByFilm = {};   // film id -> earned, from the server statement
+let currentFilmId = null;  // the film open in the film page / edit form
 let filmFile = null;
 let posterFile = null;
 let trailerFile = null;
@@ -1047,27 +1054,44 @@ function nav(viewId) {
 /* ============================================================
    DASHBOARD
    ============================================================ */
+/* The filmmaker's films (over REST, not the SDK's cache) and what each has
+   earned (from the same server statement the payout screens use — ex-VAT,
+   test payments excluded). Every screen that shows a filmmaker a number
+   goes through here, so no two screens can disagree. */
+async function refreshMyFilms() {
+  const [films, stmt] = await Promise.all([
+    queryNode(DB_PREFIX + 'films', 'filmmaker_uid', currentUser.uid),
+    payoutCall('statement').catch(() => ({ ok: false, d: {} }))
+  ]);
+  myFilms = Object.entries(films)
+    .map(([id, f]) => ({ id, ...f }))
+    .sort((a, b) => (b.submitted_at || b.created_at || 0) - (a.submitted_at || a.created_at || 0));
+  earningsByFilm = (stmt.ok && stmt.d.byFilm) || {};
+  return stmt.ok ? stmt.d : null;
+}
+
 async function loadDashboard() {
   if (!currentUser) return;
   const name = currentUser.displayName || 'Filmmaker';
-  document.getElementById('maker-greeting').innerHTML = `<p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">WELCOME BACK,<br><span style="color:var(--amber)">${name.toUpperCase()}</span></p>`;
-  // Load filmmaker's films
-  const snap = await db.ref(DB_PREFIX + 'films').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
-  myFilms = [];
-  let totalEarned = 0, totalViews = 0, totalOwned = 0, liveCount = 0;
-  snap.forEach(child => {
-    const f = { id: child.key, ...child.val() };
-    myFilms.push(f);
+  document.getElementById('maker-greeting').innerHTML = `<p class="bbn" style="font-family:var(--fb);font-size:32px;color:var(--text)">WELCOME BACK,<br><span style="color:var(--amber)">${esc(name.toUpperCase())}</span></p>`;
+
+  let statement;
+  try {
+    statement = await refreshMyFilms();
+  } catch (e) {
+    console.error('[filmmaker] dashboard load failed:', e);
+    document.getElementById('stats-grid').innerHTML =
+      `<p style="color:var(--red);font-size:14px">Couldn't load your numbers just now — reload the page or try again in a moment.</p>`;
+    return;
+  }
+
+  let totalViews = 0, totalOwned = 0, liveCount = 0;
+  myFilms.forEach(f => {
     totalViews += f.view_count || 0;
     totalOwned += f.own_count || 0;
     if (f.status === 'live') liveCount++;
   });
-  // Load earnings
-  const txSnap = await db.ref(DB_PREFIX + 'transactions').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
-  txSnap.forEach(tx => {
-    const t = tx.val();
-    if (t.status === 'complete') totalEarned += t.filmmaker_share || 0;
-  });
+  const totalEarned = statement ? statement.earned : 0;
   // Update stats
   const grid = document.getElementById('stats-grid');
   grid.innerHTML = `
@@ -1091,10 +1115,14 @@ async function loadDashboard() {
 async function loadMyFilms() {
   if (!currentUser) return;
   const el = document.getElementById('my-films-list');
-  if (myFilms.length === 0) {
-    const snap = await db.ref(DB_PREFIX + 'films').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
-    myFilms = [];
-    snap.forEach(c => myFilms.push({ id: c.key, ...c.val() }));
+  // Always re-read: the old version only fetched when the list was empty,
+  // so a film uploaded or edited this session kept showing its old state.
+  try {
+    await refreshMyFilms();
+  } catch (e) {
+    console.error('[filmmaker] films load failed:', e);
+    el.innerHTML = `<p style="color:var(--red);font-size:14px">Couldn't load your films just now — reload the page or try again in a moment.</p>`;
+    return;
   }
   if (myFilms.length === 0) {
     el.innerHTML = `<div style="text-align:center;padding:40px 0">
@@ -1110,12 +1138,12 @@ function filmRowHTML(f) {
   const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : (f.view_count || 0);
   const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red' }[f.status] || 'tag-gray';
   const statusLabel = { live: 'LIVE', review: 'REVIEW', draft: 'DRAFT', rejected: 'REJECTED' }[f.status] || f.status;
-  const earned = ((f.own_count || 0) * (f.price_own || 0) * 0.7 + (f.rent_count || 0) * (f.price_rent || 0) * 0.7).toFixed(0);
+  const earned = (earningsByFilm[f.id] || 0).toFixed(2);
   return `<div class="film-row" onclick="openFilmDetail('${f.id}')">
-    <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'}"><span>${f.title}</span></div>
+    <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'}"><span>${esc(f.title)}</span></div>
     <div style="flex:1">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <p style="font-size:14px;font-weight:600;color:var(--text)">${f.title}</p>
+        <p style="font-size:14px;font-weight:600;color:var(--text)">${esc(f.title)}</p>
         <span class="tag ${statusTag}">${statusLabel}</span>
       </div>
       <div style="display:flex;gap:12px">
@@ -1134,15 +1162,15 @@ function openFilmDetail(filmId) {
   const views = f.view_count || 0;
   const ownCount = f.own_count || 0;
   const rentCount = f.rent_count || 0;
-  const totalEarned = (ownCount * (f.price_own||0) * 0.7 + rentCount * (f.price_rent||0) * 0.7).toFixed(2);
+  const totalEarned = (earningsByFilm[f.id] || 0).toFixed(2);
   const earnPct = Math.min(100, Math.round((parseFloat(totalEarned) / 1000) * 100));
   const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red' }[f.status] || 'tag-gray';
   document.getElementById('film-detail-fm').innerHTML = `
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px">
-      <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'};width:60px;height:76px;border-radius:10px"><span>${f.title}</span></div>
+      <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'};width:60px;height:76px;border-radius:10px"><span>${esc(f.title)}</span></div>
       <div>
-        <p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${f.title}</p>
-        <p style="font-size:12px;color:var(--muted)">${f.duration_mins} min · ${f.language||''} · ${(f.genre||[]).join(', ')}</p>
+        <p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${esc(f.title)}</p>
+        <p style="font-size:12px;color:var(--muted)">${esc([`${f.duration_mins} min`, f.language, (f.genre||[]).join(', ')].filter(Boolean).join(' · '))}</p>
         <span class="tag ${statusTag}" style="margin-top:6px;display:inline-block">${f.status?.toUpperCase()}</span>
       </div>
     </div>
@@ -1151,16 +1179,16 @@ function openFilmDetail(filmId) {
         <div class="earnings-bar"><div class="earnings-bar-fill" style="width:${earnPct}%"></div></div>
       </div>
       <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Total Views</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${views >= 1000 ? (views/1000).toFixed(1)+'k' : views}</p></div>
-      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Owned</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${ownCount}</p><p style="font-size:10px;color:var(--muted)">× R${(f.price_own||0) * 0.7} share</p></div>
-      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Rented</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${rentCount}</p><p style="font-size:10px;color:var(--muted)">× R${(f.price_rent||0) * 0.7} share</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Owned</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${ownCount}</p><p style="font-size:10px;color:var(--muted)">× R${shareOf(f.price_own).toFixed(2)} your share</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Rented</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${rentCount}</p><p style="font-size:10px;color:var(--muted)">× R${shareOf(f.price_rent).toFixed(2)} your share</p></div>
     </div>
     <p class="section-label">SYNOPSIS</p>
-    <p style="color:#999;font-size:14px;line-height:1.65;margin-bottom:16px">${f.synopsis||''}</p>
+    <p style="color:#999;font-size:14px;line-height:1.65;margin-bottom:16px">${esc(f.synopsis||'')}</p>
     ${f.status === 'review' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>This film is under review. We'll notify you by email once it goes live (1–2 business days).</p></div>` : ''}
-    ${f.status === 'rejected' ? `<div class="info-box" style="background:rgba(232,70,42,.08);border:1px solid rgba(232,70,42,.3)"><svg viewBox="0 0 24 24" style="stroke:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p>This film was not approved. ${f.rejection_reason || 'Please contact support for details.'}</p></div>` : ''}
+    ${f.status === 'rejected' ? `<div class="info-box" style="background:rgba(232,70,42,.08);border:1px solid rgba(232,70,42,.3)"><svg viewBox="0 0 24 24" style="stroke:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p>This film was not approved. ${esc(f.rejection_reason || 'Please contact support for details.')}</p></div>` : ''}
     ${f.status === 'live' ? `
       <div style="display:flex;gap:10px;margin-bottom:14px">
-        <a href="index.html" class="btn btn-outline btn-sm" style="text-align:center">View on 4flieks</a>
+        <a href="/${encodeURIComponent(f.slug || f.id)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-align:center">View on 4flieks</a>
          <button class="btn btn-amber btn-sm" onclick="openEditFilm(currentFilmId)">Edit Details</button>
       </div>
     ` : ''}
@@ -1627,6 +1655,40 @@ async function payoutCall(action, extra) {
   return { ok: r.ok, d };
 }
 
+/* Read a whole node over REST with a force-refreshed token, not the SDK.
+   Same fix admin.html's readNode() applies, for the same reason: the SDK
+   caches and has been seen returning stale, partial data, which anywhere
+   a filmmaker's own numbers are involved means showing them the wrong
+   figure. */
+async function readNode(path) {
+  try {
+    const token = await auth.currentUser.getIdToken(true);
+    const res = await fetch(
+      `https://flieks-app-default-rtdb.firebaseio.com/${path}.json?auth=${token}`);
+    return res.ok ? ((await res.json()) || {}) : {};
+  } catch (e) {
+    console.error(`[filmmaker] could not read ${path}:`, e);
+    return {};
+  }
+}
+
+/* The same, for an indexed query — e.g. "films where filmmaker_uid is me".
+   Needs the key in .indexOn (flieks_films has filmmaker_uid). Throws rather
+   than returning {} so a failed read is never mistaken for "no films". */
+async function queryNode(path, key, value) {
+  const token = await auth.currentUser.getIdToken(true);
+  const q = `orderBy=${encodeURIComponent(JSON.stringify(key))}` +
+            `&equalTo=${encodeURIComponent(JSON.stringify(value))}`;
+  const res = await fetch(
+    `https://flieks-app-default-rtdb.firebaseio.com/${path}.json?auth=${token}&${q}`);
+  if (!res.ok) throw new Error(`Could not read ${path} (${res.status})`);
+  return (await res.json()) || {};
+}
+
+/* A film's price → what the filmmaker actually gets per sale: 70% of the
+   ex-VAT amount (R49 → R29.83), never 70% of the sticker price. */
+const shareOf = price => +((Number(price) || 0) / 1.15 * 0.7).toFixed(2);
+
 async function loadEarnings() {
   const box = document.getElementById('earn-body');
   if (!box) return;
@@ -1681,7 +1743,7 @@ async function loadEarnings() {
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;
                       padding:11px 13px;${i ? 'border-top:1px solid var(--border)' : ''}">
             <div style="min-width:0">
-              <p style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.film}</p>
+              <p style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.film)}</p>
               <p style="font-size:11px;color:var(--dim)">${l.type} · ${new Date(l.at).toLocaleDateString('en-ZA')}</p>
             </div>
             <div style="text-align:right;flex-shrink:0">
@@ -1748,9 +1810,13 @@ async function saveBank() {
 
 async function requestPayout() {
   const { ok, d } = await payoutCall('request');
-  if (!ok) { snack(d.message || 'Could not request that.'); return; }
-  snack(`Requested R${d.amount.toFixed(2)}. We'll pay it out shortly.`);
-  loadEarnings();
+  if (!ok) { showSnack(d.message || 'Could not request that.'); return; }
+  showSnack(`Requested R${d.amount.toFixed(2)}. We'll pay it out shortly.`);
+  // Whichever screen sent this — the earnings modal or the Payouts tab —
+  // refresh both, since they now read from the same statement and can't
+  // disagree, but only one is actually on screen.
+  if (document.getElementById('earn-modal')) loadEarnings();
+  if (document.getElementById('view-payouts').classList.contains('active')) loadPayouts();
 }
 
 function mountShareOptions(f) {
@@ -1814,7 +1880,11 @@ function shareSentence(share, priceOwn) {
 function renderSharePreview(f) {
   const el = document.getElementById('share-preview');
   if (!el) return;
-  const film = f || (myFilms || []).find(x => x.id === editingFilmId) || {};
+  // Called bare from the radio buttons' change handler, so fall back to the
+  // film currently open. (This used `editingFilmId`, which only a dead copy
+  // of the edit form ever set — so the "about Rxx each" figure vanished the
+  // moment a filmmaker picked a different share.)
+  const film = f || (myFilms || []).find(x => x.id === currentFilmId) || {};
   el.innerHTML = `<span style="display:block;font-size:10px;letter-spacing:.1em;
     text-transform:uppercase;color:var(--dim);margin-bottom:5px">Your cast will see</span>
     ${shareSentence(currentShare, Number(film.price_own) || 0)}`;
@@ -2401,49 +2471,58 @@ async function submitFilm() {
 /* ============================================================
    PAYOUTS
    ============================================================ */
+/* This tab and the earnings modal (openEarnings/loadEarnings above) used to
+   be two separate, disagreeing implementations — this one read raw
+   transactions via the SDK and wrote payout requests straight to the
+   database, bypassing the bank-details check and the real minimum, and
+   without recording which transactions it covered (the thing that stops a
+   sale being paid twice). It now shares the same server statement and the
+   same requestPayout() as the earnings modal, so the two screens can never
+   show different numbers again. */
 async function loadPayouts() {
   if (!currentUser) return;
   const el = document.getElementById('payouts-content');
-  // Load transactions
-  const snap = await db.ref(DB_PREFIX + 'transactions').orderByChild('filmmaker_uid').equalTo(currentUser.uid).once('value');
-  let available = 0, pending = 0;
-  const txList = [];
-  snap.forEach(tx => {
-    const t = { id: tx.key, ...tx.val() };
-    txList.push(t);
-    if (t.status === 'complete' && !t.paid_out) available += t.filmmaker_share || 0;
-    if (t.status === 'pending') pending += t.filmmaker_share || 0;
-  });
+  el.innerHTML = `<p style="color:var(--muted);font-size:14px">Working it out…</p>`;
 
-  // Load payout requests
-  const poSnap = await db.ref(`${DB_PREFIX}payouts/${currentUser.uid}`).once('value');
-  const payouts = [];
-  poSnap.forEach(p => payouts.push({ id: p.key, ...p.val() }));
-  const totalPaidOut = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount||0), 0);
+  const { ok, d } = await payoutCall('statement');
+  if (!ok) {
+    el.innerHTML = `<p style="color:var(--red);font-size:14px">${d.message || 'Could not load that.'}</p>`;
+    return;
+  }
+
+  const lines = d.lines || [];
+  const payouts = Object.entries(await readNode(`${DB_PREFIX}payouts/${currentUser.uid}`))
+    .map(([id, p]) => ({ id, ...p }))
+    .sort((a, b) => (b.requested_at || 0) - (a.requested_at || 0));
 
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Available</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--green)">R${available.toFixed(2)}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Ready to withdraw</p></div>
-      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">All-Time</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">R${(available + totalPaidOut).toFixed(2)}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Total earned</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">Available</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--green)">R${d.available.toFixed(2)}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Ready to withdraw</p></div>
+      <div class="stat-card"><p class="section-label" style="margin-bottom:4px">All-Time</p><p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">R${d.earned.toFixed(2)}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">Total earned</p></div>
     </div>
-    ${available >= 50 ? `
-      <button class="btn btn-amber" onclick="requestPayout(${available.toFixed(2)})" style="margin-bottom:16px">WITHDRAW R${available.toFixed(2)}</button>
+    ${!d.hasBank ? `
+      <div style="border:1px solid var(--accent,#F0A62E);border-radius:10px;padding:14px;margin-bottom:16px">
+        <p style="font-size:13px;color:var(--text);margin-bottom:9px">We need your bank details before we can pay you.</p>
+        <button class="btn btn-outline btn-sm" onclick="openEarnings()">ADD BANK DETAILS</button>
+      </div>
+    ` : d.canRequest ? `
+      <button class="btn btn-amber" onclick="requestPayout()" style="margin-bottom:16px">WITHDRAW R${d.available.toFixed(2)}</button>
     ` : `
       <div class="info-box amber" style="margin-bottom:16px">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <p>Minimum payout is R50. You currently have R${available.toFixed(2)} available.</p>
+        <p>Minimum payout is R${d.minimum}. You currently have R${d.available.toFixed(2)} available.</p>
       </div>
     `}
     <div class="divider" style="margin:0 0 16px"></div>
     <p class="section-label">RECENT TRANSACTIONS</p>
-    ${txList.length === 0 ? `<p style="color:var(--muted);font-size:14px">No transactions yet.</p>` :
-      txList.slice(-10).reverse().map(t => `
+    ${lines.length === 0 ? `<p style="color:var(--muted);font-size:14px">No transactions yet.</p>` :
+      lines.slice(0, 10).map(l => `
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
           <div>
-            <p style="font-size:14px;color:var(--text)">${t.film_title || 'Film'}</p>
-            <p style="font-size:12px;color:var(--muted);margin-top:2px">${t.type === 'own' ? 'Purchase' : 'Rental'} · ${t.status}</p>
+            <p style="font-size:14px;color:var(--text)">${esc(l.film || 'Film')}</p>
+            <p style="font-size:12px;color:var(--muted);margin-top:2px">${l.type === 'own' ? 'Purchase' : 'Rental'} · ${l.state}</p>
           </div>
-          <p style="font-size:14px;font-weight:600;color:${t.status==='complete'?'var(--green)':'var(--muted)'}">R${(t.filmmaker_share||0).toFixed(2)}</p>
+          <p style="font-size:14px;font-weight:600;color:${l.state!=='available'?'var(--green)':'var(--muted)'}">R${l.yours.toFixed(2)}</p>
         </div>
       `).join('')
     }
@@ -2453,29 +2532,15 @@ async function loadPayouts() {
       payouts.map(p => `
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
           <div><p style="font-size:14px;color:var(--text)">R${(p.amount||0).toFixed(2)}</p><p style="font-size:12px;color:var(--muted);margin-top:2px">${new Date(p.requested_at).toLocaleDateString('en-ZA')}</p></div>
-          <span class="tag ${p.status==='paid'?'tag-green':'tag-amber'}">${p.status.toUpperCase()}</span>
+          <span class="tag ${p.status==='paid'?'tag-green':'tag-amber'}">${(p.status||'').toUpperCase()}</span>
         </div>
       `).join('')
     }
     <div class="info-box green" style="margin-top:16px">
       <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-      <p>Payouts are processed via EFT within 3–5 business days. Make sure your banking details are up to date in your profile settings.</p>
+      <p>Payouts are processed via EFT within 3–5 business days. Make sure your banking details are up to date.</p>
     </div>
   `;
-}
-
-async function requestPayout(amount) {
-  if (!currentUser) return;
-  await db.ref(`${DB_PREFIX}payouts/${currentUser.uid}`).push({
-    amount,
-    filmmaker_uid: currentUser.uid,
-    filmmaker_name: currentUser.displayName,
-    filmmaker_email: currentUser.email,
-    status: 'pending',
-    requested_at: Date.now()
-  });
-  showSnack(`Payout of R${amount} requested! Allow 3–5 business days.`);
-  loadPayouts();
 }
 
 /* ============================================================
@@ -2544,131 +2609,157 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- EDIT FILM VIEW -->
+<!-- EDIT FILM VIEW
+     There used to be three near-identical copies of this view and its
+     script, each redefining the same functions; only the last copy's code
+     ran, while the first copy's markup was the one shown. One copy now.
+     The dropdowns are filled from the upload form's own lists, so the two
+     can never drift apart again (they had: a Venda, Tsonga, Ndebele or
+     Swati film opened here showed "English", and saving wrote English). -->
 <div id="view-edit-film" class="view">
   <div class="topbar">
     <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
-      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
-      Film Stats
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>Back
     </button>
     <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
-  <div style="padding:14px;max-width:480px;margin:0 auto">
-    <p class="section-label">SYNOPSIS</p>
-    <textarea id="edit-synopsis" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;resize:vertical;font-family:inherit"></textarea>
+  <div style="padding:14px 20px">
+    <p id="edit-film-title" class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)"></p>
+    <p style="font-size:12px;color:var(--dim);margin:2px 0 18px;line-height:1.5">
+      The title can't change once a film is submitted — it's part of the film's link.</p>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-      <div>
-        <p class="section-label">LANGUAGE</p>
-        <select id="edit-language" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-          <option value="English">English</option>
-          <option value="Zulu">Zulu</option>
-          <option value="Xhosa">Xhosa</option>
-          <option value="Afrikaans">Afrikaans</option>
-          <option value="Sotho">Sotho</option>
-          <option value="Tswana">Tswana</option>
-          <option value="Other">Other</option>
-        </select>
+    <div class="input-group">
+      <label class="input-label">Synopsis *</label>
+      <textarea class="input" id="edit-synopsis" rows="4"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Duration (minutes) *</label>
+        <input class="input" id="edit-duration" type="number" min="1" max="20">
       </div>
-      <div>
-        <p class="section-label">SUBTITLES</p>
-        <select id="edit-subtitles" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-          <option value="none">None</option>
-          <option value="English">English</option>
-          <option value="Zulu">Zulu</option>
-          <option value="Afrikaans">Afrikaans</option>
-        </select>
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Language *</label>
+        <select class="input" id="edit-language"></select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Genre *</label>
+        <select class="input" id="edit-genre"></select>
+      </div>
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Subtitles</label>
+        <select class="input" id="edit-subtitles"></select>
+      </div>
+    </div>
+    <div class="input-group" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" id="edit-free" onchange="syncEditFree()" style="width:18px;height:18px;accent-color:var(--amber)">
+        <label for="edit-free" style="font-size:14px;color:var(--muted);cursor:pointer">Free to watch</label>
+      </div>
+    </div>
+    <div id="edit-prices" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Rent Price (ZAR)</label>
+        <input class="input" id="edit-rent" type="number" min="1">
+      </div>
+      <div class="input-group" style="margin:0">
+        <label class="input-label">Own Price (ZAR)</label>
+        <input class="input" id="edit-own" type="number" min="1">
       </div>
     </div>
 
-    <p class="section-label" style="margin-top:14px">GENRE</p>
-    <select id="edit-genre" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-      <option value="Drama">Drama</option>
-      <option value="Comedy">Comedy</option>
-      <option value="Thriller">Thriller</option>
-      <option value="Documentary">Documentary</option>
-      <option value="Romance">Romance</option>
-      <option value="Horror">Horror</option>
-      <option value="Action">Action</option>
-      <option value="Music">Music</option>
-      <option value="Sci-Fi">Sci-Fi</option>
-      <option value="Animation">Animation</option>
-    </select>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-      <div>
-        <p class="section-label">RENT PRICE (R)</p>
-        <input id="edit-rent" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-      </div>
-      <div>
-        <p class="section-label">OWN PRICE (R)</p>
-        <input id="edit-own" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-      </div>
-    </div>
-
-    <p class="section-label" style="margin-top:14px">REPLACE POSTER</p>
+    <p class="section-label" style="margin-top:6px">REPLACE POSTER</p>
     <div class="upload-zone" id="edit-poster-drop" onclick="document.getElementById('edit-poster-file').click()"
          ondragover="event.preventDefault();this.classList.add('drag')"
          ondragleave="this.classList.remove('drag')"
-         ondrop="handleEditDrop(event)">
+         ondrop="event.preventDefault();this.classList.remove('drag');pickEditPoster(event.dataTransfer.files[0])">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      <p style="color:var(--muted);font-size:14px">Tap to replace poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
+      <p style="color:var(--muted);font-size:14px">Tap to replace poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait, under 10MB. Leave the title off the artwork — 4flieks adds it.</span></p>
       <div id="edit-poster-name" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
-      <img id="edit-poster-preview" style="display:none;margin-top:8px;max-height:120px;border-radius:6px;object-fit:cover">
+      <img id="edit-poster-preview" alt="" style="display:none;margin-top:8px;max-height:120px;border-radius:6px;object-fit:cover">
     </div>
-    <input type="file" id="edit-poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleEditPosterSelect(event)">
-
-    <div style="margin-top:20px;display:flex;gap:10px">
-      <button class="btn btn-amber" id="edit-save-btn" onclick="saveFilmEdit()" style="flex:1">SAVE CHANGES</button>
-      <button class="btn btn-ghost" onclick="nav('film-detail')" style="flex:1">CANCEL</button>
-    </div>
+    <input type="file" id="edit-poster-file" accept="image/jpeg,image/png" style="display:none" onchange="pickEditPoster(this.files[0])">
     <div id="edit-progress" style="display:none;margin-top:10px">
       <div class="progress-upload"><div class="progress-upload-fill" id="edit-prog-fill"></div></div>
+    </div>
+
+    <p id="edit-msg" style="font-size:13px;color:var(--red);min-height:1.2em;margin-top:12px"></p>
+    <div style="margin-top:6px;display:flex;gap:10px">
+      <button class="btn btn-amber" id="edit-save-btn" onclick="saveFilmEdit()" style="flex:1">SAVE CHANGES</button>
+      <button class="btn btn-outline" onclick="nav('film-detail')" style="flex:1">CANCEL</button>
     </div>
   </div>
 </div>
 <script>
 var editPosterFile = null;
-var currentFilmId = null;
-var editingFilmId = null;
 
-function openEditFilm(filmId) {
-  editingFilmId = filmId;
-  editPosterFile = null;
-  db.ref(DB_PREFIX + 'films/' + filmId).once('value').then(snap => {
-    const f = snap.val();
-    if (!f) return;
-    document.getElementById('edit-synopsis').value = f.synopsis || '';
-    document.getElementById('edit-language').value = f.language || 'English';
-    document.getElementById('edit-subtitles').value = f.subtitles || 'none';
-    document.getElementById('edit-genre').value = (f.genre && f.genre[0]) ? f.genre[0] : 'Drama';
-    document.getElementById('edit-rent').value = f.price_rent || 25;
-    document.getElementById('edit-own').value = f.price_own || 49;
-    document.getElementById('edit-poster-name').textContent = '';
-    document.getElementById('edit-poster-preview').style.display = 'none';
-    document.getElementById('edit-save-btn').textContent = 'SAVE CHANGES';
-    document.getElementById('edit-save-btn').disabled = false;
-    document.getElementById('edit-progress').style.display = 'none';
-    nav('edit-film');
+/* Fill an edit dropdown from the matching upload dropdown, then select the
+   film's current value — adding it as an option if the lists ever differ,
+   so opening and saving a film can never silently change it. */
+function fillEditSelect(editId, uploadId, current, fallback) {
+  const sel = document.getElementById(editId);
+  const src = document.getElementById(uploadId);
+  sel.innerHTML = '';
+  [...src.options].filter(o => o.value !== '').forEach(o => {
+    sel.appendChild(new Option(o.textContent, o.value));
   });
+  const want = current || fallback;
+  if (want && ![...sel.options].some(o => o.value === want)) {
+    sel.appendChild(new Option(want, want));
+  }
+  sel.value = want;
 }
 
-function handleEditPosterSelect(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  editPosterFile = file;
-  document.getElementById('edit-poster-name').textContent = file.name;
-  const preview = document.getElementById('edit-poster-preview');
-  preview.src = URL.createObjectURL(file);
-  preview.style.display = 'block';
+function syncEditFree() {
+  const free = document.getElementById('edit-free').checked;
+  document.getElementById('edit-prices').style.display = free ? 'none' : 'grid';
 }
 
-function handleEditDrop(event) {
-  event.preventDefault();
-  document.getElementById('edit-poster-drop').classList.remove('drag');
-  const file = event.dataTransfer.files[0];
+async function openEditFilm(filmId) {
+  if (!filmId) { showSnack('No film selected'); return; }
+  currentFilmId = filmId;
+  editPosterFile = null;
+  // Fresh read over REST: this form writes back what it shows, so it must
+  // not start from the SDK's cached copy.
+  const f = await readNode(`${DB_PREFIX}films/${filmId}`);
+  if (!f || !f.title) { showSnack('Could not load that film. Try again.'); return; }
+
+  document.getElementById('edit-film-title').textContent = f.title;
+  document.getElementById('edit-synopsis').value = f.synopsis || '';
+  document.getElementById('edit-duration').value = f.duration_mins || '';
+  fillEditSelect('edit-language', 'up-language', f.language, 'English');
+  fillEditSelect('edit-genre', 'up-genre', f.genre && f.genre[0], 'Drama');
+  fillEditSelect('edit-subtitles', 'up-subs', f.subtitles, 'none');
+  document.getElementById('edit-free').checked = !!f.free;
+  document.getElementById('edit-rent').value = f.free ? 25 : (f.price_rent || 25);
+  document.getElementById('edit-own').value = f.free ? 49 : (f.price_own || 49);
+  syncEditFree();
+
+  document.getElementById('edit-poster-name').textContent = '';
+  document.getElementById('edit-poster-preview').style.display = 'none';
+  document.getElementById('edit-poster-file').value = '';
+  document.getElementById('edit-msg').textContent = '';
+  document.getElementById('edit-progress').style.display = 'none';
+  const btn = document.getElementById('edit-save-btn');
+  btn.textContent = 'SAVE CHANGES';
+  btn.disabled = false;
+  nav('edit-film');
+}
+
+function pickEditPoster(file) {
+  const msg = document.getElementById('edit-msg');
+  msg.textContent = '';
   if (!file) return;
+  if (!/^image\/(jpeg|png)$/.test(file.type)) {
+    msg.textContent = 'The poster needs to be a JPG or PNG.';
+    return;
+  }
+  if (file.size > 10 * 1048576) {
+    msg.textContent = `That image is ${(file.size / 1048576).toFixed(1)}MB — please keep posters under 10MB.`;
+    return;
+  }
   editPosterFile = file;
   document.getElementById('edit-poster-name').textContent = file.name;
   const preview = document.getElementById('edit-poster-preview');
@@ -2677,278 +2768,66 @@ function handleEditDrop(event) {
 }
 
 async function saveFilmEdit() {
-  if (!editingFilmId) return;
+  if (!currentFilmId) return;
   const btn = document.getElementById('edit-save-btn');
+  const msg = document.getElementById('edit-msg');
+  msg.textContent = '';
+
+  const synopsis = document.getElementById('edit-synopsis').value.trim();
+  const duration = parseInt(document.getElementById('edit-duration').value, 10);
+  const free = document.getElementById('edit-free').checked;
+  const rent = parseFloat(document.getElementById('edit-rent').value);
+  const own = parseFloat(document.getElementById('edit-own').value);
+
+  if (!synopsis) { msg.textContent = 'Add a synopsis — it’s what sells the film.'; return; }
+  if (!(duration >= 1 && duration <= 20)) { msg.textContent = 'Duration should be between 1 and 20 minutes.'; return; }
+  if (!free && !(rent > 0 && own > 0)) { msg.textContent = 'Set a rent and an own price, or tick "Free to watch".'; return; }
+  if (!free && own < rent) { msg.textContent = 'The own price should be at least the rent price.'; return; }
+
   btn.textContent = 'SAVING…';
   btn.disabled = true;
 
   try {
     const updates = {
-      synopsis: document.getElementById('edit-synopsis').value.trim(),
+      synopsis,
+      duration_mins: duration,
       language: document.getElementById('edit-language').value,
       subtitles: document.getElementById('edit-subtitles').value,
       genre: [document.getElementById('edit-genre').value],
-      price_rent: parseFloat(document.getElementById('edit-rent').value) || 0,
-      price_own: parseFloat(document.getElementById('edit-own').value) || 0
+      free,
+      price_rent: free ? 0 : rent,
+      price_own: free ? 0 : own
     };
 
     if (editPosterFile) {
-      btn.textContent = 'UPLOADING POSTER…';
       document.getElementById('edit-progress').style.display = 'block';
-      const posterRef = storage.ref('flieks_films/' + editingFilmId + '/poster.jpg');
+      const posterRef = storage.ref('flieks_films/' + currentFilmId + '/poster.jpg');
       const task = posterRef.put(editPosterFile);
       task.on('state_changed', snap => {
         const pct = (snap.bytesTransferred / snap.totalBytes * 100).toFixed(0);
         document.getElementById('edit-prog-fill').style.width = pct + '%';
-        btn.textContent = 'UPLOADING ' + pct + '%…';
+        btn.textContent = 'UPLOADING POSTER ' + pct + '%…';
       });
       await task;
       updates.poster_url = await posterRef.getDownloadURL();
       document.getElementById('edit-progress').style.display = 'none';
     }
 
-    await db.ref(DB_PREFIX + 'films/' + editingFilmId).update(updates);
+    await db.ref(DB_PREFIX + 'films/' + currentFilmId).update(updates);
     btn.textContent = 'SAVED ✓';
-    setTimeout(() => { nav('film-detail'); }, 1200);
-  } catch(e) {
-    console.error(e);
-    showSnack('Save failed: ' + e.message);
+    showSnack('Changes saved.');
+    // Re-read before showing the film page again, so it shows what was
+    // just saved rather than the version from before the edit.
+    await refreshMyFilms().catch(() => {});
+    setTimeout(() => { openFilmDetail(currentFilmId); }, 700);
+  } catch (e) {
+    console.error('[filmmaker] save failed:', e);
+    msg.textContent = /permission/i.test(e.message || '')
+      ? 'You don’t have permission to change this film.'
+      : 'Couldn’t save just now — check your connection and try again.';
     btn.textContent = 'SAVE CHANGES';
     btn.disabled = false;
-  }
-}
-</script>
-<div id="view-edit-film" class="view">
-  <div class="topbar">
-    <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
-      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>Back
-    </button>
-    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
-    <div style="width:40px"></div>
-  </div>
-  <div style="padding:14px">
-    <p class="section-label">SYNOPSIS</p>
-    <textarea id="edit-synopsis" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-      <div>
-        <p class="section-label">LANGUAGE</p>
-        <select id="edit-language" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-          <option>English</option><option>Zulu</option><option>Xhosa</option><option>Afrikaans</option><option>Sotho</option><option>Tswana</option><option>Other</option>
-        </select>
-      </div>
-      <div>
-        <p class="section-label">SUBTITLES</p>
-        <select id="edit-subtitles" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-          <option value="none">None</option><option>English</option><option>Zulu</option><option>Afrikaans</option>
-        </select>
-      </div>
-    </div>
-    <p class="section-label" style="margin-top:14px">GENRE</p>
-    <select id="edit-genre" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-      <option>Drama</option><option>Comedy</option><option>Thriller</option><option>Documentary</option><option>Romance</option><option>Horror</option><option>Action</option><option>Music</option><option>Sci-Fi</option><option>Animation</option>
-    </select>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-      <div>
-        <p class="section-label">RENT (R)</p>
-        <input id="edit-rent" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
-      </div>
-      <div>
-        <p class="section-label">OWN (R)</p>
-        <input id="edit-own" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
-      </div>
-    </div>
-    <p class="section-label" style="margin-top:14px">REPLACE POSTER</p>
-    <div class="upload-zone" onclick="document.getElementById('edit-poster-file').click()">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      <p style="color:var(--muted);font-size:14px">Tap to replace poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
-      <div id="edit-poster-name" style="font-size:12px;color:var(--amber);margin-top:6px"></div>
-      <img id="edit-poster-preview" style="display:none;max-height:120px;border-radius:6px;margin-top:8px;object-fit:cover">
-    </div>
-    <input type="file" id="edit-poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleEditPosterSelect(event)">
-    <div id="edit-progress" style="display:none;margin-top:8px"><div class="progress-upload"><div class="progress-upload-fill" id="edit-prog-fill"></div></div></div>
-    <div style="margin-top:20px;display:flex;gap:10px">
-      <button class="btn btn-amber" id="edit-save-btn" onclick="saveFilmEdit()" style="flex:1">SAVE CHANGES</button>
-      <button class="btn btn-ghost" onclick="nav('film-detail')" style="flex:1">CANCEL</button>
-    </div>
-  </div>
-</div><script>
-var editPosterFile=null;
-function openEditFilm(filmId){
-  if(!filmId){showSnack('No film selected');return;}
-  editPosterFile=null;
-  db.ref(DB_PREFIX+'films/'+filmId).once('value').then(function(snap){
-    var f=snap.val();if(!f)return;
-    document.getElementById('edit-synopsis').value=f.synopsis||'';
-    document.getElementById('edit-language').value=f.language||'English';
-    document.getElementById('edit-subtitles').value=f.subtitles||'none';
-    document.getElementById('edit-genre').value=(f.genre&&f.genre[0])||'Drama';
-    document.getElementById('edit-rent').value=f.price_rent||25;
-    document.getElementById('edit-own').value=f.price_own||49;
-    document.getElementById('edit-poster-name').textContent='';
-    document.getElementById('edit-poster-preview').style.display='none';
-    document.getElementById('edit-save-btn').textContent='SAVE CHANGES';
-    document.getElementById('edit-save-btn').disabled=false;
-    document.getElementById('edit-progress').style.display='none';
-    nav('edit-film');
-  });
-}
-function handleEditPosterSelect(e){
-  var f=e.target.files[0];if(!f)return;
-  editPosterFile=f;
-  document.getElementById('edit-poster-name').textContent=f.name;
-  var pr=document.getElementById('edit-poster-preview');
-  pr.src=URL.createObjectURL(f);pr.style.display='block';
-}
-async function saveFilmEdit(){
-  if(!currentFilmId)return;
-  var btn=document.getElementById('edit-save-btn');
-  btn.textContent='SAVING…';btn.disabled=true;
-  try{
-    var updates={
-      synopsis:document.getElementById('edit-synopsis').value.trim(),
-      language:document.getElementById('edit-language').value,
-      subtitles:document.getElementById('edit-subtitles').value,
-      genre:[document.getElementById('edit-genre').value],
-      price_rent:parseFloat(document.getElementById('edit-rent').value)||0,
-      price_own:parseFloat(document.getElementById('edit-own').value)||0
-    };
-    if(editPosterFile){
-      btn.textContent='UPLOADING…';
-      document.getElementById('edit-progress').style.display='block';
-      var ref=storage.ref('flieks_films/'+currentFilmId+'/poster.jpg');
-      var task=ref.put(editPosterFile);
-      task.on('state_changed',function(s){
-        var p=(s.bytesTransferred/s.totalBytes*100).toFixed(0);
-        document.getElementById('edit-prog-fill').style.width=p+'%';
-        btn.textContent='UPLOADING '+p+'%…';
-      });
-      await task;
-      updates.poster_url=await ref.getDownloadURL();
-    }
-    await db.ref(DB_PREFIX+'films/'+currentFilmId).update(updates);
-    showSnack('Saved!');
-    btn.textContent='SAVED ✓';
-    setTimeout(function(){nav('film-detail');},1000);
-  }catch(e){
-    showSnack('Error: '+e.message);
-    btn.textContent='SAVE CHANGES';btn.disabled=false;
-  }
-}
-</script>
-<div id="view-edit-film" class="view">
-  <div class="topbar">
-    <button onclick="nav('film-detail')" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;background:none;border:none;cursor:pointer">
-      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>Back
-    </button>
-    <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
-    <div style="width:40px"></div>
-  </div>
-  <div style="padding:14px">
-    <p class="section-label">SYNOPSIS</p>
-    <textarea id="edit-synopsis" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-      <div>
-        <p class="section-label">LANGUAGE</p>
-        <select id="edit-language" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-          <option>English</option><option>Zulu</option><option>Xhosa</option><option>Afrikaans</option><option>Sotho</option><option>Tswana</option><option>Other</option>
-        </select>
-      </div>
-      <div>
-        <p class="section-label">SUBTITLES</p>
-        <select id="edit-subtitles" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-          <option value="none">None</option><option>English</option><option>Zulu</option><option>Afrikaans</option>
-        </select>
-      </div>
-    </div>
-    <p class="section-label" style="margin-top:14px">GENRE</p>
-    <select id="edit-genre" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px">
-      <option>Drama</option><option>Comedy</option><option>Thriller</option><option>Documentary</option><option>Romance</option><option>Horror</option><option>Action</option><option>Music</option><option>Sci-Fi</option><option>Animation</option>
-    </select>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-      <div>
-        <p class="section-label">RENT (R)</p>
-        <input id="edit-rent" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
-      </div>
-      <div>
-        <p class="section-label">OWN (R)</p>
-        <input id="edit-own" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box">
-      </div>
-    </div>
-    <p class="section-label" style="margin-top:14px">REPLACE POSTER</p>
-    <div class="upload-zone" onclick="document.getElementById('edit-poster-file').click()" style="cursor:pointer">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      <p style="color:var(--muted);font-size:14px">Tap to replace poster<br><span style="font-size:12px;color:var(--dim)">JPG or PNG — 9:16 portrait</span></p>
-      <div id="edit-poster-name" style="font-size:12px;color:var(--amber);margin-top:6px"></div>
-      <img id="edit-poster-preview" style="display:none;max-height:120px;border-radius:6px;margin-top:8px;object-fit:cover">
-    </div>
-    <input type="file" id="edit-poster-file" accept="image/jpeg,image/png" style="display:none" onchange="handleEditPosterSelect(event)">
-    <div id="edit-progress" style="display:none;margin-top:8px"><div class="progress-upload"><div class="progress-upload-fill" id="edit-prog-fill"></div></div></div>
-    <div style="margin-top:20px;display:flex;gap:10px">
-      <button class="btn btn-amber" id="edit-save-btn" onclick="saveFilmEdit()" style="flex:1">SAVE CHANGES</button>
-      <button class="btn btn-ghost" onclick="nav('film-detail')" style="flex:1">CANCEL</button>
-    </div>
-  </div>
-</div><script>
-var editPosterFile = null;
-function openEditFilm(filmId) {
-  if (!filmId) { showSnack('No film selected'); return; }
-  editPosterFile = null;
-  db.ref(DB_PREFIX + 'films/' + filmId).once('value').then(function(snap) {
-    var f = snap.val(); if (!f) return;
-    document.getElementById('edit-synopsis').value = f.synopsis || '';
-    document.getElementById('edit-language').value = f.language || 'English';
-    document.getElementById('edit-subtitles').value = f.subtitles || 'none';
-    document.getElementById('edit-genre').value = (f.genre && f.genre[0]) || 'Drama';
-    document.getElementById('edit-rent').value = f.price_rent || 25;
-    document.getElementById('edit-own').value = f.price_own || 49;
-    document.getElementById('edit-poster-name').textContent = '';
-    document.getElementById('edit-poster-preview').style.display = 'none';
-    document.getElementById('edit-save-btn').textContent = 'SAVE CHANGES';
-    document.getElementById('edit-save-btn').disabled = false;
     document.getElementById('edit-progress').style.display = 'none';
-    nav('edit-film');
-  });
-}
-function handleEditPosterSelect(e) {
-  var f = e.target.files[0]; if (!f) return;
-  editPosterFile = f;
-  document.getElementById('edit-poster-name').textContent = f.name;
-  var pr = document.getElementById('edit-poster-preview');
-  pr.src = URL.createObjectURL(f); pr.style.display = 'block';
-}
-async function saveFilmEdit() {
-  if (!currentFilmId) return;
-  var btn = document.getElementById('edit-save-btn');
-  btn.textContent = 'SAVING…'; btn.disabled = true;
-  try {
-    var updates = {
-      synopsis: document.getElementById('edit-synopsis').value.trim(),
-      language: document.getElementById('edit-language').value,
-      subtitles: document.getElementById('edit-subtitles').value,
-      genre: [document.getElementById('edit-genre').value],
-      price_rent: parseFloat(document.getElementById('edit-rent').value) || 0,
-      price_own: parseFloat(document.getElementById('edit-own').value) || 0
-    };
-    if (editPosterFile) {
-      btn.textContent = 'UPLOADING…';
-      document.getElementById('edit-progress').style.display = 'block';
-      var ref = storage.ref('flieks_films/' + currentFilmId + '/poster.jpg');
-      var task = ref.put(editPosterFile);
-      task.on('state_changed', function(s) {
-        var p = (s.bytesTransferred / s.totalBytes * 100).toFixed(0);
-        document.getElementById('edit-prog-fill').style.width = p + '%';
-        btn.textContent = 'UPLOADING ' + p + '%…';
-      });
-      await task;
-      updates.poster_url = await ref.getDownloadURL();
-    }
-    await db.ref(DB_PREFIX + 'films/' + currentFilmId).update(updates);
-    showSnack('Saved!');
-    btn.textContent = 'SAVED ✓';
-    setTimeout(function() { nav('film-detail'); }, 1000);
-  } catch(e) {
-    showSnack('Error: ' + e.message);
-    btn.textContent = 'SAVE CHANGES'; btn.disabled = false;
   }
 }
 </script>

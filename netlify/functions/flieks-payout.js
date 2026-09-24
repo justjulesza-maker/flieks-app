@@ -88,6 +88,7 @@ async function statement(uid) {
   });
 
   const lines = [];
+  const byFilm = {};            // film id -> what this filmmaker has earned from it
   let earned = 0, awaiting = 0, paid = 0;
 
   Object.entries(txs || {}).forEach(([txId, t]) => {
@@ -99,6 +100,7 @@ async function statement(uid) {
     if (!share) return;
 
     earned += share;
+    if (t.film_id) byFilm[t.film_id] = money((byFilm[t.film_id] || 0) + share);
     const state = settled.has(txId) ? 'paid' : pendingIds.has(txId) ? 'requested' : 'available';
     if (state === 'paid') paid += share;
     else if (state === 'requested') awaiting += share;
@@ -126,6 +128,10 @@ async function statement(uid) {
     minimum: MINIMUM,
     canRequest: available >= MINIMUM,
     sales: lines.length,
+    // Per-film totals, so the portal's film rows and film pages show the
+    // same ex-VAT, test-mode-excluded figure as this statement — not their
+    // own estimate from list prices. Not capped like `lines`.
+    byFilm,
     lines: lines.slice(0, 200),
     availableIds: lines.filter(l => l.state === 'available').map(l => l.txId)
   };
