@@ -853,7 +853,12 @@ function uploader(el, path, done) {
   const start = file => {
     if (!file) return;
     const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
-    const task = store().ref(`${path}.${ext}`).put(file);
+    // Stamped with the uploader and a fresh name, never an overwrite —
+    // the Storage rules only accept uploads like this.
+    const task = store().ref(`${path}-${Date.now().toString(36)}.${ext}`).put(file, {
+      contentType: file.type || 'image/jpeg',
+      customMetadata: { owner: firebase.auth().currentUser.uid }
+    });
     const p = el.querySelector('.fcp-prog'); p.style.display='block';
     task.on('state_changed',
       s => p.querySelector('i').style.width = (s.bytesTransferred/s.totalBytes*100)+'%',
@@ -1509,8 +1514,8 @@ async function saveScript(filmId) {
   prog.style.display = 'block';
 
   try {
-    const ref = storage.ref(`flieks_scripts/${filmId}/script.pdf`);
-    const task = ref.put(scriptFile, { contentType: 'application/pdf' });
+    const ref = storage.ref(`flieks_scripts/${filmId}/${freshName('script', 'pdf')}`);
+    const task = ref.put(scriptFile, { contentType: 'application/pdf', customMetadata: { owner: auth.currentUser.uid } });
     task.on('state_changed',
       sn => fill.style.width = (sn.bytesTransferred / sn.totalBytes * 100) + '%',
       err => { prog.style.display = 'none'; msg.style.color = 'var(--red)';
@@ -1694,6 +1699,24 @@ async function queryNode(path, key, value) {
   if (!res.ok) throw new Error(`Could not read ${path} (${res.status})`);
   return (await res.json()) || {};
 }
+
+/* ---- Uploads to Firebase Storage ----
+   Every file is stamped with its uploader (metadata.owner) and given a name
+   that has never been used, so nothing is ever overwritten. The Storage
+   rules only let the owner fetch a file's link (which the portal does once,
+   right after uploading) — everything else plays, shows and previews from
+   the tokened links stored in the database, which rules don't affect.
+   That's what stops a signed-in account fetching any film's master. */
+function freshName(base, ext) {
+  return `${base}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.${ext}`;
+}
+function ownedMeta(file, fallbackType) {
+  return {
+    contentType: (file && file.type) || fallbackType,
+    customMetadata: { owner: auth.currentUser.uid }
+  };
+}
+const videoType = file => /\.mov$/i.test((file && file.name) || '') ? 'video/quicktime' : 'video/mp4';
 
 /* A film's price → what the filmmaker actually gets per sale: 70% of the
    ex-VAT amount (R49 → R29.83), never 70% of the sticker price. */
@@ -2087,8 +2110,8 @@ async function uploadOgImage(filmId, file) {
     const kb = Math.round(blob.size / 1024);
 
     prog.style.display = 'block';
-    const ref = storage.ref('flieks_films/' + filmId + '/og.jpg');
-    const task = ref.put(blob, { contentType: 'image/jpeg' });
+    const ref = storage.ref(`flieks_films/${filmId}/${freshName('og', 'jpg')}`);
+    const task = ref.put(blob, { contentType: 'image/jpeg', customMetadata: { owner: auth.currentUser.uid } });
 
     task.on('state_changed',
       sn => fill.style.width = (sn.bytesTransferred / sn.totalBytes * 100) + '%',
@@ -2220,8 +2243,9 @@ async function uploadReplacement(filmId) {
   btn.disabled = true;
   btn.textContent = 'UPLOADING…';
   try {
-    const videoRef = storage.ref(`flieks_films/${filmId}/film.mp4`);
-    const task = videoRef.put(replacementFile);
+    // A new file, not an overwrite of the old one — see freshName().
+    const videoRef = storage.ref(`flieks_films/${filmId}/${freshName('film', /\.mov$/i.test(replacementFile.name) ? 'mov' : 'mp4')}`);
+    const task = videoRef.put(replacementFile, ownedMeta(replacementFile, videoType(replacementFile)));
     task.on('state_changed', snap => {
       const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
       document.getElementById(`replace-progress-${filmId}`).style.display = 'block';
@@ -2330,10 +2354,10 @@ function cancelUpload() {
 function warnBeforeLeaving(e) { e.preventDefault(); e.returnValue = ''; }
 
 // Runs one Storage upload with a progress bar; resolves with the download URL.
-function uploadWithProgress(ref, file, barId, fillId, btn, label) {
+function uploadWithProgress(ref, file, barId, fillId, btn, label, meta) {
   return new Promise((resolve, reject) => {
     if (uploadCancelled) return reject(Object.assign(new Error('cancelled'), { code: 'storage/canceled' }));
-    const task = ref.put(file);
+    const task = ref.put(file, meta);
     activeUpload = task;
     document.getElementById(barId).style.display = 'block';
     task.on('state_changed', snap => {
@@ -2515,12 +2539,15 @@ async function submitFilm() {
     // Generate film ID
     const filmId = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
 
-    const videoUrl = await uploadWithProgress(storage.ref(`flieks_films/${filmId}/film.mp4`), filmFile,
-      'film-upload-progress', 'film-prog-fill', btn, 'UPLOADING FILM');
-    const posterUrl = posterFile ? await uploadWithProgress(storage.ref(`flieks_films/${filmId}/poster.jpg`), posterFile,
-      'poster-upload-progress', 'poster-prog-fill', btn, 'UPLOADING POSTER') : '';
-    const trailerUrl = trailerFile ? await uploadWithProgress(storage.ref(`flieks_films/${filmId}/trailer.mp4`), trailerFile,
-      'trailer-upload-progress', 'trailer-prog-fill', btn, 'UPLOADING TRAILER') : '';
+    const videoUrl = await uploadWithProgress(
+      storage.ref(`flieks_films/${filmId}/${freshName('film', /\.mov$/i.test(filmFile.name) ? 'mov' : 'mp4')}`), filmFile,
+      'film-upload-progress', 'film-prog-fill', btn, 'UPLOADING FILM', ownedMeta(filmFile, videoType(filmFile)));
+    const posterUrl = posterFile ? await uploadWithProgress(
+      storage.ref(`flieks_films/${filmId}/${freshName('poster', posterFile.type === 'image/png' ? 'png' : 'jpg')}`), posterFile,
+      'poster-upload-progress', 'poster-prog-fill', btn, 'UPLOADING POSTER', ownedMeta(posterFile, 'image/jpeg')) : '';
+    const trailerUrl = trailerFile ? await uploadWithProgress(
+      storage.ref(`flieks_films/${filmId}/${freshName('trailer', /\.mov$/i.test(trailerFile.name) ? 'mov' : 'mp4')}`), trailerFile,
+      'trailer-upload-progress', 'trailer-prog-fill', btn, 'UPLOADING TRAILER', ownedMeta(trailerFile, videoType(trailerFile))) : '';
 
     // Last chance to back out before anything is saved.
     if (uploadCancelled) throw Object.assign(new Error('cancelled'), { code: 'storage/canceled' });
@@ -2941,8 +2968,8 @@ async function saveFilmEdit() {
 
     if (editPosterFile) {
       document.getElementById('edit-progress').style.display = 'block';
-      const posterRef = storage.ref('flieks_films/' + currentFilmId + '/poster.jpg');
-      const task = posterRef.put(editPosterFile);
+      const posterRef = storage.ref(`flieks_films/${currentFilmId}/${freshName('poster', editPosterFile.type === 'image/png' ? 'png' : 'jpg')}`);
+      const task = posterRef.put(editPosterFile, ownedMeta(editPosterFile, 'image/jpeg'));
       task.on('state_changed', snap => {
         const pct = (snap.bytesTransferred / snap.totalBytes * 100).toFixed(0);
         document.getElementById('edit-prog-fill').style.width = pct + '%';

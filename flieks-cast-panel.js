@@ -234,7 +234,12 @@ function uploader(el, path, done) {
   const start = file => {
     if (!file) return;
     const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
-    const task = store().ref(`${path}.${ext}`).put(file);
+    // Stamped with the uploader and a fresh name, never an overwrite —
+    // the Storage rules only accept uploads like this.
+    const task = store().ref(`${path}-${Date.now().toString(36)}.${ext}`).put(file, {
+      contentType: file.type || 'image/jpeg',
+      customMetadata: { owner: firebase.auth().currentUser.uid }
+    });
     const p = el.querySelector('.fcp-prog'); p.style.display='block';
     task.on('state_changed',
       s => p.querySelector('i').style.width = (s.bytesTransferred/s.totalBytes*100)+'%',
