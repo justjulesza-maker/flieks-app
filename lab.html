@@ -171,7 +171,7 @@ async function showReport(id) {
     return;
   }
   document.getElementById('docref').innerHTML = `SCRIPT REPORT<br>${esc(dateStr(d.finished_at || d.created_at))}`;
-  document.title = `${d.title} — Script Report — 4flieks Lab`;
+  document.title = `${d.title} — Report — 4flieks Lab`;
   if (d.status === 'queued' || d.status === 'working') {
     app.innerHTML = `<div class="center"><div class="spin"></div><h1 style="font-size:26px">${esc(d.title)}</h1>
       <p class="muted" style="margin-top:6px">${esc(d.stage || 'Working…')}</p>
@@ -213,14 +213,19 @@ function arcSvg(arc) {
 
 function renderReport(id, r) {
   const f = r.format || {};
+  const kind = (r.source && r.source.kind) || 'screenplay';
+  const isScript = kind === 'screenplay';
+  const kindLabel = { screenplay: 'Screenplay', treatment: 'Treatment', prose: 'Story', other: 'Document' }[kind];
   const bits = [
-    { short: 'Short film', feature: 'Feature', episode: 'Episode' }[f.type] || '',
-    f.pages ? `${f.pages} pages` : '',
+    kindLabel,
+    (isScript ? '' : 'best as a ') + ({ short: 'short film', feature: 'feature', episode: 'episode' }[f.type] || ''),
+    isScript && f.pages ? `${f.pages} pages` : '',
     f.est_runtime_mins ? `about ${f.est_runtime_mins} min` : '',
     (r.languages || []).join(', ')
   ].filter(Boolean).join(' · ');
   const vclass = { Strong: 'strong', Promising: 'promising', 'Needs work': 'needs' }[r.verdict.label] || 'promising';
-  const scoreNames = { concept: 'Concept', character: 'Characters', dialogue: 'Dialogue', structure: 'Structure', marketability: 'Market appeal' };
+  const scoreNames = { concept: 'Concept', character: 'Characters', dialogue: isScript ? 'Dialogue' : 'Voice', structure: 'Structure', marketability: 'Market appeal' };
+  const ad = r.adaptation;
   const usedEmo = [...new Set(r.emotion_arc.map(p => p.emotion))];
   const pr = r.production, rel = r.release, au = r.audience, st = r.structure;
 
@@ -261,10 +266,18 @@ function renderReport(id, r) {
       ${st.pacing ? `<div><b>Pacing</b><span>${esc(st.pacing)}</span></div>` : ''}
     </div>
 
+    ${ad ? `<h2>Adapting it for film</h2>
+      <div class="verdict" style="margin-top:0"><span class="chip ${{ High: 'strong', Medium: 'promising', Low: 'needs' }[ad.potential]}">${esc(ad.potential)} potential</span>
+        <p><b>${esc({ short: 'Short film', feature: 'Feature', series: 'Series' }[ad.best_format])}${ad.length ? ' · ' + esc(ad.length) : ''}.</b> ${esc(ad.approach)}</p></div>
+      <div class="acts" style="margin-top:10px">
+        ${[['Keep', ad.keep], ['Cut or compress', ad.cut], ['Invent', ad.invent]].filter(([, l]) => l.length).map(([k, l]) =>
+          `<div class="box"><p class="lbl">${k}</p>${l.map(x => `<p class="small" style="margin-bottom:6px">${esc(x)}</p>`).join('')}</div>`).join('')}
+      </div>` : ''}
+
     ${r.characters.length ? `<h2>Characters</h2>
       ${r.characters.map(c => `<div class="char">
         <div class="top"><h3>${esc(c.name)} <span class="role">${esc(c.role)}</span></h3>
-          <span class="share"><span class="track"><span class="fill" style="display:block;width:${c.dialogue_share}%"></span></span>${c.dialogue_share}% of dialogue</span></div>
+          <span class="share"><span class="track"><span class="fill" style="display:block;width:${c.dialogue_share}%"></span></span>${c.dialogue_share}% of ${isScript ? 'dialogue' : 'the story'}</span></div>
         ${c.description ? `<p>${esc(c.description)}</p>` : ''}
         ${c.arc ? `<p class="muted"><b>Arc:</b> ${esc(c.arc)}</p>` : ''}
         ${c.casting ? `<p class="cast"><b>Casting:</b> ${esc(c.casting)}</p>` : ''}
@@ -307,7 +320,7 @@ function renderReport(id, r) {
     </div>
 
     <div class="foot">
-      <p class="tiny">AI coverage by 4flieks Lab${r.meta && r.meta.truncated ? '. The script was very long, so the last pages were not read' : ''}. A starting point for your own judgement, not a verdict. The screenplay itself stays private: only this report is shared, through its link.</p>
+      <p class="tiny">AI coverage by 4flieks Lab${r.meta && r.meta.truncated ? '. The script was very long, so the last pages were not read' : ''}. A starting point for your own judgement, not a verdict. Your writing itself stays private: only this report is shared, through its link.</p>
       <div class="actions noprint">
         <button onclick="copyLink(this)">Copy link</button>
         <button class="ghost" onclick="window.print()">Save as PDF</button>
@@ -329,18 +342,21 @@ let chosen = null;
 function workspaceShell() {
   app.innerHTML = `
     <h1>Script Report</h1>
-    <p class="muted" style="margin-bottom:6px">Upload your screenplay and get professional-style coverage in a few minutes:
-      verdict and scores, emotion arc, structure, characters and casting, audience, development notes, and how to release it.</p>
-    <p class="tiny">Your script stays private. Only the report can be shared, by its link.</p>
+    <p class="muted" style="margin-bottom:6px">Upload a screenplay, or a story, treatment or synopsis you want to turn into a film, and get
+      professional-style coverage in a few minutes: verdict and scores, emotion arc, structure, characters and casting, audience,
+      development notes, how to adapt it, and how to release it.</p>
+    <p class="tiny">Your writing stays private. Only the report can be shared, by its link.</p>
 
     <h2>New report</h2>
     <label for="t">Title</label><input id="t" type="text" maxlength="120" placeholder="e.g. Where Have All the DVDs Gone?">
     <label for="w">Writer (optional)</label><input id="w" type="text" maxlength="120" placeholder="Who wrote it">
-    <label>Screenplay (PDF, up to 30MB)</label>
+    <label>Screenplay, treatment or story</label>
     <div class="drop" id="drop" onclick="document.getElementById('f').click()">
-      <p id="dropText">Tap to choose a PDF, or drop it here</p>
-      <input id="f" type="file" accept="application/pdf,.pdf" style="display:none">
+      <p id="dropText">Tap to choose a PDF, Word or text file, or drop it here</p>
+      <input id="f" type="file" accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt,text/plain" style="display:none">
     </div>
+    <p class="tiny" style="margin-top:8px"><a href="#" onclick="togglePaste();return false" style="color:var(--sunset)" id="pasteLink">Or paste the text instead</a></p>
+    <textarea id="paste" placeholder="Paste your story, treatment or synopsis here" style="display:none;width:100%;min-height:220px;margin-top:8px;font:15px/1.5 var(--fn);padding:12px;border:1px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink)"></textarea>
     <div class="prog" id="prog"><div id="progBar"></div></div>
     <p class="msg" id="msg"></p>
     <div class="actions"><button id="go" onclick="startReport()">Get my Script Report</button></div>
@@ -360,21 +376,43 @@ function pick(file) {
   msg.className = 'msg'; msg.textContent = '';
   chosen = null;
   if (!file) return;
-  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { msg.className = 'msg err'; msg.textContent = 'Please choose a PDF. Most screenwriting apps can export one.'; return; }
+  if (!/\.(pdf|docx|txt)$/i.test(file.name)) { msg.className = 'msg err'; msg.textContent = 'Please choose a PDF, a Word document (.docx) or a text file. Older .doc files: save as .docx first.'; return; }
   if (file.size > 30 * 1024 * 1024) { msg.className = 'msg err'; msg.textContent = 'That file is over 30MB.'; return; }
   chosen = file;
   document.getElementById('drop').classList.add('has');
   document.getElementById('dropText').textContent = `${file.name} · ${(file.size / 1048576).toFixed(1)}MB`;
   const t = document.getElementById('t');
-  if (!t.value.trim()) t.value = file.name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim();
+  if (!t.value.trim()) t.value = file.name.replace(/\.(pdf|docx|txt)$/i, '').replace(/[_-]+/g, ' ').trim();
+  const box = document.getElementById('paste'); if (box.style.display !== 'none') togglePaste();
 }
 
 async function startReport() {
   const msg = document.getElementById('msg'), go = document.getElementById('go');
   const title = document.getElementById('t').value.trim(), writer = document.getElementById('w').value.trim();
   msg.className = 'msg err';
-  if (!title) { msg.textContent = 'Give the script a title.'; return; }
-  if (!chosen) { msg.textContent = 'Choose the screenplay PDF.'; return; }
+  const pasted = document.getElementById('paste').style.display !== 'none' ? document.getElementById('paste').value.trim() : '';
+  if (!title) { msg.textContent = 'Give it a title.'; return; }
+  if (!chosen && !pasted) { msg.textContent = 'Choose a file, or paste the text.'; return; }
+
+  // Word, text and pasted writing are read here and sent as text; PDFs go to private storage.
+  if (pasted || !/\.pdf$/i.test(chosen.name)) {
+    go.disabled = true; msg.className = 'msg'; msg.textContent = 'Reading your file…';
+    try {
+      let text = pasted, source = 'paste';
+      if (!pasted && /\.txt$/i.test(chosen.name)) { text = await chosen.text(); source = 'txt'; }
+      else if (!pasted) { text = await docxText(chosen); source = 'docx'; }
+      if (text.replace(/\s+/g, '').length < 400) throw new Error('That is too short to report on. Use the full story or treatment.');
+      if (text.length > 400000) throw new Error('That is too long to send as text. Try a PDF, or the first part.');
+      msg.textContent = 'Starting the read…';
+      const { ok, d } = await call('start', { title, writer, text, source, fileName: chosen ? chosen.name : 'pasted text' });
+      if (!ok) throw new Error(d.message || 'Could not start.');
+      location.href = `/lab/r/${d.id}`;
+    } catch (e) {
+      msg.className = 'msg err'; msg.textContent = e.message || 'Could not read that file.'; go.disabled = false;
+    }
+    return;
+  }
+
   go.disabled = true; msg.className = 'msg'; msg.textContent = 'Uploading…';
   const uid = auth.currentUser.uid;
   const rand = Math.random().toString(36).slice(2, 8);
@@ -395,6 +433,26 @@ async function startReport() {
     msg.textContent = e.message || 'Upload failed. Try again.';
     go.disabled = false; prog.style.display = 'none'; bar.style.width = '0';
   }
+}
+
+function togglePaste() {
+  const box = document.getElementById('paste'), link = document.getElementById('pasteLink'), drop = document.getElementById('drop');
+  const show = box.style.display === 'none';
+  box.style.display = show ? 'block' : 'none';
+  drop.style.display = show ? 'none' : 'block';
+  link.textContent = show ? 'Upload a file instead' : 'Or paste the text instead';
+  if (show) { chosen = null; box.focus(); }
+}
+
+/* Word documents are read in the browser with mammoth, loaded only when needed. */
+function docxText(file) {
+  const load = window.mammoth ? Promise.resolve() : new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js';
+    sc.onload = res; sc.onerror = () => rej(new Error('Could not load the Word reader. Check your connection, or export a PDF.'));
+    document.head.appendChild(sc);
+  });
+  return load.then(() => file.arrayBuffer()).then(buf => mammoth.extractRawText({ arrayBuffer: buf })).then(r => r.value || '');
 }
 
 async function loadList() {

@@ -2,7 +2,10 @@
  * flieks-script-report — the Script Report (4flieks Lab).
  *
  * POST { action, ... }
- *   start  { token, title, writer?, fileUrl, fileName }  filmmaker/admin: queue a report
+ *   start  { token, title, writer?, fileUrl, fileName }  filmmaker/admin: queue a report from a PDF
+ *   start  { token, title, writer?, text, fileName, source }  …or from text (Word/.txt read in the
+ *                                                          browser, or pasted); held server-side
+ *                                                          until the reader has it, then deleted
  *   list   { token }                                      my reports, newest first
  *   get    { id }                                         a report by its link id (shareable)
  *   delete { token, id }                                  remove one of my reports
@@ -90,6 +93,7 @@ exports.handler = async event => {
       const rec = await ops.dbGet(`flieks_script_reports/${body.id}`);
       if (!rec || (rec.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Report not found.' });
       await ops.dbWrite(`flieks_script_reports/${body.id}`, null);
+      await ops.dbWrite(`flieks_script_texts/${body.id}`, null);
       await ops.dbWrite(`flieks_script_reports_by_user/${rec.owner}/${body.id}`, null);
       return reply(200, { ok: true, filePath: rec.file_path || null });
     }
@@ -102,12 +106,18 @@ exports.handler = async event => {
       const title = String(body.title || '').trim().slice(0, 120);
       const writer = String(body.writer || '').trim().slice(0, 120);
       const fileUrl = String(body.fileUrl || '');
-      if (title.length < 1) return reply(400, { message: 'Give the script a title.' });
+      const text = typeof body.text === 'string' ? body.text : '';
+      if (title.length < 1) return reply(400, { message: 'Give it a title.' });
 
-      // Only a file this person uploaded to their own lab folder in our bucket.
-      const ownPrefix = `${BUCKET_PREFIX}${encodeURIComponent(`flieks_scripts/lab_${me.uid}/`)}`;
-      if (!fileUrl.startsWith(ownPrefix) || !/[?&]token=/.test(fileUrl)) {
-        return reply(400, { message: 'Upload the script first.' });
+      if (text) {
+        if (text.length > 400000) return reply(413, { message: 'That text is too long. Try the first part, or a PDF.' });
+        if (text.replace(/\s+/g, '').length < 400) return reply(400, { message: 'That is too short to report on. Paste the full story or treatment.' });
+      } else {
+        // Only a file this person uploaded to their own lab folder in our bucket.
+        const ownPrefix = `${BUCKET_PREFIX}${encodeURIComponent(`flieks_scripts/lab_${me.uid}/`)}`;
+        if (!fileUrl.startsWith(ownPrefix) || !/[?&]token=/.test(fileUrl)) {
+          return reply(400, { message: 'Upload the file first.' });
+        }
       }
 
       if (me.role !== 'admin') {
@@ -121,11 +131,13 @@ exports.handler = async event => {
 
       const id = newId();
       const now = Date.now();
-      const filePath = decodeURIComponent(fileUrl.slice(BUCKET_PREFIX.length).split('?')[0]);
+      const filePath = text ? null : decodeURIComponent(fileUrl.slice(BUCKET_PREFIX.length).split('?')[0]);
+      const source = ['docx', 'txt', 'paste'].includes(body.source) ? body.source : (text ? 'paste' : 'pdf');
+      if (text) await ops.dbWrite(`flieks_script_texts/${id}`, { text, owner: me.uid, created_at: now });
       await ops.dbWrite(`flieks_script_reports/${id}`, {
         owner: me.uid, owner_email: me.email, title, writer: writer || null,
-        status: 'queued', stage: 'Waiting to start…', created_at: now,
-        file_url: fileUrl, file_path: filePath, file_name: String(body.fileName || '').slice(0, 120)
+        status: 'queued', stage: 'Waiting to start…', created_at: now, source,
+        file_url: text ? null : fileUrl, file_path: filePath, file_name: String(body.fileName || '').slice(0, 120)
       });
       await ops.dbWrite(`flieks_script_reports_by_user/${me.uid}/${id}`, { title, created_at: now, status: 'queued' });
 

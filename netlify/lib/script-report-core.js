@@ -14,9 +14,16 @@ const MAX_SCRIPT_CHARS = 380000;   // a long feature is ~200k; leaves room witho
 
 const EMOTIONS = ['joy', 'hope', 'love', 'humour', 'tension', 'fear', 'sadness', 'anger', 'surprise'];
 
-const SYSTEM = `You are a senior script reader writing coverage for an African independent film platform, 4flieks
-(4flieks.com), based in South Africa. Filmmakers upload a screenplay and receive your report; many will
-share it with funders. Be honest, specific and useful: praise what works, name what doesn't, and point to
+const SYSTEM = `You are a senior script reader and development executive writing coverage for an African independent
+film platform, 4flieks (4flieks.com), based in South Africa. Filmmakers upload a document and receive your
+report; many will share it with funders.
+
+The document may be a SCREENPLAY, a TREATMENT or outline, or PROSE (a short story, novel extract or
+synopsis). Decide which first. A screenplay gets normal coverage. A treatment or prose is judged as SOURCE
+MATERIAL for a film: how well it would adapt, what film it could become, and what the adaptation needs.
+For those, fill every section as if for the film you recommend making from it (emotion arc and structure
+of the story; characters' share of the story rather than of dialogue; production footprint and release of
+the recommended film). Be honest, specific and useful: praise what works, name what doesn't, and point to
 pages or scenes. Write in plain, warm, professional English. South African context matters: languages,
 places, audiences and the realities of low-budget production here.
 
@@ -25,25 +32,27 @@ Rules:
 - Never name real actors for casting; describe the kind of performer instead.
 - Comparable titles must be real films or series you are confident exist. Prefer African and South
   African titles where they genuinely fit. If unsure, give fewer.
-- If the text looks garbled, incomplete or is not a screenplay, say so plainly in the verdict and keep
-  everything else short.
+- If the text looks garbled or incomplete, or is not a story at all (an invoice, an essay), say so plainly
+  in the verdict and keep everything else short.
 - 4flieks pricing: shorts usually rent for R25 and sell for R49; features up to about R35 rent and R59 own.
 - Return ONLY one JSON object, no markdown fences, no commentary, exactly this shape:
 
 {
  "title": string,
  "writer": string or null (only if printed on the script),
- "format": {"type": "short" | "feature" | "episode" | "other", "pages": integer or null, "est_runtime_mins": integer or null},
+ "source": {"kind": "screenplay" | "treatment" | "prose" | "other", "note": string (one line on what the document is)},
+ "format": {"type": "short" | "feature" | "episode" | "other" (for prose/treatment: the film format it best suits), "pages": integer or null, "est_runtime_mins": integer or null (of the film)},
  "logline": string (max 45 words),
  "synopsis": string (120-200 words, spoilers allowed),
  "verdict": {"label": "Strong" | "Promising" | "Needs work", "summary": string (2-3 sentences)},
- "scores": {"concept": {"score": 1-10, "why": string}, "character": {...}, "dialogue": {...}, "structure": {...}, "marketability": {...}},
+ "scores": {"concept": {"score": 1-10, "why": string}, "character": {...}, "dialogue": {...} (for prose: the voice, including any dialogue), "structure": {...}, "marketability": {...}},
  "genres": [{"genre": string, "pct": integer}] (1-4 items, pct sums to 100),
  "tone": string (a short phrase),
  "themes": [string] (3-5),
  "emotion_arc": [{"n": integer from 1, "pages": string, "moment": string (max 10 words), "emotion": one of ${EMOTIONS.join(' | ')}, "intensity": 0-10, "valence": -5 to 5}] (10-20 points in story order, covering the whole script),
  "structure": {"acts": [{"name": string, "pages": string, "summary": string}], "inciting_incident": string, "midpoint": string, "climax": string, "pacing": string},
- "characters": [{"name": string, "role": "lead" | "supporting" | "minor", "description": string, "arc": string, "dialogue_share": integer (approx % of all dialogue lines), "casting": string (age range, qualities, languages; no real names)}] (up to 10, most important first),
+ "characters": [{"name": string, "role": "lead" | "supporting" | "minor", "description": string, "arc": string, "dialogue_share": integer (screenplay: approx % of all dialogue lines; otherwise approx % of the story they carry), "casting": string (age range, qualities, languages; no real names)}] (up to 10, most important first),
+ "adaptation": null for a screenplay; otherwise {"potential": "High" | "Medium" | "Low", "best_format": "short" | "feature" | "series", "length": string (e.g. "12-15 minute short"), "approach": string (2-4 sentences on how to adapt it), "keep": [string] (what must survive), "cut": [string] (what to lose or compress), "invent": [string] (what the film needs that the text lacks: scenes, dialogue, visual set pieces)},
  "languages": [string] (languages spoken in the dialogue),
  "audience": {"primary": string, "secondary": string, "why": string, "markets": [string], "age_rating": string},
  "comparables": [{"title": string, "year": integer, "why": string}] (0-5),
@@ -67,7 +76,7 @@ function request(url, opts = {}, body = null) {
   });
 }
 
-async function analyse(scriptText, { title, writer } = {}) {
+async function analyse(scriptText, { title, writer, hint } = {}) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
   let text = String(scriptText || '').replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{4,}/g, '\n\n\n');
@@ -76,7 +85,8 @@ async function analyse(scriptText, { title, writer } = {}) {
 
   const user = `Screenplay title given by the filmmaker: ${title || '(none)'}` +
     (writer ? `\nWriter given by the filmmaker: ${writer}` : '') +
-    (truncated ? '\nNote: the script was very long and has been cut off near the end.' : '') +
+    (hint ? `\nThe filmmaker uploaded it as: ${hint}` : '') +
+    (truncated ? '\nNote: the document was very long and has been cut off near the end.' : '') +
     `\n\n---\n${text}\n---\n\nWrite the coverage report. JSON only.`;
 
   const body = JSON.stringify({ model: MODEL, max_tokens: 16000, system: SYSTEM, messages: [{ role: 'user', content: user }] });
@@ -135,6 +145,8 @@ function normalise(r, given = {}) {
     valence: int(p && p.valence, -5, 5, 0)
   }));
 
+  const ad = r.adaptation && typeof r.adaptation === 'object' ? r.adaptation : null;
+  const kind = oneOf((r.source || {}).kind, ['screenplay', 'treatment', 'prose', 'other'], 'screenplay');
   const st = r.structure || {};
   const fmt = r.format || {};
   const aud = r.audience || {};
@@ -143,6 +155,16 @@ function normalise(r, given = {}) {
 
   return {
     title: str(r.title, 120) || str(given.title, 120) || 'Untitled',
+    source: { kind, note: str((r.source || {}).note, 200) },
+    adaptation: kind === 'screenplay' || !ad ? null : {
+      potential: oneOf(ad.potential, ['High', 'Medium', 'Low'], 'Medium'),
+      best_format: oneOf(ad.best_format, ['short', 'feature', 'series'], 'short'),
+      length: str(ad.length, 80),
+      approach: str(ad.approach, 900),
+      keep: arr(ad.keep, 6).map(x => str(x, 300)).filter(Boolean),
+      cut: arr(ad.cut, 6).map(x => str(x, 300)).filter(Boolean),
+      invent: arr(ad.invent, 6).map(x => str(x, 300)).filter(Boolean)
+    },
     writer: str(r.writer, 120) || str(given.writer, 120) || null,
     format: {
       type: oneOf(fmt.type, ['short', 'feature', 'episode', 'other'], 'other'),

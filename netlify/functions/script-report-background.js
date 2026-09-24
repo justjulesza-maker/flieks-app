@@ -43,23 +43,32 @@ exports.handler = async event => {
     if (!rec || rec.status !== 'queued') return { statusCode: 200 };
 
     await set({ status: 'working', stage: 'Reading the file…' });
-    const buf = await download(rec.file_url);
-    if (buf.slice(0, 5).toString() !== '%PDF-') throw new Error('That file is not a PDF.');
-
     let text = '', pages = null;
-    try {
-      const pdf = await pdfParse(buf);
-      text = pdf.text || '';
-      pages = pdf.numpages || null;
-    } catch (e) {
-      throw new Error('Could not read that PDF. Export it again from your screenwriting app and retry.');
-    }
-    if (text.replace(/\s+/g, '').length < 800) {
-      throw new Error('Almost no text came out of that PDF. If it is a scan, export a text PDF from your screenwriting app instead.');
+    const hint = { pdf: 'a PDF', docx: 'a Word document', txt: 'a text file', paste: 'pasted text' }[rec.source || 'pdf'];
+
+    if (rec.file_url) {
+      const buf = await download(rec.file_url);
+      if (buf.slice(0, 5).toString() !== '%PDF-') throw new Error('That file is not a PDF.');
+      try {
+        const pdf = await pdfParse(buf);
+        text = pdf.text || '';
+        pages = pdf.numpages || null;
+      } catch (e) {
+        throw new Error('Could not read that PDF. Export it again and retry.');
+      }
+      if (text.replace(/\s+/g, '').length < 400) {
+        throw new Error('Almost no text came out of that PDF. If it is a scan, export a text PDF (or upload the Word file) instead.');
+      }
+    } else {
+      const held = await ops.dbGet(`flieks_script_texts/${id}`);
+      text = (held && held.text) || '';
+      await ops.dbWrite(`flieks_script_texts/${id}`, null);   // don't keep their writing longer than needed
+      if (!text) throw new Error('The text did not arrive. Try again.');
     }
 
-    await set({ stage: `Reading ${pages ? pages + ' pages' : 'the script'}… this takes a few minutes.`, pages });
-    const report = await analyse(text, { title: rec.title, writer: rec.writer });
+    const words = text.split(/\s+/).filter(Boolean).length;
+    await set({ stage: `Reading ${pages ? pages + ' pages' : words.toLocaleString('en-ZA') + ' words'}… this takes a few minutes.`, pages });
+    const report = await analyse(text, { title: rec.title, writer: rec.writer, hint });
     if (pages && !report.format.pages) report.format.pages = pages;
 
     const now = Date.now();
