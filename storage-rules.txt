@@ -22,6 +22,10 @@ service firebase.storage {
     // Manage them in the Firebase console, which these rules don't apply to.
 
     function signedIn()     { return request.auth != null; }
+    // "create" must mean a file that doesn't exist yet. Without this, a write
+    // over an existing, unstamped file was accepted as a create — that is how
+    // an old poster got replaced in testing.
+    function isNew()        { return resource == null; }
     function ownsIt()       { return signedIn() && resource.metadata.owner == request.auth.uid; }
     function stampedByMe()  { return signedIn() && request.resource.metadata.owner == request.auth.uid; }
     function underMB(n)     { return request.resource.size < n * 1024 * 1024; }
@@ -32,7 +36,7 @@ service firebase.storage {
     match /flieks_films/{filmId}/{file} {
       allow get:    if ownsIt();
       allow list:   if false;
-      allow create: if stampedByMe()
+      allow create: if isNew() && stampedByMe()
                     && ((isVideo() && request.resource.size < 2 * 1024 * 1024 * 1024)
                      || (isImage() && underMB(10)));
       allow update: if ownsIt() && stampedByMe();
@@ -45,7 +49,7 @@ service firebase.storage {
     match /flieks_scripts/{filmId}/{file} {
       allow get:    if ownsIt();
       allow list:   if false;
-      allow create: if stampedByMe() && underMB(30)
+      allow create: if isNew() && stampedByMe() && underMB(30)
                     && request.resource.contentType == 'application/pdf';
       allow update: if ownsIt() && stampedByMe();
       allow delete: if ownsIt();
@@ -55,7 +59,7 @@ service firebase.storage {
     match /flieks_cast/{filmId}/{file} {
       allow get:    if ownsIt();
       allow list:   if false;
-      allow create: if stampedByMe() && isImage() && underMB(10);
+      allow create: if isNew() && stampedByMe() && isImage() && underMB(10);
       allow update: if ownsIt() && stampedByMe();
       allow delete: if ownsIt();
     }
