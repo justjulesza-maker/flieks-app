@@ -7,6 +7,9 @@
 [functions."script-report-background"]
   timeout = 900
 
+[functions."pitch-writer-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 

@@ -225,4 +225,72 @@ function normalise(r, given = {}) {
   };
 }
 
-module.exports = { analyse, normalise, EMOTIONS, MODEL };
+/* ---------- the pitch: persuasive, honest, one page ---------- */
+
+const PITCH_SYSTEM = `You write one-page film pitches for funders, co-producers and festivals, for 4flieks, an African
+independent film platform in South Africa. You get a script report (already written by a reader) and the
+filmmaker's own details. Write persuasive, specific, confident copy in plain English: no hype words
+("groundbreaking", "must-see"), no clichés, no exclamation marks.
+
+Honesty rules:
+- Use only facts in the report and the filmmaker's details. Never invent awards, budgets, figures, cast,
+  partners, festival selections or attachments.
+- Leave weaknesses out rather than misstate them; do not claim the opposite of the report.
+- Comparable titles only from the report.
+
+Return ONLY one JSON object, no fences:
+{
+ "headline": string (a tagline, max 12 words),
+ "logline": string (max 45 words),
+ "story": string (90-130 words),
+ "why_this_film": string (50-80 words: what makes it distinctive),
+ "why_now": string (30-60 words),
+ "audience": string (30-60 words),
+ "look_and_feel": string (30-60 words: tone, visual style, sound, performances),
+ "production": string (30-60 words: scale, cast size, locations, budget band; practical and reassuring),
+ "release": string (40-70 words: release on 4flieks with cast and crew links, plus sensible festival or partner routes),
+ "comparables": [{"title": string, "year": integer or null, "note": string (max 15 words)}] (0-4),
+ "key_facts": [{"label": string, "value": string}] (4-6 short facts, e.g. Format, Runtime, Language, Genre, Budget band, Stage)
+}`;
+
+async function writePitch(report, details = {}) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
+  // Development notes and scores stay out: the pitch is for funders.
+  const { notes, scores, meta, verdict, ...forPitch } = report || {};
+  const user = `Script report (JSON):\n${JSON.stringify(forPitch)}\n\nFilmmaker's details:\n` +
+    `Stage: ${details.stage || 'not given'}\nTeam: ${details.team || 'not given'}\nWhat they are looking for: ${details.ask || 'not given'}\n\nWrite the pitch. JSON only.`;
+  const body = JSON.stringify({ model: MODEL, max_tokens: 3000, system: PITCH_SYSTEM, messages: [{ role: 'user', content: user }] });
+  const r = await request('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body),
+               'x-api-key': key, 'anthropic-version': '2023-06-01' }
+  }, body);
+  const d = JSON.parse(r.body || '{}');
+  if (d.error) throw new Error(d.error.message || 'model error');
+  const out = (d.content || []).map(b => b.text || '').join('');
+  const a = out.indexOf('{'), b = out.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error('The pitch came back empty. Try again.');
+  let raw;
+  try { raw = JSON.parse(out.slice(a, b + 1)); } catch { throw new Error('The pitch could not be read. Try again.'); }
+  return normalisePitch(raw);
+}
+
+function normalisePitch(p) {
+  p = p && typeof p === 'object' ? p : {};
+  return {
+    headline: str(p.headline, 140),
+    logline: str(p.logline, 400),
+    story: str(p.story, 1200),
+    why_this_film: str(p.why_this_film, 800),
+    why_now: str(p.why_now, 600),
+    audience: str(p.audience, 600),
+    look_and_feel: str(p.look_and_feel, 600),
+    production: str(p.production, 600),
+    release: str(p.release, 700),
+    comparables: arr(p.comparables, 4).map(c => ({ title: str(c && c.title, 100), year: int(c && c.year, 1900, 2100), note: str(c && c.note, 160) })).filter(c => c.title),
+    key_facts: arr(p.key_facts, 6).map(f => ({ label: str(f && f.label, 30), value: str(f && f.value, 60) })).filter(f => f.label && f.value)
+  };
+}
+
+module.exports = { analyse, normalise, writePitch, normalisePitch, EMOTIONS, MODEL };

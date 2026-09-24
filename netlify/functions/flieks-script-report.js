@@ -8,7 +8,10 @@
  *                                                          until the reader has it, then deleted
  *   list   { token }                                      my reports, newest first
  *   get    { id }                                         a report by its link id (shareable)
- *   delete { token, id }                                  remove one of my reports
+ *   delete { token, id }                                  remove one of my reports (and its pitch)
+ *   pitch-start { token, id, team, ask, contact, stage }  owner: (re)write the one-page pitch
+ *   pitch-get   { pid, token? }                           a pitch by its own link (shareable)
+ *   pitch-save  { token, pid, copy, details }             owner: save hand edits
  *
  * The screenplay is uploaded by the browser to Storage (flieks_scripts/lab_<uid>/…,
  * owner-only under the Storage rules) and only its download link comes here.
@@ -44,6 +47,28 @@ async function lookup(token) {
 const newId = () => crypto.randomBytes(15).toString('base64').replace(/[+/=]/g, '').slice(0, 20);
 const validId = id => typeof id === 'string' && /^[A-Za-z0-9]{12,40}$/.test(id);
 const jobSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':script-report').digest('hex');
+const pitchSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':pitch').digest('hex');
+const STAGES = ['Idea', 'Script', 'Financing', 'Pre-production', 'Shooting', 'Post-production', 'Finished'];
+const MAX_PITCH_DRAFTS = 10;
+const { normalisePitch } = require('../lib/script-report-core');
+
+function cleanDetails(d) {
+  d = d && typeof d === 'object' ? d : {};
+  return {
+    team: String(d.team || '').trim().slice(0, 1500),
+    ask: String(d.ask || '').trim().slice(0, 800),
+    contact: String(d.contact || '').trim().slice(0, 160),
+    stage: STAGES.includes(d.stage) ? d.stage : 'Script'
+  };
+}
+function pitchView(pid, p, isOwner) {
+  return {
+    pid, status: p.status, error: p.status === 'error' ? (p.error || 'Something went wrong.') : null,
+    title: p.title, writer: p.writer || null, details: p.details || {}, copy: p.copy || null,
+    updated_at: p.updated_at || p.created_at, is_owner: !!isOwner, report_id: isOwner ? p.report_id : null
+  };
+}
+async function optionalUser(token) { try { return token ? await lookup(token) : null; } catch { return null; } }
 
 /* What anyone with the link may see. Never the owner's uid or the file link. */
 function publicView(id, rec) {
@@ -72,7 +97,22 @@ exports.handler = async event => {
       if (!validId(body.id)) return reply(404, { message: 'Report not found.' });
       const rec = await ops.dbGet(`flieks_script_reports/${body.id}`);
       if (!rec) return reply(404, { message: 'Report not found.' });
-      return reply(200, publicView(body.id, rec));
+      const view = publicView(body.id, rec);
+      const who = await optionalUser(body.token);
+      if (who && (who.uid === rec.owner || who.role === 'admin')) {
+        view.is_owner = true;
+        view.pitch_id = rec.pitch_id || null;
+        view.owner_email = rec.owner_email || '';
+      }
+      return reply(200, view);
+    }
+
+    if (action === 'pitch-get') {
+      if (!validId(body.pid)) return reply(404, { message: 'Pitch not found.' });
+      const pitch = await ops.dbGet(`flieks_pitches/${body.pid}`);
+      if (!pitch) return reply(404, { message: 'Pitch not found.' });
+      const who = await optionalUser(body.token);
+      return reply(200, pitchView(body.pid, pitch, who && (who.uid === pitch.owner || who.role === 'admin')));
     }
 
     const me = await lookup(body.token);
@@ -94,6 +134,7 @@ exports.handler = async event => {
       if (!rec || (rec.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Report not found.' });
       await ops.dbWrite(`flieks_script_reports/${body.id}`, null);
       await ops.dbWrite(`flieks_script_texts/${body.id}`, null);
+      if (rec.pitch_id) await ops.dbWrite(`flieks_pitches/${rec.pitch_id}`, null);
       await ops.dbWrite(`flieks_script_reports_by_user/${rec.owner}/${body.id}`, null);
       return reply(200, { ok: true, filePath: rec.file_path || null });
     }
@@ -154,6 +195,48 @@ exports.handler = async event => {
         return reply(502, { message: 'Could not start the reader. Try again.' });
       }
       return reply(200, { ok: true, id });
+    }
+
+    /* ---- the pitch ---- */
+    if (action === 'pitch-start') {
+      if (!validId(body.id)) return reply(404, { message: 'Report not found.' });
+      const rec = await ops.dbGet(`flieks_script_reports/${body.id}`);
+      if (!rec || (rec.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Report not found.' });
+      if (rec.status !== 'done') return reply(409, { message: 'The report is not ready yet.' });
+      const pid = rec.pitch_id || newId();
+      const prev = rec.pitch_id ? await ops.dbGet(`flieks_pitches/${pid}`) : null;
+      const drafts = (prev && prev.drafts) || 0;
+      if (drafts >= MAX_PITCH_DRAFTS && me.role !== 'admin') {
+        return reply(429, { message: `That's ${MAX_PITCH_DRAFTS} drafts for this pitch. Edit the text by hand instead.` });
+      }
+      const now = Date.now();
+      await ops.dbWrite(`flieks_pitches/${pid}`, {
+        report_id: body.id, owner: rec.owner, title: rec.title, writer: rec.writer || null,
+        details: cleanDetails(body), copy: (prev && prev.copy) || null,
+        status: 'queued', drafts: drafts + 1, created_at: (prev && prev.created_at) || now, updated_at: now
+      });
+      if (!rec.pitch_id) await ops.dbWrite(`flieks_script_reports/${body.id}`, { pitch_id: pid }, 'PATCH');
+      const base = process.env.URL || 'https://4flieks.com';
+      const kick = await fetch(`${base}/.netlify/functions/pitch-writer-background`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-job-secret': pitchSecret() },
+        body: JSON.stringify({ pid })
+      }).catch(() => ({ ok: false, status: 0 }));
+      if (!kick.ok && kick.status !== 202) {
+        await ops.dbWrite(`flieks_pitches/${pid}`, { status: 'error', error: 'Could not start the writer. Try again.' }, 'PATCH');
+        return reply(502, { message: 'Could not start the writer. Try again.' });
+      }
+      return reply(200, { ok: true, pid });
+    }
+
+    if (action === 'pitch-save') {
+      if (!validId(body.pid)) return reply(404, { message: 'Pitch not found.' });
+      const pitch = await ops.dbGet(`flieks_pitches/${body.pid}`);
+      if (!pitch || (pitch.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Pitch not found.' });
+      const fields = { updated_at: Date.now() };
+      if (body.copy) fields.copy = normalisePitch(body.copy);
+      if (body.details) fields.details = cleanDetails(body.details);
+      await ops.dbWrite(`flieks_pitches/${body.pid}`, fields, 'PATCH');
+      return reply(200, { ok: true });
     }
 
     return reply(400, { message: 'Unknown action.' });
