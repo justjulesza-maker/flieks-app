@@ -699,6 +699,34 @@ async function toggleFilmStatus(id, status) {
 }
 
 /* ---- USERS ---- */
+/* Keep in step with VERSION in netlify/functions/flieks-agree.js. */
+const AGREEMENT_VERSION = '2026-09-12';
+const escA = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+function agreementLine(u) {
+  if (!u.agreement_ref) {
+    return `<p style="font-size:12px;margin-top:3px;color:var(--amber)">Agreement: not accepted yet</p>`;
+  }
+  const when = u.agreement_at ? new Date(u.agreement_at).toLocaleDateString('en-ZA', { day:'numeric', month:'short', year:'numeric' }) : '';
+  const old = u.agreement_version && u.agreement_version !== AGREEMENT_VERSION;
+  return `<p style="font-size:12px;margin-top:3px;color:${old ? 'var(--amber)' : 'var(--green)'}">
+    Agreement ${escA(u.agreement_ref)} · accepted ${escA(when)}${old ? ` · older version (${escA(u.agreement_version)}), will be asked again` : ''}</p>`;
+}
+
+/* Email the filmmaker their agreement record with the PDF, copied to Julian. */
+async function sendAgreementCopy(uid, btn) {
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/.netlify/functions/flieks-agree', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action: 'send-copy', uid })
+    });
+    const d = await r.json().catch(() => ({}));
+    snack(r.ok ? `Agreement copy sent to ${d.to}.` : `Not sent: ${d.message || r.status}`);
+  } catch (e) { snack('Not sent: ' + e.message); }
+  btn.disabled = false; btn.textContent = label;
+}
+
 async function loadUsers() {
   const appEl = document.getElementById('applications-list');
   const uEl = document.getElementById('users-list');
@@ -733,12 +761,23 @@ async function loadUsers() {
     if (users.length === 0) {
       uEl.innerHTML = `<p style="color:var(--muted);font-size:14px">No users yet.</p>`;
     } else {
-      uEl.innerHTML = users.map(u => `
+      // Filmmakers first, then everyone else; newest first within each.
+      const isMaker = u => u.role === 'filmmaker' || u.role === 'filmmaker_pending' || !!u.agreement_ref;
+      users.sort((a, b) => (isMaker(b) - isMaker(a)) || ((b.created_at || 0) - (a.created_at || 0)));
+      const makers = users.filter(isMaker);
+      const signed = makers.filter(u => u.agreement_ref).length;
+      uEl.innerHTML = `
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${makers.length} filmmaker${makers.length === 1 ? '' : 's'} ·
+          ${signed} accepted the distribution agreement${makers.length - signed ? ` · <span style="color:var(--amber)">${makers.length - signed} not yet</span>` : ''}</p>` +
+        users.map(u => `
         <div class="card row">
-          <div>
-            <p style="font-size:14px;font-weight:600">${u.name||'—'}</p>
-            <p style="font-size:12px;color:var(--muted)">${u.email||''} · <span style="color:${u.role==='filmmaker'?'var(--amber)':u.role==='admin'?'var(--green)':'var(--muted)'}">${u.role||'viewer'}</span></p>
+          <div style="flex:1;min-width:0">
+            <p style="font-size:14px;font-weight:600">${escA(u.name||'—')}</p>
+            <p style="font-size:12px;color:var(--muted)">${escA(u.email||'')} · <span style="color:${u.role==='filmmaker'?'var(--amber)':u.role==='admin'?'var(--green)':'var(--muted)'}">${escA(u.role||'viewer')}</span></p>
+            ${isMaker(u) ? agreementLine(u) : ''}
           </div>
+          ${u.agreement_ref ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-left:10px;white-space:nowrap"
+             onclick="sendAgreementCopy('${u.id}', this)">Email agreement</button>` : ''}
         </div>
       `).join('');
     }

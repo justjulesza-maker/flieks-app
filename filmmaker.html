@@ -2505,7 +2505,8 @@ async function acceptAgreement() {
       msg.textContent = d.message || 'Could not record that.';
       return;
     }
-    showSnack(`Agreement accepted. Your reference is ${d.reference}.`);
+    showSnack(`Agreement accepted. Your reference is ${d.reference}.` +
+      (d.emailed ? ' A copy is in your inbox.' : ''));
     checkAgreement();
   } finally {
     // Whatever happened, the button comes back.

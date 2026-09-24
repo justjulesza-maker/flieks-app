@@ -377,7 +377,7 @@ async function sendWhatsApp(kind, vars, plainText) {
 }
 
 /* Any email through Resend. Used for Julian's alerts and for mail to filmmakers. */
-async function sendEmailTo({ to, subject, text, html, replyTo }) {
+async function sendEmailTo({ to, subject, text, html, replyTo, cc, attachments }) {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, reason: 'RESEND_API_KEY is not set' };
   if (!to) return { ok: false, reason: 'no recipient' };
@@ -387,6 +387,9 @@ async function sendEmailTo({ to, subject, text, html, replyTo }) {
   };
   if (html) msg.html = html;
   if (replyTo) msg.reply_to = replyTo;
+  if (cc && cc !== to) msg.cc = [cc];
+  // [{ filename, path: 'https://…' }] — Resend fetches the file itself.
+  if (attachments && attachments.length) msg.attachments = attachments;
   const body = JSON.stringify(msg);
   const r = await request('https://api.resend.com/emails', {
     method: 'POST',
