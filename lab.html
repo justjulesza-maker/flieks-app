@@ -100,6 +100,14 @@ ul.plain li::before{content:'—';position:absolute;left:0;color:var(--sunset)}
 .fst.open{background:#2E7D32;border-color:#2E7D32;color:#fff}
 .fmeta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px!important}
 .fmeta b{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#B9AB9B;font-weight:400;margin-right:4px}
+.targets{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}
+@media (max-width:640px){.targets{grid-template-columns:1fr}}
+.tgt{border-top:1px solid var(--rule);padding:7px 0;display:flex;flex-direction:column;gap:2px}
+.tgt b{font-size:14px}
+.tgt span{font-size:12.5px;color:var(--ink-2)}
+.tgt a{font-size:12.5px;color:var(--sunset)}
+.finc{display:inline-flex!important;align-items:center;gap:7px;margin:8px 0 0!important;font:600 13px var(--fn)!important;letter-spacing:0!important;text-transform:none!important;color:var(--paper)!important;cursor:pointer}
+.finc input{accent-color:var(--sunset);width:16px;height:16px}
 .foot{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule)}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 button,.btn{font:700 13px var(--fn);padding:10px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;display:inline-block}
@@ -254,6 +262,7 @@ body.home .sheet{max-width:1040px}
   body.pitch .team p{padding:3px 0}
   body.pitch .ask{padding:10px 14px;margin-top:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body.pitch .foot{margin-top:12px;padding-top:6px}
+  body.pitch .tgt{padding:3px 0} body.pitch .tgt b{font-size:11.5px} body.pitch .tgt span{font-size:10.5px}
   body{background:#fff;padding:0}
   .sheet{box-shadow:none;max-width:none;padding:24px 28px}
   .noprint{display:none!important}
@@ -552,10 +561,32 @@ function renderPitch(d) {
       ${det.ask ? `<h2>What we're looking for</h2><p>${esc(det.ask)}</p>` : ''}
       ${det.contact ? `<p style="margin-top:${det.ask ? '12px' : '0'}"><b>Contact:</b> ${esc(det.contact)}</p>` : ''}
     </div>` : ''}
+    <div id="ptargets">${targetsHtml(d.targets)}</div>
     <div class="foot"><p class="tiny">A 4flieks Lab pitch, drafted with AI from a script report and edited by the filmmaker. 4flieks.com</p></div>
     ${d.is_owner ? `<div class="panel noprint" id="fundbox" style="margin-top:26px"></div>` : ''}`;
   editing = false;
   if (d.is_owner) fundingPanel(d.pid, d.funding);
+}
+
+/* The funds the filmmaker chose to show partners. Part of the pitch: shared link and PDF. */
+const TSTAGE = { development: 'Development', production: 'Production', 'post-production': 'Post-production', distribution: 'Distribution', training: 'Training' };
+function targetsHtml(list) {
+  if (!list || !list.length) return '';
+  return `<h2>Funding we're targeting</h2><div class="targets">${list.map(t => `<div class="tgt">
+      <b>${esc(t.funder)}${t.programme ? ` — ${esc(t.programme)}` : ''}</b>
+      <span>${[t.stage && TSTAGE[t.stage], t.amount, t.deadline && `Deadline: ${t.deadline}`].filter(Boolean).map(esc).join(' · ')}</span>
+      ${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener" class="noprint">The call →</a>` : ''}
+    </div>`).join('')}</div>`;
+}
+const fundKeyOf = o => String((o && (o.url || `${o.funder}|${o.programme}`)) || '').toLowerCase().replace(/\/+$/, '');
+async function toggleTarget(pid, box) {
+  const keys = [...document.querySelectorAll('#fundbox .finc input:checked')].map(i => i.value);
+  box.disabled = true;
+  const { ok, d } = await call('funding-include', { pid, keys });
+  box.disabled = false;
+  if (!ok) { box.checked = !box.checked; return; }
+  document.getElementById('ptargets').innerHTML = targetsHtml(d.targets);
+  if (pitchData) pitchData.targets = d.targets;
 }
 
 /* ---- funding open now: live web search, owner only, never printed ---- */
@@ -569,11 +600,12 @@ function fundingPanel(pid, f) {
   const picked = (f.regions && f.regions.length) ? f.regions : ['za', 'africa'];
   const busy = f.status === 'queued' || f.status === 'working';
   const items = f.status === 'done' ? (f.items || []) : [];
+  const inc = new Set(f.include || []);
   const regionName = k => (FUND_REGIONS.find(r => r[0] === k) || [k, k])[1];
   const groups = FUND_REGIONS.map(([k]) => [k, items.filter(i => i.region === k)]).filter(([, l]) => l.length);
   box.innerHTML = `
     <h3>Funding open now</h3>
-    <p>Search the web for funds, grants, incentives and labs that are open for a project like this one. Only you see this; it is not part of the pitch.</p>
+    <p>Search the web for funds, grants, incentives and labs that are open for a project like this one. Only you see this list. Tick <b>Show on my pitch</b> on the ones you're going for, and they appear on your pitch as "Funding we're targeting" for partners.</p>
     <label style="margin-top:12px">Look for funding from</label>
     <div class="fregions">${FUND_REGIONS.map(([k, n]) => `<label class="freg"><input type="checkbox" value="${k}" ${picked.includes(k) ? 'checked' : ''} ${busy ? 'disabled' : ''}> ${esc(n)}</label>`).join('')}</div>
     <p class="msg" id="fmsg" style="color:#F2C7A8">${busy ? 'Searching the web… this takes 2 to 4 minutes. You can leave this page and come back.' : f.status === 'error' ? esc(f.error || 'The search failed. Try again.') : ''}</p>
@@ -589,6 +621,7 @@ function fundingPanel(pid, f) {
           <p class="fmeta">${[o.amount && `<span><b>Amount</b> ${esc(o.amount)}</span>`, o.deadline && `<span><b>Deadline</b> ${esc(o.deadline)}</span>`, `<span><b>Stage</b> ${esc(o.stage)}</span>`].filter(Boolean).join('')}</p>
           ${o.eligibility ? `<p class="small" style="color:#D9D1C2"><b>Who can apply:</b> ${esc(o.eligibility)}</p>` : ''}
           ${o.fit ? `<p class="small" style="color:#D9D1C2"><b>Why it fits:</b> ${esc(o.fit)}</p>` : ''}
+          <label class="finc"><input type="checkbox" value="${esc(fundKeyOf(o))}" ${inc.has(fundKeyOf(o)) ? 'checked' : ''} onchange="toggleTarget('${esc(pid)}', this)"> Show on my pitch</label>
           <p style="margin-top:6px"><a href="${esc(o.url)}" target="_blank" rel="noopener">Read the call on their site →</a>${
             o.found_at && f.checked_at && o.found_at < f.checked_at - 60000 ? ` <span class="tiny" style="color:#B9AB9B">· found ${esc(dateStr(o.found_at))}</span>` : ''}</p>
         </div>`).join('')).join('')

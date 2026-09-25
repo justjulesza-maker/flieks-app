@@ -12,6 +12,7 @@
  *   pitch-start { token, id, team, ask, contact, stage }  owner: (re)write the one-page pitch
  *   pitch-get   { pid, token? }                           a pitch by its own link (shareable)
  *   pitch-save  { token, pid, copy, details }             owner: save hand edits
+ *   funding-include { token, pid, keys }                owner: which found funds show on the pitch
  *   funding-start { token, pid, regions }               owner: search the web for funding open now
  *                                                          (regions: za, africa, europe, intl)
  *   match-start { token, id }                             owner: suggest opted-in actors for the roles
@@ -84,8 +85,18 @@ function pitchView(pid, p, isOwner) {
     title: p.title, writer: p.writer || null, details: p.details || {}, copy: p.copy || null,
     updated_at: p.updated_at || p.created_at, is_owner: !!isOwner, report_id: isOwner ? p.report_id : null,
     // Funding research is the filmmaker's own working list, never shown to people they share the pitch with.
-    funding: isOwner ? (p.funding || null) : undefined
+    funding: isOwner ? (p.funding || null) : undefined,
+    // Funds the filmmaker chose to show partners: on the shared pitch and its PDF.
+    targets: pitchTargets(p)
   };
+}
+const fundKey = o => String((o && (o.url || `${o.funder}|${o.programme}`)) || '').toLowerCase().replace(/\/+$/, '');
+function pitchTargets(p) {
+  const f = p.funding || {}, keep = new Set(Array.isArray(f.include) ? f.include : []);
+  return (f.items || []).filter(o => o && keep.has(fundKey(o))).map(o => ({
+    funder: o.funder, programme: o.programme || '', amount: o.amount || null, deadline: o.deadline || null,
+    stage: o.stage || null, url: o.url || null
+  }));
 }
 async function optionalUser(token) { try { return token ? await lookup(token) : null; } catch { return null; } }
 
@@ -262,6 +273,16 @@ exports.handler = async event => {
     }
 
     /* ---- funding open now (live web search) ---- */
+    if (action === 'funding-include') {
+      if (!validId(body.pid)) return reply(404, { message: 'Pitch not found.' });
+      const pitch = await ops.dbGet(`flieks_pitches/${body.pid}`);
+      if (!pitch || (pitch.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Pitch not found.' });
+      const known = new Set(((pitch.funding || {}).items || []).map(fundKey));
+      const keys = (Array.isArray(body.keys) ? body.keys : []).map(k => String(k).toLowerCase().replace(/\/+$/, '')).filter(k => known.has(k)).slice(0, 8);
+      await ops.dbWrite(`flieks_pitches/${body.pid}/funding/include`, keys.length ? keys : null);
+      return reply(200, { ok: true, targets: pitchTargets({ funding: { ...pitch.funding, include: keys } }) });
+    }
+
     if (action === 'funding-start') {
       if (!validId(body.pid)) return reply(404, { message: 'Pitch not found.' });
       const pitch = await ops.dbGet(`flieks_pitches/${body.pid}`);
