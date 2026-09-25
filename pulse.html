@@ -483,8 +483,43 @@ function renderLab(L) {
         <div class="kv"><span>Partners (Lab unlimited)</span><b>${n(L.members.partnersWithUnlimited)}</b></div>
         ${verdicts ? `<p style="font-size:12px;color:var(--muted);margin-top:8px">Verdicts so far: ${verdicts}</p>` : ''}
         ${L.reports.failedLast7days ? `<p style="font-size:12px;color:var(--red);margin-top:6px">${L.reports.failedLast7days} failed this week</p>` : ''}
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn" id="fest-btn" onclick="updateFestivals()">Add festival picks to older reports</button>
+          <span id="fest-msg" style="font-size:12px;color:var(--muted)">${esc(festMsg)}</span>
+        </div>
       </div>
     </div>`;
+}
+
+/* Older Script Reports get 'Festivals to aim for' from their own content; runs in the background. */
+let festMsg = '', festTimer = null;
+function setFestMsg(t) { festMsg = t; const m = document.getElementById('fest-msg'); if (m) m.textContent = t; }
+async function watchFestivals() {
+  clearTimeout(festTimer);
+  try {
+    const { status: st } = await opsCall('lab-festivals-status');
+    if (!st) return;
+    if (st.status === 'queued' || st.status === 'working') {
+      setFestMsg(`Adding festivals… ${st.done || 0} of ${st.total || '?'} reports done`);
+      festTimer = setTimeout(watchFestivals, 5000);
+    } else if (st.status === 'done') {
+      setFestMsg(`Done: ${st.done} report${st.done === 1 ? '' : 's'} updated${st.failed ? `, ${st.failed} failed (press again to retry them)` : ''}.`);
+      const b = document.getElementById('fest-btn'); if (b) b.disabled = false;
+    } else if (st.status === 'error') {
+      setFestMsg('It stopped: ' + (st.error || 'unknown error') + '. Press again to retry.');
+      const b = document.getElementById('fest-btn'); if (b) b.disabled = false;
+    }
+  } catch (e) { setFestMsg('Could not check progress: ' + e.message); }
+}
+async function updateFestivals() {
+  const btn = document.getElementById('fest-btn');
+  btn.disabled = true; setFestMsg('Starting…');
+  try {
+    const d = await opsCall('lab-festivals');
+    if (d.total === 0 && !d.running) { setFestMsg('Every report already has festival picks.'); btn.disabled = false; return; }
+    setFestMsg(`Adding festivals to ${d.total} report${d.total === 1 ? '' : 's'}…`);
+    watchFestivals();
+  } catch (e) { setFestMsg(e.message); btn.disabled = false; }
 }
 
 async function freshBriefing() {

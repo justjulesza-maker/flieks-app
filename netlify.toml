@@ -13,6 +13,9 @@
 [functions."cast-match-background"]
   timeout = 900
 
+[functions."festivals-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 

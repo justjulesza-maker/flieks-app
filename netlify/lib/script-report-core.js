@@ -127,6 +127,15 @@ const int = (v, lo, hi, dflt = null) => {
 const arr = (v, max) => (Array.isArray(v) ? v : []).slice(0, max);
 const oneOf = (v, list, dflt) => (list.includes(v) ? v : dflt);
 
+/* Only real festivals from our list; the name and place come from the list, not the model. */
+function cleanFestivals(list) {
+  return arr(list, 8).map(f => {
+    const id = String((f && f.id) || '').trim(), known = festivalById[id];
+    return known && { id, name: known.name, where: known.where, type: known.type,
+      stage: oneOf(f.stage, ['script', 'rough-cut', 'finished'], 'finished'), why: str(f.why, 260) };
+  }).filter(Boolean).filter((f, i, a) => a.findIndex(x => x.id === f.id) === i).slice(0, 6);
+}
+
 function normalise(r, given = {}) {
   r = r && typeof r === 'object' ? r : {};
   const scoreKeys = ['concept', 'character', 'dialogue', 'structure', 'marketability'];
@@ -232,11 +241,7 @@ function normalise(r, given = {}) {
       cast_link_plan: str(rel.cast_link_plan, 600)
     },
     // Only real festivals from our list; the name and place come from the list, not the model.
-    festivals: arr(r.festivals, 8).map(f => f && festivalById[String(f.id || '').trim()] && {
-        id: String(f.id).trim(), name: festivalById[String(f.id).trim()].name, where: festivalById[String(f.id).trim()].where,
-        type: festivalById[String(f.id).trim()].type,
-        stage: oneOf(f.stage, ['script', 'rough-cut', 'finished'], 'finished'), why: str(f.why, 260)
-      }).filter(Boolean).filter((f, i, a) => a.findIndex(x => x.id === f.id) === i).slice(0, 6),
+    festivals: cleanFestivals(r.festivals),
     festival_strategy: str(r.festival_strategy, 600)
   };
 }
@@ -350,4 +355,41 @@ async function matchCast(characters, candidates) {
   })).filter(m => names.has(m.character));
 }
 
-module.exports = { analyse, normalise, writePitch, normalisePitch, matchCast, EMOTIONS, MODEL };
+/* ---------- festivals for a report written before they were added ---------- */
+
+const FEST_SYSTEM = `You advise African filmmakers on festival strategy for 4flieks. You get a script report
+(already written by a reader). Suggest 3-6 festivals, labs, markets or funds from the FESTIVALS list ONLY, by id:
+match format, language, genre, region and stage; include at least one African festival, lab or market; for a
+project that isn't shot yet, include script-stage labs or markets. Never give dates, deadlines or fees.
+
+Return ONLY JSON, no fences:
+{"festivals": [{"id": string (from the list, exactly), "stage": "script" | "rough-cut" | "finished", "why": string (max 30 words, specific to this story)}],
+ "festival_strategy": string (2-3 sentences: which to approach first and in what order, and that a world premiere can only happen once)}
+
+FESTIVALS:
+${forPrompt()}`;
+
+async function suggestFestivals(report) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
+  const r0 = report || {};
+  const brief = { title: r0.title, source: r0.source, format: r0.format, logline: r0.logline, synopsis: r0.synopsis,
+    genres: r0.genres, tone: r0.tone, themes: r0.themes, languages: r0.languages, audience: r0.audience,
+    adaptation: r0.adaptation, production: r0.production, verdict: r0.verdict && r0.verdict.label };
+  const body = JSON.stringify({ model: MODEL, max_tokens: 1500, system: FEST_SYSTEM,
+    messages: [{ role: 'user', content: `Script report (JSON):\n${JSON.stringify(brief)}\n\nSuggest festivals. JSON only.` }] });
+  const r = await request('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body),
+               'x-api-key': key, 'anthropic-version': '2023-06-01' }
+  }, body);
+  const d = JSON.parse(r.body || '{}');
+  if (d.error) throw new Error(d.error.message || 'model error');
+  const out = (d.content || []).map(b => b.text || '').join('');
+  const a = out.indexOf('{'), b = out.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error('empty answer');
+  const raw = JSON.parse(out.slice(a, b + 1));
+  return { festivals: cleanFestivals(raw.festivals), festival_strategy: str(raw.festival_strategy, 600) };
+}
+
+module.exports = { analyse, normalise, writePitch, normalisePitch, matchCast, suggestFestivals, cleanFestivals, EMOTIONS, MODEL };
