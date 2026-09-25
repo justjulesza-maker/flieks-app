@@ -557,7 +557,7 @@ firebase.auth().onAuthStateChanged(user => {
   function pollJob(jobId) {
     const url = FIREBASE_DB + "/script_coach/jobs/" + jobId + ".json";
     let elapsed = 0;
-    const maxWait = 300000; // 5 minutes
+    const maxWait = 17 * 60000; // a feature-length script is read in parts and can take 10+ minutes
     const interval = 3000;  // poll every 3 seconds
 
     const timer = setInterval(async () => {
@@ -607,7 +607,7 @@ firebase.auth().onAuthStateChanged(user => {
         clearInterval(timer);
         stopProgress();
         showSection("form");
-        showError("Processing is taking longer than expected. The extraction may still be running — check back in a minute.");
+        showError("This is taking much longer than it should, so it has probably failed. Please try again, or send us the script.");
       }
     }, interval);
   }
