@@ -9,6 +9,7 @@
  * Everything is normalised after the model answers, so the page can trust the
  * shape (numbers in range, lists capped, no missing keys).
  */
+const { byId: festivalById, forPrompt } = require('./festivals');
 const MODEL = process.env.SCRIPT_REPORT_MODEL || 'claude-sonnet-5';
 const MAX_SCRIPT_CHARS = 380000;   // a long feature is ~200k; leaves room without blowing the context
 
@@ -35,6 +36,7 @@ Rules:
   anywhere on the continent, where they genuinely fit. If unsure, give fewer.
 - If the text looks garbled or incomplete, or is not a story at all (an invoice, an essay), say so plainly
   in the verdict and keep everything else short.
+- Festivals: suggest ONLY from the FESTIVALS list at the end, by id. Never give dates, deadlines or fees.
 - 4flieks pricing: shorts usually rent for R25 and sell for R49; features up to about R35 rent and R59 own.
 - Return ONLY one JSON object, no markdown fences, no commentary, exactly this shape:
 
@@ -60,8 +62,14 @@ Rules:
  "strengths": [string] (3-5),
  "notes": [{"area": string, "note": string, "where": string or null}] (4-8 actionable development notes),
  "production": {"speaking_roles": integer, "locations": integer, "night_scenes": "few" | "some" | "many", "budget_band": "micro" | "low" | "mid", "flags": [string] (costly elements such as crowds, stunts, period, VFX, animals, water, vehicles)},
- "release": {"rent_price": integer, "own_price": integer, "why_price": string, "trailer_moments": [string] (3 specific moments that would cut into a strong trailer), "poster_idea": string, "cast_link_plan": string (how the cast and crew should promote it with their 4flieks links)}
-}`;
+ "release": {"rent_price": integer, "own_price": integer, "why_price": string, "trailer_moments": [string] (3 specific moments that would cut into a strong trailer), "poster_idea": string, "cast_link_plan": string (how the cast and crew should promote it with their 4flieks links)},
+ "festivals": [{"id": string (an id from the FESTIVALS list below, exactly), "stage": "script" | "rough-cut" | "finished" (when to approach it), "why": string (max 30 words, specific to this story)}] (3-6, best fit first),
+ "festival_strategy": string (2-3 sentences: which to approach first and in what order, and that a world premiere can only happen once)
+}
+
+FESTIVALS (the only ones you may suggest; match format, language, genre, region and stage; include at least one
+African festival, lab or market; for a project that isn't shot yet, include script-stage labs or markets):
+${forPrompt()}`;
 
 function request(url, opts = {}, body = null) {
   const https = require('https');
@@ -222,7 +230,14 @@ function normalise(r, given = {}) {
       trailer_moments: arr(rel.trailer_moments, 4).map(t => str(t, 300)).filter(Boolean),
       poster_idea: str(rel.poster_idea, 400),
       cast_link_plan: str(rel.cast_link_plan, 600)
-    }
+    },
+    // Only real festivals from our list; the name and place come from the list, not the model.
+    festivals: arr(r.festivals, 8).map(f => f && festivalById[String(f.id || '').trim()] && {
+        id: String(f.id).trim(), name: festivalById[String(f.id).trim()].name, where: festivalById[String(f.id).trim()].where,
+        type: festivalById[String(f.id).trim()].type,
+        stage: oneOf(f.stage, ['script', 'rough-cut', 'finished'], 'finished'), why: str(f.why, 260)
+      }).filter(Boolean).filter((f, i, a) => a.findIndex(x => x.id === f.id) === i).slice(0, 6),
+    festival_strategy: str(r.festival_strategy, 600)
   };
 }
 
