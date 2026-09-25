@@ -83,7 +83,17 @@ function request(url, opts = {}, body = null) {
 
 const str = (v, n) => (v == null ? '' : String(v)).trim().slice(0, n);
 const oneOf = (v, list, d) => (list.includes(v) ? v : d);
-const origin = u => { try { const x = new URL(u); return x.protocol === 'https:' ? x.origin : null; } catch { return null; } };
+/* The site a link belongs to, ignoring www. and sub-sites: nfvf.co.za, iffr.com, gov.za → thedtic.gov.za. */
+const siteOf = u => {
+  try {
+    const x = new URL(u);
+    if (x.protocol !== 'https:' && x.protocol !== 'http:') return null;
+    const h = x.hostname.toLowerCase().replace(/^www\./, '').split('.');
+    // co.za, org.za, gov.za, co.uk, com.ng … keep three labels; otherwise two.
+    const keep = h.length > 2 && /^(co|org|gov|ac|net|com|or|go|edu)$/.test(h[h.length - 2]) && h[h.length - 1].length === 2 ? 3 : 2;
+    return h.slice(-keep).join('.');
+  } catch { return null; }
+};
 
 /** What the project is, for the search. From the pitch and its report. */
 function projectBrief(pitch, report) {
@@ -114,7 +124,7 @@ async function findFunding(brief, { regions, apiKey = process.env.ANTHROPIC_API_
   let data, searches = 0;
   for (let turn = 0; turn < 4; turn++) {
     const body = JSON.stringify({
-      model: MODEL, max_tokens: 6000, system: SYSTEM, messages,
+      model: MODEL, max_tokens: 8000, system: SYSTEM, messages,
       tools: [{ type: TOOL, name: 'web_search', max_uses: 6 + 2 * chosen.length,
         ...(chosen.length === 1 && chosen[0] === 'za' ? { user_location: { type: 'approximate', country: 'ZA' } } : {}) }]
     });
@@ -146,11 +156,16 @@ async function findFunding(brief, { regions, apiKey = process.env.ANTHROPIC_API_
   }
   let raw;
   try { raw = JSON.parse(text.slice(a, z + 1)); } catch { throw new Error('The results could not be read. Try again.'); }
-  const foundOrigins = new Set([...found].map(origin).filter(Boolean));
+  const foundSites = new Set([...found].map(siteOf).filter(Boolean));
+  const dropped = [];
   const items = (Array.isArray(raw.opportunities) ? raw.opportunities : []).map(o => {
     const url = str(o && o.url, 500);
     // The link must be a page the search returned, or on the same site as one.
-    if (!url || !origin(url) || !(found.has(url) || foundOrigins.has(origin(url)))) return null;
+    // The link must be a page the search returned, or on the same website as one.
+    if (!url || !siteOf(url) || !(found.has(url) || foundSites.has(siteOf(url)))) {
+      if (o && o.funder) dropped.push({ funder: str(o.funder, 100), url: url || null });
+      return null;
+    }
     return {
       funder: str(o.funder, 100), programme: str(o.programme, 140), what: str(o.what, 220),
       amount: str(o.amount, 120) || null, deadline: str(o.deadline, 120) || null,
@@ -160,7 +175,8 @@ async function findFunding(brief, { regions, apiKey = process.env.ANTHROPIC_API_
       eligibility: str(o.eligibility, 220), fit: str(o.fit, 220), url
     };
   }).filter(o => o && o.funder).slice(0, 10);
-  return { regions: chosen, items, note: str(raw.note, 300), searches, dropped: (raw.opportunities || []).length - items.length };
+  return { regions: chosen, items, note: str(raw.note, 300), searches, found: found.size,
+    proposed: (raw.opportunities || []).length, dropped };
 }
 
 module.exports = { findFunding, projectBrief, REGIONS, DEFAULT_REGIONS, cleanRegions, SYSTEM };

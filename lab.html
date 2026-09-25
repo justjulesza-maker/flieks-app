@@ -540,11 +540,12 @@ function fundingPanel(pid, f) {
     <p>Search the web for funds, grants, incentives and labs that are open for a project like this one. Only you see this; it is not part of the pitch.</p>
     <label style="margin-top:12px">Look for funding from</label>
     <div class="fregions">${FUND_REGIONS.map(([k, n]) => `<label class="freg"><input type="checkbox" value="${k}" ${picked.includes(k) ? 'checked' : ''} ${busy ? 'disabled' : ''}> ${esc(n)}</label>`).join('')}</div>
-    <p class="msg" id="fmsg" style="color:#F2C7A8">${busy ? 'Searching… this takes a minute or two.' : f.status === 'error' ? esc(f.error || 'The search failed. Try again.') : ''}</p>
+    <p class="msg" id="fmsg" style="color:#F2C7A8">${busy ? 'Searching the web… this takes 2 to 4 minutes. You can leave this page and come back.' : f.status === 'error' ? esc(f.error || 'The search failed. Try again.') : ''}</p>
     <div class="actions"><button id="fgo" onclick="startFunding('${esc(pid)}')" ${busy ? 'disabled' : ''}>${f.status === 'done' ? 'Search again' : 'Find funding'}</button></div>
     ${f.status === 'done' ? `
-      <p class="tiny" style="color:#B9AB9B;margin-top:14px">Found by live web search on ${esc(dateStr(f.checked_at))} in: ${esc((f.regions || []).map(regionName).join(', '))}.
-        Calls change often: always read the funder's own page before you apply.</p>
+      <p class="tiny" style="color:#B9AB9B;margin-top:14px">Last searched ${esc(dateStr(f.checked_at))} in: ${esc((f.regions || []).map(regionName).join(', '))}${
+        f.last_run ? ` · ${f.last_run.found} found this time${f.last_run.left_out ? `, ${f.last_run.left_out} left out because their link couldn't be confirmed` : ''}` : ''}.
+        Earlier finds stay on the list for 45 days. Calls change often: always read the funder's own page before you apply.</p>
       ${items.length ? groups.map(([k, list]) => `<h3 style="margin-top:18px;font-size:14px;color:#F2C7A8">${esc(regionName(k))}</h3>` + list.map(o => `
         <div class="fund">
           <div class="ftop"><b>${esc(o.funder)}${o.programme ? ` — ${esc(o.programme)}` : ''}</b><span class="fst ${o.status}">${esc(FUND_STATUS[o.status] || 'Open now')}</span></div>
@@ -552,7 +553,8 @@ function fundingPanel(pid, f) {
           <p class="fmeta">${[o.amount && `<span><b>Amount</b> ${esc(o.amount)}</span>`, o.deadline && `<span><b>Deadline</b> ${esc(o.deadline)}</span>`, `<span><b>Stage</b> ${esc(o.stage)}</span>`].filter(Boolean).join('')}</p>
           ${o.eligibility ? `<p class="small" style="color:#D9D1C2"><b>Who can apply:</b> ${esc(o.eligibility)}</p>` : ''}
           ${o.fit ? `<p class="small" style="color:#D9D1C2"><b>Why it fits:</b> ${esc(o.fit)}</p>` : ''}
-          <p style="margin-top:6px"><a href="${esc(o.url)}" target="_blank" rel="noopener">Read the call on their site →</a></p>
+          <p style="margin-top:6px"><a href="${esc(o.url)}" target="_blank" rel="noopener">Read the call on their site →</a>${
+            o.found_at && f.checked_at && o.found_at < f.checked_at - 60000 ? ` <span class="tiny" style="color:#B9AB9B">· found ${esc(dateStr(o.found_at))}</span>` : ''}</p>
         </div>`).join('')).join('')
         : `<p style="margin-top:10px">Nothing open right now that fits, in these regions. Try more regions, or search again in a few weeks.</p>`}
       ${f.note ? `<p class="small" style="margin-top:12px;color:#D9D1C2">${esc(f.note)}</p>` : ''}` : ''}`;

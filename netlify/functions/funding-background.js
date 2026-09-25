@@ -23,8 +23,18 @@ exports.handler = async event => {
     await set({ status: 'working' });
     const report = pitch.report_id ? await ops.dbGet(`flieks_script_reports/${pitch.report_id}/report`) : null;
     const r = await findFunding(projectBrief(pitch, report), { regions: pitch.funding.regions });
-    console.log('[funding]', pid, `${r.items.length} opportunities, ${r.searches} searches, ${r.dropped} dropped (no matching source)`);
-    await set({ status: 'done', regions: r.regions, items: r.items, note: r.note || null, error: null, checked_at: Date.now() });
+    console.log('[funding]', pid, `${r.items.length} kept of ${r.proposed} proposed, ${r.searches} searches, ${r.found} pages found`,
+      r.dropped.length ? `dropped: ${JSON.stringify(r.dropped)}` : '');
+    // Keep what earlier searches found: a new search adds to the list and refreshes
+    // what it finds again; it never wipes it. Finds older than 45 days fall off.
+    const now = Date.now();
+    const keyOf = o => (o.url || `${o.funder}|${o.programme}`).toLowerCase().replace(/\/+$/, '');
+    const fresh = r.items.map(o => ({ ...o, found_at: now }));
+    const seen = new Set(fresh.map(keyOf));
+    const earlier = (pitch.funding.items || []).filter(o => o && !seen.has(keyOf(o)) && now - (o.found_at || pitch.funding.checked_at || 0) < 45 * 864e5)
+      .map(o => ({ ...o, found_at: o.found_at || pitch.funding.checked_at || now }));
+    await set({ status: 'done', regions: r.regions, items: [...fresh, ...earlier].slice(0, 16), note: r.note || null, error: null,
+      checked_at: now, last_run: { regions: r.regions, found: fresh.length, left_out: r.dropped.length, searches: r.searches } });
     await ops.logLabEvent('funding', pitch.owner, { title: pitch.title, report: pitch.report_id || null });
   } catch (e) {
     console.error('[funding]', pid, e);
