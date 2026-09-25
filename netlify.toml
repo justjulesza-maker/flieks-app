@@ -16,6 +16,9 @@
 [functions."festivals-background"]
   timeout = 900
 
+[functions."funding-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 

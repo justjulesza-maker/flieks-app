@@ -89,6 +89,17 @@ ul.plain li::before{content:'—';position:absolute;left:0;color:var(--sunset)}
 .fest .ftop b{font-size:14.5px;line-height:1.3}
 .ftag{flex:none;font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;border:1px solid var(--ink);border-radius:3px;white-space:nowrap}
 .ftag.dev{background:var(--ink);color:var(--paper)}
+.fregions{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 6px}
+.freg{display:flex;align-items:center;gap:7px;margin:0!important;font:500 13px var(--fn)!important;letter-spacing:0!important;text-transform:none!important;color:var(--paper)!important;border:1px solid #6B5A4E;border-radius:999px;padding:7px 12px;cursor:pointer}
+.freg input{accent-color:var(--sunset)}
+.fund{border-top:1px solid #4A3D34;padding:12px 0}
+.fund .ftop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fund .ftop b{color:var(--paper);font-size:14.5px;line-height:1.35}
+.fund p{color:#D9D1C2;font-size:13.5px;margin-top:4px}
+.fst{flex:none;font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;border-radius:3px;border:1px solid #6B5A4E;color:#D9D1C2;white-space:nowrap}
+.fst.open{background:#2E7D32;border-color:#2E7D32;color:#fff}
+.fmeta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px!important}
+.fmeta b{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#B9AB9B;font-weight:400;margin-right:4px}
 .foot{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule)}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 button,.btn{font:700 13px var(--fn);padding:10px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;display:inline-block}
@@ -505,8 +516,59 @@ function renderPitch(d) {
       ${det.ask ? `<h2>What we're looking for</h2><p>${esc(det.ask)}</p>` : ''}
       ${det.contact ? `<p style="margin-top:${det.ask ? '12px' : '0'}"><b>Contact:</b> ${esc(det.contact)}</p>` : ''}
     </div>` : ''}
-    <div class="foot"><p class="tiny">A 4flieks Lab pitch, drafted with AI from a script report and edited by the filmmaker. 4flieks.com</p></div>`;
+    <div class="foot"><p class="tiny">A 4flieks Lab pitch, drafted with AI from a script report and edited by the filmmaker. 4flieks.com</p></div>
+    ${d.is_owner ? `<div class="panel noprint" id="fundbox" style="margin-top:26px"></div>` : ''}`;
   editing = false;
+  if (d.is_owner) fundingPanel(d.pid, d.funding);
+}
+
+/* ---- funding open now: live web search, owner only, never printed ---- */
+const FUND_REGIONS = [['za', 'South Africa'], ['africa', 'Rest of Africa'], ['europe', 'Europe'], ['intl', 'International (USA, Middle East, global)']];
+const FUND_STATUS = { open: 'Open now', upcoming: 'Opening soon', rolling: 'Always open' };
+let fundTimer = null;
+function fundingPanel(pid, f) {
+  const box = document.getElementById('fundbox'); if (!box) return;
+  clearTimeout(fundTimer);
+  f = f || {};
+  const picked = (f.regions && f.regions.length) ? f.regions : ['za', 'africa'];
+  const busy = f.status === 'queued' || f.status === 'working';
+  const items = f.status === 'done' ? (f.items || []) : [];
+  const regionName = k => (FUND_REGIONS.find(r => r[0] === k) || [k, k])[1];
+  const groups = FUND_REGIONS.map(([k]) => [k, items.filter(i => i.region === k)]).filter(([, l]) => l.length);
+  box.innerHTML = `
+    <h3>Funding open now</h3>
+    <p>Search the web for funds, grants, incentives and labs that are open for a project like this one. Only you see this; it is not part of the pitch.</p>
+    <label style="margin-top:12px">Look for funding from</label>
+    <div class="fregions">${FUND_REGIONS.map(([k, n]) => `<label class="freg"><input type="checkbox" value="${k}" ${picked.includes(k) ? 'checked' : ''} ${busy ? 'disabled' : ''}> ${esc(n)}</label>`).join('')}</div>
+    <p class="msg" id="fmsg" style="color:#F2C7A8">${busy ? 'Searching… this takes a minute or two.' : f.status === 'error' ? esc(f.error || 'The search failed. Try again.') : ''}</p>
+    <div class="actions"><button id="fgo" onclick="startFunding('${esc(pid)}')" ${busy ? 'disabled' : ''}>${f.status === 'done' ? 'Search again' : 'Find funding'}</button></div>
+    ${f.status === 'done' ? `
+      <p class="tiny" style="color:#B9AB9B;margin-top:14px">Found by live web search on ${esc(dateStr(f.checked_at))} in: ${esc((f.regions || []).map(regionName).join(', '))}.
+        Calls change often: always read the funder's own page before you apply.</p>
+      ${items.length ? groups.map(([k, list]) => `<h3 style="margin-top:18px;font-size:14px;color:#F2C7A8">${esc(regionName(k))}</h3>` + list.map(o => `
+        <div class="fund">
+          <div class="ftop"><b>${esc(o.funder)}${o.programme ? ` — ${esc(o.programme)}` : ''}</b><span class="fst ${o.status}">${esc(FUND_STATUS[o.status] || 'Open now')}</span></div>
+          ${o.what ? `<p>${esc(o.what)}</p>` : ''}
+          <p class="fmeta">${[o.amount && `<span><b>Amount</b> ${esc(o.amount)}</span>`, o.deadline && `<span><b>Deadline</b> ${esc(o.deadline)}</span>`, `<span><b>Stage</b> ${esc(o.stage)}</span>`].filter(Boolean).join('')}</p>
+          ${o.eligibility ? `<p class="small" style="color:#D9D1C2"><b>Who can apply:</b> ${esc(o.eligibility)}</p>` : ''}
+          ${o.fit ? `<p class="small" style="color:#D9D1C2"><b>Why it fits:</b> ${esc(o.fit)}</p>` : ''}
+          <p style="margin-top:6px"><a href="${esc(o.url)}" target="_blank" rel="noopener">Read the call on their site →</a></p>
+        </div>`).join('')).join('')
+        : `<p style="margin-top:10px">Nothing open right now that fits, in these regions. Try more regions, or search again in a few weeks.</p>`}
+      ${f.note ? `<p class="small" style="margin-top:12px;color:#D9D1C2">${esc(f.note)}</p>` : ''}` : ''}`;
+  if (busy) fundTimer = setTimeout(async () => {
+    const { ok, d } = await call('pitch-get', { pid });
+    if (ok) fundingPanel(pid, d.funding);
+  }, 5000);
+}
+async function startFunding(pid) {
+  const regions = [...document.querySelectorAll('#fundbox .freg input:checked')].map(i => i.value);
+  const msg = document.getElementById('fmsg'), btn = document.getElementById('fgo');
+  if (!regions.length) { msg.textContent = 'Tick at least one region.'; return; }
+  btn.disabled = true; msg.textContent = 'Starting…';
+  const { ok, d } = await call('funding-start', { pid, regions });
+  if (!ok) { btn.disabled = false; msg.textContent = d.message || 'Could not start.'; return; }
+  fundingPanel(pid, { status: 'queued', regions });
 }
 
 function toggleEdit() {

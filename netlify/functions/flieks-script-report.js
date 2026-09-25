@@ -12,6 +12,8 @@
  *   pitch-start { token, id, team, ask, contact, stage }  owner: (re)write the one-page pitch
  *   pitch-get   { pid, token? }                           a pitch by its own link (shareable)
  *   pitch-save  { token, pid, copy, details }             owner: save hand edits
+ *   funding-start { token, pid, regions }               owner: search the web for funding open now
+ *                                                          (regions: za, africa, europe, intl)
  *   match-start { token, id }                             owner: suggest opted-in actors for the roles
  *   connect     { token, id, talentUid, character, message }  owner: email a suggested actor
  *                                                          (their address is never shown; replies
@@ -56,6 +58,8 @@ async function lookup(token) {
 const newId = () => crypto.randomBytes(15).toString('base64').replace(/[+/=]/g, '').slice(0, 20);
 const validId = id => typeof id === 'string' && /^[A-Za-z0-9]{12,40}$/.test(id);
 const jobSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':script-report').digest('hex');
+const fundingSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':funding').digest('hex');
+const FUNDING_PER_DAY = 5;                                             // searches per pitch, admins/partners exempt
 const castSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':castmatch').digest('hex');
 const MAX_MATCH_RUNS = 10;                                             // per report, admins exempt
 const CONNECT_PER_DAY = parseInt(process.env.TALENT_CONNECT_PER_DAY || '20', 10);
@@ -63,6 +67,7 @@ const pitchSecret = () => crypto.createHash('sha256').update(String(process.env.
 const STAGES = ['Idea', 'Script', 'Financing', 'Pre-production', 'Shooting', 'Post-production', 'Finished'];
 const MAX_PITCH_DRAFTS = 10;
 const { normalisePitch } = require('../lib/script-report-core');
+const { cleanRegions } = require('../lib/funding');
 
 function cleanDetails(d) {
   d = d && typeof d === 'object' ? d : {};
@@ -77,7 +82,9 @@ function pitchView(pid, p, isOwner) {
   return {
     pid, status: p.status, error: p.status === 'error' ? (p.error || 'Something went wrong.') : null,
     title: p.title, writer: p.writer || null, details: p.details || {}, copy: p.copy || null,
-    updated_at: p.updated_at || p.created_at, is_owner: !!isOwner, report_id: isOwner ? p.report_id : null
+    updated_at: p.updated_at || p.created_at, is_owner: !!isOwner, report_id: isOwner ? p.report_id : null,
+    // Funding research is the filmmaker's own working list, never shown to people they share the pitch with.
+    funding: isOwner ? (p.funding || null) : undefined
   };
 }
 async function optionalUser(token) { try { return token ? await lookup(token) : null; } catch { return null; } }
@@ -251,6 +258,32 @@ exports.handler = async event => {
       if (body.copy) fields.copy = normalisePitch(body.copy);
       if (body.details) fields.details = cleanDetails(body.details);
       await ops.dbWrite(`flieks_pitches/${body.pid}`, fields, 'PATCH');
+      return reply(200, { ok: true });
+    }
+
+    /* ---- funding open now (live web search) ---- */
+    if (action === 'funding-start') {
+      if (!validId(body.pid)) return reply(404, { message: 'Pitch not found.' });
+      const pitch = await ops.dbGet(`flieks_pitches/${body.pid}`);
+      if (!pitch || (pitch.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Pitch not found.' });
+      const f = pitch.funding || {};
+      if ((f.status === 'queued' || f.status === 'working') && Date.now() - (f.at || 0) < 15 * 60e3) return reply(200, { ok: true });
+      const day = new Date().toISOString().slice(0, 10);
+      const runs = f.day === day ? (f.runs || 0) : 0;
+      if (runs >= FUNDING_PER_DAY && !me.unlimited) {
+        return reply(429, { message: `That's ${FUNDING_PER_DAY} funding searches for this pitch today. Try again tomorrow.` });
+      }
+      const regions = cleanRegions(body.regions);
+      await ops.dbWrite(`flieks_pitches/${body.pid}/funding`, { ...f, status: 'queued', regions, error: null, at: Date.now(), day, runs: runs + 1 });
+      const base = process.env.URL || 'https://4flieks.com';
+      const kick = await fetch(`${base}/.netlify/functions/funding-background`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-job-secret': fundingSecret() },
+        body: JSON.stringify({ pid: body.pid })
+      }).catch(() => ({ ok: false, status: 0 }));
+      if (!kick.ok && kick.status !== 202) {
+        await ops.dbWrite(`flieks_pitches/${body.pid}/funding`, { status: 'error', error: 'Could not start the search. Try again.' }, 'PATCH');
+        return reply(502, { message: 'Could not start the search. Try again.' });
+      }
       return reply(200, { ok: true });
     }
 
