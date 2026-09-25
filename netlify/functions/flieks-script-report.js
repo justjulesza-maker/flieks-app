@@ -318,6 +318,7 @@ exports.handler = async event => {
     if (action === 'connect') {
       if (!validId(body.id)) return reply(404, { message: 'Report not found.' });
       const talentUid = String(body.talentUid || '');
+      if (talentUid.startsWith('as:')) return reply(400, { message: 'Contact this actor through their Actors Spaces profile.' });
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(talentUid)) return reply(400, { message: 'Bad request.' });
       const rec = await ops.dbGet(`flieks_script_reports/${body.id}`);
       if (!rec || (rec.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Report not found.' });

@@ -65,6 +65,7 @@ button:disabled{opacity:.5;cursor:default}
 .facts .n{font-family:var(--fb);font-size:22px}
 .facts .k{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-top:3px}
 .tabs{display:flex;gap:6px;margin:10px 0 4px}
+.work{border:1px solid var(--rule);border-radius:8px;padding:4px 14px 12px;margin-top:10px;background:var(--card)}
 .tabs button{flex:1}
 .center{text-align:center;padding:40px 0}
 </style>
@@ -208,6 +209,7 @@ function render() {
   const credits = Object.entries((me.profile && me.profile.credits) || {});
   app.innerHTML = `
     <h1>${has ? esc(me.profile.name) : 'Your talent profile'}</h1>
+    ${has ? `<p class="small" style="margin-bottom:6px"><a href="/lab/talent/${esc(auth.currentUser.uid)}" style="color:var(--sunset)">See your profile as others see it →</a> · <a href="/lab/talent" style="color:var(--sunset)">Search talent</a></p>` : ''}
     <p class="muted small">${has ? (me.profile.suggest ? 'Filmmakers can be shown your profile when they are casting.' : 'Your profile is private. Switch on suggestions below to be found for roles.')
       : 'Fill this in once. Filmmakers only ever see it if you switch on suggestions.'}</p>
 
@@ -233,7 +235,7 @@ function render() {
       <div><label for="amax">to</label><input id="amax" type="number" min="1" max="99" value="${p.playing_age_max || ''}"></div>
     </div>
     <label for="fl">Languages you can perform in (comma between them)</label>
-    <input id="fl" type="text" maxlength="200" placeholder="English, isiZulu, Yoruba, Swahili" value="${esc((p.languages || []).join(', '))}">
+    <input id="fl" type="text" maxlength="200" placeholder="English, isiZulu, Yoruba, Swahili" value="${esc(Array.isArray(p.languages) ? p.languages.join(', ') : (p.languages || ''))}">
     <div class="row2">
       <div><label for="fk">Country</label><select id="fk" onchange="countryChanged()"><option value="">Choose</option>${COUNTRIES.map(x => `<option${countryOf(p) === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
       <div><label for="fc">City or town</label><input id="fc" type="text" maxlength="60" value="${esc(p.city)}"></div>
@@ -244,11 +246,18 @@ function render() {
     <label for="fi">Instagram</label><input id="fi" type="text" maxlength="60" placeholder="@yourname" value="${esc(p.instagram ? '@' + p.instagram : '')}">
     <label for="fb">A few lines about you</label><textarea id="fb" maxlength="400" placeholder="Training, recent work, what you want to do next">${esc(p.bio)}</textarea>
 
+    <h2>Your work</h2>
+    <p class="small muted">Shown at the top of your profile. Link your IMDb page and up to six films, series or parts: the film's page, a trailer, a clip of your scene.</p>
+    <label for="fimdb">IMDb page</label><input id="fimdb" type="url" maxlength="300" placeholder="https://www.imdb.com/name/nm…" value="${esc(p.imdb)}">
+    <div id="works">${(p.work || []).map((w, i) => workRow(w, i)).join('')}</div>
+    ${(p.work || []).length < 6 ? `<div class="actions" style="margin-top:10px"><button class="ghost" onclick="addWork()">+ Add a film or part</button></div>` : ''}
+
     <div class="consent">
       <label class="switch" style="margin:0"><input type="checkbox" id="sg" ${p.suggest ? 'checked' : ''}><span></span></label>
-      <div><b>Suggest me to filmmakers for roles</b>
-        <p>When a 4flieks filmmaker looks for cast, you may be suggested for a part that fits. They see this profile and your 4flieks record,
-          never your email. If they want to talk, 4flieks emails you their message and you decide whether to reply. Switch it off any time.</p></div>
+      <div><b>Show me in the talent search and suggest me for roles</b>
+        <p>4flieks Lab members can find you in the talent search, by name or what you do, and filmmakers casting in the Lab may be suggested
+          your profile. They see this profile, your work and your 4flieks record, never your email. If they want to talk, 4flieks emails you
+          their message and you decide whether to reply. Switch it off any time.</p></div>
     </div>
     <p class="msg" id="smsg"></p>
     <div class="actions"><button id="sv" onclick="save()">${has ? 'Save changes' : 'Create my profile'}</button></div>
@@ -276,12 +285,38 @@ function render() {
   if (has) loadFilms();
 }
 
+/* ---- featured work rows ---- */
+const WORK_KINDS = ['Feature', 'Short', 'Series', 'Documentary', 'Trailer', 'Showreel', 'Stage', 'Music video', 'Commercial', 'Other'];
+function workRow(w, i) {
+  w = w || {};
+  return `<div class="work" data-i="${i}">
+    <div class="row2"><div><label>Title</label><input class="wt" type="text" maxlength="80" value="${esc(w.title)}" placeholder="e.g. Silverton Siege"></div>
+      <div><label>Your part</label><input class="wr" type="text" maxlength="60" value="${esc(w.role)}" placeholder="e.g. Aldo, or Director"></div></div>
+    <div class="row2"><div><label>Type</label><select class="wk">${WORK_KINDS.map(k => `<option${(w.kind || 'Feature') === k ? ' selected' : ''}>${k}</option>`).join('')}</select></div>
+      <div><label>Year</label><input class="wy" type="number" min="1950" max="2100" value="${w.year || ''}"></div></div>
+    <label>Link (the film's page, trailer or clip)</label><input class="wu" type="url" maxlength="300" placeholder="https://" value="${esc(w.url)}">
+    <div class="actions" style="margin-top:8px"><button class="ghost" onclick="removeWork(${i})">Remove</button></div>
+  </div>`;
+}
+function readWork() {
+  return [...document.querySelectorAll('#works .work')].map(el => ({
+    title: el.querySelector('.wt').value.trim(), role: el.querySelector('.wr').value.trim(), kind: el.querySelector('.wk').value,
+    year: el.querySelector('.wy').value, url: el.querySelector('.wu').value.trim()
+  })).filter(w => w.title || w.url);
+}
+function addWork() { Object.assign(draft, collect()); draft.work = [...(draft.work || []), {}].slice(0, 6); render(); const l = document.querySelectorAll('#works .wt'); if (l.length) l[l.length - 1].focus(); }
+function removeWork(i) { Object.assign(draft, collect()); draft.work = readWorkAll().filter((_, j) => j !== i); render(); }
+function readWorkAll() { return [...document.querySelectorAll('#works .work')].map(el => ({
+  title: el.querySelector('.wt').value.trim(), role: el.querySelector('.wr').value.trim(), kind: el.querySelector('.wk').value,
+  year: el.querySelector('.wy').value, url: el.querySelector('.wu').value.trim() })); }
+
 function collect() {
   return {
     name: $('fn').value, disciplines: [...document.querySelectorAll('input[name=disc]:checked')].map(i => i.value),
     playing_age_min: $('amin').value, playing_age_max: $('amax').value,
     languages: $('fl').value, city: $('fc').value, country: $('fk').value, province: $('fk').value === 'South Africa' ? $('fp').value : '',
     showreel: $('fs').value.trim(), instagram: $('fi').value, bio: $('fb').value,
+    imdb: $('fimdb').value.trim(), work: readWork(),
     photo_url: draft.photo_url || '', suggest: $('sg').checked
   };
 }
@@ -289,6 +324,9 @@ function collect() {
 async function save() {
   const prof = collect();
   if (prof.showreel && !/^https:\/\//i.test(prof.showreel)) return say('smsg', 'The showreel link must start with https://', 'err');
+  if (prof.imdb && !/imdb\.com\/name\/nm\d+/i.test(prof.imdb)) return say('smsg', 'Use your IMDb name page: it looks like https://www.imdb.com/name/nm1234567/', 'err');
+  const badWork = prof.work.find(w => (w.title || w.url) && !(w.title && /^https:\/\/\S+$/i.test(w.url)));
+  if (badWork) return say('smsg', 'Each film or part needs a title and a link starting with https://', 'err');
   if (prof.suggest && prof.disciplines.includes('Actor') && !(prof.playing_age_min && prof.playing_age_max)) {
     return say('smsg', 'Add your playing age so you are suggested for parts that fit.', 'err');
   }

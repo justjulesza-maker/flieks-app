@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const ops = require('../lib/ops-core');
 const { matchCast } = require('../lib/script-report-core');
 const { record, card } = require('../lib/talent');
+const actorsSpaces = require('../lib/actors-spaces');
 
 const MAX_CANDIDATES = 120;
 const secret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':castmatch').digest('hex');
@@ -33,10 +34,12 @@ exports.handler = async event => {
 
     const cards = {};
     for (const [uid, p] of opted) cards[uid] = card(uid, p, await record(p));
+    // Actors Spaces' pool too, once it's connected (their ids start with "as:").
+    for (const c of (await actorsSpaces.search({ discipline: 'Actor' })).slice(0, 60)) cards[c.id] = c;
 
     const characters = (rec.report.characters || []).map(c => ({ name: c.name, role: c.role, casting: c.casting, description: c.description }));
     let matches = [];
-    if (opted.length && characters.length) {
+    if (Object.keys(cards).length && characters.length) {
       const candidates = Object.values(cards).map(c => ({
         id: c.id, playing_age: c.playing_age, languages: c.languages, city: c.city, province: c.province, country: c.country, bio: c.bio,
         films: c.record.films.length, people_via_link: c.record.clicks, sales_via_link: c.record.sales
@@ -45,7 +48,7 @@ exports.handler = async event => {
     }
     const used = new Set(matches.flatMap(m => m.picks.map(p => p.id)));
     const people = Object.fromEntries(Object.entries(cards).filter(([uid]) => used.has(uid)));
-    await set({ status: 'done', matches, people, pool: opted.length, error: null, finished_at: Date.now() });
+    await set({ status: 'done', matches, people, pool: Object.keys(cards).length, error: null, finished_at: Date.now() });
     return { statusCode: 200 };
   } catch (e) {
     console.error('[cast-match]', id, e);

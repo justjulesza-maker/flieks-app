@@ -10,9 +10,14 @@
  *   remove-credit { filmId, castKey }  take an approved credit off my profile
  *   claims                         filmmaker: pending claims on my films
  *   approve / decline { filmId, castKey, uid }   filmmaker (or admin) decides
+ *   search    { q, discipline, country, language, age }   Lab members: people who opted in (and Actors Spaces, when connected)
+ *   profile   { id }                one person's profile page (opted-in people; you always see your own)
+ *   contact   { id, message }       email someone who opted in; replies go to you; their email is never shown
  */
 const ops = require('../lib/ops-core');
-const { cleanProfile, record } = require('../lib/talent');
+const { cleanProfile, record, card, matchCards, DISCIPLINES } = require('../lib/talent');
+const actorsSpaces = require('../lib/actors-spaces');
+const CONTACT_PER_DAY = parseInt(process.env.TALENT_CONNECT_PER_DAY || '20', 10);
 
 const reply = (code, obj) => ({
   statusCode: code,
@@ -30,7 +35,9 @@ async function lookup(token) {
   const u = ((await r.json().catch(() => ({}))).users || [])[0];
   if (!u) return null;
   const profile = await ops.dbGet(`flieks_users/${u.localId}`) || {};
-  return { uid: u.localId, email: u.email || '', role: profile.role || 'viewer', name: profile.name || '' };
+  const role = profile.role || 'viewer';
+  const unlimited = role === 'admin' || !!(await ops.dbGet(`flieks_lab_unlimited/${u.localId}`).catch(() => null));
+  return { uid: u.localId, email: u.email || '', role, name: profile.name || '', verified: !!u.emailVerified, unlimited };
 }
 
 async function filmOwnedBy(filmId, me) {
@@ -162,6 +169,72 @@ exports.handler = async event => {
       });
       // One person per credit: any other claims on it are settled.
       await ops.dbWrite(`flieks_talent_claims/${b.filmId}/${b.castKey}`, null);
+      return reply(200, { ok: true });
+    }
+
+    /* ---- the talent search (4flieks Lab) ---- */
+    const canBrowse = me.role === 'filmmaker' || me.role === 'admin' || me.verified || me.unlimited;
+    if (a === 'search' || a === 'profile' || a === 'contact') {
+      if (!canBrowse) return reply(403, { code: 'verify', message: 'Confirm your email first: open the link we sent you, then try again.' });
+    }
+
+    if (a === 'search') {
+      const f = {
+        q: String(b.q || '').slice(0, 80), discipline: DISCIPLINES.includes(b.discipline) ? b.discipline : '',
+        country: String(b.country || '').slice(0, 60), language: String(b.language || '').slice(0, 30), age: b.age
+      };
+      const all = await ops.dbGet('flieks_talent') || {};
+      const ours = [];
+      for (const [uid, p] of Object.entries(all)) {
+        if (!p || p.suggest !== true || !p.name) continue;            // only people who opted in
+        ours.push(card(uid, p, { films: Object.values(p.credits || {}).map(c => ({ title: c.film_title, role: c.role || '' })), clicks: 0, trailer: 0, sales: 0 }));
+      }
+      const theirs = await actorsSpaces.search(f);
+      const results = matchCards([...ours, ...theirs], f).slice(0, 60);
+      return reply(200, { results, total: results.length, sources: { flieks: ours.length, actorsSpaces: actorsSpaces.enabled() } });
+    }
+
+    if (a === 'profile') {
+      const id = String(b.id || '');
+      if (id.startsWith('as:')) {
+        const c = await actorsSpaces.profile(id);
+        return c ? reply(200, { profile: c }) : reply(404, { message: 'That profile is not available.' });
+      }
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) return reply(404, { message: 'Profile not found.' });
+      const p = await ops.dbGet(`flieks_talent/${id}`);
+      const mine = id === me.uid;
+      if (!p || (!p.suggest && !mine && me.role !== 'admin')) return reply(404, { message: 'This profile is private or no longer exists.' });
+      const contacted = mine ? null : await ops.dbGet(`flieks_ops/talent_contacted/${me.uid}/${id}`).catch(() => null);
+      return reply(200, { profile: card(id, p, await record(p)), mine, hidden: !p.suggest, contacted_at: contacted || null });
+    }
+
+    if (a === 'contact') {
+      const id = String(b.id || '');
+      if (id.startsWith('as:')) return reply(400, { message: 'Contact this person through their Actors Spaces profile.' });
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || id === me.uid) return reply(400, { message: 'Bad request.' });
+      const t = await ops.dbGet(`flieks_talent/${id}`);
+      if (!t || t.suggest !== true || !t.email) return reply(410, { message: 'They are not taking messages through 4flieks.' });
+      const message = String(b.message || '').trim().slice(0, 1200);
+      if (message.length < 20) return reply(400, { message: 'Say a little about the project and what you are asking (a sentence or two).' });
+      const last = await ops.dbGet(`flieks_ops/talent_contacted/${me.uid}/${id}`);
+      if (last && Date.now() - last < 7 * 864e5 && !me.unlimited) return reply(409, { message: 'You wrote to them this week. Give them time to reply.' });
+      const day = new Date().toISOString().slice(0, 10);
+      const countPath = `flieks_ops/talent_connect/${me.uid}/${day}`;
+      const count = me.unlimited ? 0 : (await ops.dbGet(countPath)) || 0;
+      if (count >= CONTACT_PER_DAY) return reply(429, { message: `That's ${CONTACT_PER_DAY} messages today. Try again tomorrow.` });
+      const from = me.name || 'A 4flieks Lab member';
+      const sent = await ops.sendEmailTo({
+        to: t.email, replyTo: me.email,
+        subject: `${from} found you on the 4flieks talent search`,
+        text: [`Hi ${t.name},`, '', `${from} found your profile on the 4flieks talent search and sent you this message:`, '', message, '',
+          `Just reply to this email to answer them. It goes straight to ${from}${me.email ? ` (${me.email})` : ''}.`,
+          'Your email address was not shown to them; they will see it only if you reply.', '',
+          `You're in the talent search because you switched it on. Turn it off any time at ${ops.SITE}/talent`, '', '4flieks'].join('\n')
+      });
+      if (!sent || !sent.ok) return reply(502, { message: 'The email could not be sent. Try again in a minute.' });
+      await ops.dbWrite(`flieks_ops/talent_contacted/${me.uid}/${id}`, Date.now());
+      if (!me.unlimited) await ops.dbWrite(countPath, count + 1);
+      await ops.logLabEvent('talent_contact', me.uid, { title: t.name });
       return reply(200, { ok: true });
     }
 

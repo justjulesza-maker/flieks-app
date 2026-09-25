@@ -202,6 +202,40 @@ body.home .sheet{max-width:1040px}
 .work .item:first-of-type{border-top:0}
 .work .item a{font-size:14px}
 .mini{font-family:var(--fm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+/* talent search */
+.tsearch{display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr .8fr auto;gap:10px;align-items:end;background:var(--card);border:1px solid var(--rule);padding:14px;margin:16px 0 10px}
+@media (max-width:820px){.tsearch{grid-template-columns:1fr 1fr}.tsearch .tq{grid-column:1/-1}}
+.tsearch label{margin:0 0 5px}
+.tsearch select,.tsearch input{width:100%;font:15px var(--fn);padding:10px 11px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink)}
+.tchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.tchips button{padding:6px 12px;font-size:12px;border-radius:999px}
+.tchips button.on{background:var(--ink);color:var(--paper)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.tcard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--rule);text-decoration:none;color:var(--ink);overflow:hidden}
+.tcard:hover{border-color:var(--ink)}
+.tph{aspect-ratio:4/5;background:#241C18 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-family:var(--fb);font-size:44px;color:#6B5A4E}
+.tbody{padding:12px 14px 14px}
+.tbody b{font-size:16px}
+.troles{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sunset);margin:4px 0 6px}
+.tsrc{display:inline-block;margin-top:8px;font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--rule);padding:3px 7px;color:var(--ink-3)}
+.tsrc.on{border-color:var(--green);color:var(--green)}
+/* talent profile hero */
+.thero{display:grid;grid-template-columns:300px 1fr;gap:34px;background:var(--ink);color:var(--paper);margin:0 -52px;padding:40px 52px}
+@media (max-width:760px){.thero{grid-template-columns:1fr;margin:0 -20px;padding:28px 20px;gap:20px}}
+.thphoto{aspect-ratio:4/5;background:#241C18 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-family:var(--fb);font-size:72px;color:#6B5A4E;border-radius:4px}
+@media (max-width:760px){.thphoto{max-width:260px}}
+.thtext .eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#F2C7A8;margin-bottom:10px}
+.thtext h1{font-size:clamp(32px,5vw,52px);line-height:1.02;color:var(--paper)}
+.thfacts{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 0;font-size:14px;color:#D9D1C2}
+.thbio{font-size:15.5px;line-height:1.6;color:#D9D1C2;max-width:60ch;margin-bottom:16px}
+.thtext .actions .btn,.thtext .actions button{background:var(--sunset);border-color:var(--sunset);color:#fff}
+.thtext .actions .ghost{background:transparent;border-color:#6B5A4E;color:var(--paper)}
+.twork{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.tw{display:flex;flex-direction:column;gap:4px;background:var(--card);border:1px solid var(--rule);border-top:3px solid var(--sunset);padding:14px 16px;text-decoration:none;color:var(--ink)}
+.tw:hover{border-color:var(--ink)}
+.twk{font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.tw b{font-size:16px}
+.twgo{font-size:12.5px;color:var(--sunset);margin-top:auto;padding-top:6px}
 .homefoot{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:center;background:var(--ink);color:var(--paper);padding:20px 22px;margin-top:34px}
 .homefoot b{font-family:var(--fb);font-size:17px;display:block;margin-bottom:2px}
 .homefoot p{color:#D9D1C2;font-size:13.5px}
@@ -237,7 +271,7 @@ body.home .sheet{max-width:1040px}
     <a href="/lab" data-k="home">Lab</a>
     <a href="/lab/report" data-k="report">Script Report</a>
     <a href="/script-upload.html" data-k="coach">Script Coach</a>
-    <a href="/talent" data-k="talent">Talent</a>
+    <a href="/lab/talent" data-k="talent">Talent</a>
     <a href="/" data-k="watch">Watch films</a>
     <a href="/lab#join" class="acct" id="navAcct">Join free</a>
   </nav>
@@ -382,8 +416,10 @@ function actorCard(id, character, pick, a, wasSent) {
       <div class="actions" style="margin-top:10px">
         ${a.showreel ? `<a class="btn ghost" href="${esc(a.showreel)}" target="_blank" rel="noopener">Showreel</a>` : ''}
         ${a.instagram ? `<a class="btn ghost" href="https://instagram.com/${encodeURIComponent(a.instagram)}" target="_blank" rel="noopener">Instagram</a>` : ''}
-        ${wasSent ? `<span class="small" style="color:#9FD89F;align-self:center">Asked to connect ✓</span>`
+        ${a.source === 'actorsspaces' ? (a.profile_url ? `<a class="btn" href="${esc(a.profile_url)}" target="_blank" rel="noopener">View on Actors Spaces</a>` : '')
+          : wasSent ? `<span class="small" style="color:#9FD89F;align-self:center">Asked to connect ✓</span>`
           : `<button data-rid="${esc(id)}" data-uid="${key}" data-char="${esc(character)}" onclick="connectForm(this)">Ask to connect</button>`}
+        ${a.source !== 'actorsspaces' ? `<a class="btn ghost" href="/lab/talent/${esc(a.id)}" target="_blank">Full profile</a>` : ''}
       </div>
       <div class="cform"></div>
     </div></div>`;
@@ -942,6 +978,8 @@ const TOOLS = [
     text: 'Suggestions for every role from actors who asked to be found, with their playing age, languages, city and the audience their 4flieks links bring in. Ask to connect by email.' },
   { k: 'coach', name: 'Script Coach', tag: 'Learn your lines', href: '/script-upload.html', cta: 'Upload a script',
     text: 'Upload a script and every character gets a line coach: scene breakdown, cue cards and a line quiz that checks what you say. Send each actor their own link.' },
+  { k: 'search', name: 'Talent search', tag: 'Cast and crew, found fast', href: '/lab/talent', cta: 'Search talent',
+    text: 'Search actors, directors, DOPs, editors and crew by name or what they do, then by country, language and playing age. See their work and message them without ever seeing their email.' },
   { k: 'talent', name: 'Talent profile', tag: 'For actors and crew', href: '/talent', cta: 'Make my profile',
     text: 'One profile for your credits and the people your cast links brought in. Switch on suggestions and filmmakers casting in the Lab can find you. Your email stays private.' }
 ];
@@ -952,6 +990,7 @@ const SOON = [
 ];
 
 const isReportTool = /^\/lab\/report\/?$/.test(location.pathname);
+const talentMatch = location.pathname.match(/^\/lab\/talent(?:\/([A-Za-z0-9_:%-]{1,200}))?\/?$/);
 function setNav(user, k) {
   document.querySelectorAll('#labnav a[data-k]').forEach(a => a.classList.toggle('on', a.dataset.k === k));
   const acct = document.getElementById('navAcct');
@@ -1151,6 +1190,125 @@ async function loadWork() {
 
 function startHome(user) { setNav(user, 'home'); showHome(user); if (user) loadWork(); }
 
+/* ================= talent search and profiles ================= */
+
+const DISCIPLINES = ['Actor', 'Director', 'Writer', 'Producer', 'Camera / DOP', 'Editor', 'Sound', 'Production design', 'Wardrobe', 'Make-up', 'Music', 'Other crew'];
+const TCHIPS = [['Actor', 'Actors'], ['Director', 'Directors'], ['Writer', 'Writers'], ['Producer', 'Producers'], ['Camera / DOP', 'DOPs'], ['Editor', 'Editors'], ['Sound', 'Sound']];
+const TCOUNTRIES = ['South Africa', 'Nigeria', 'Kenya', 'Ghana', 'Zimbabwe', 'Namibia', 'Botswana', 'Uganda', 'Tanzania', 'Rwanda', 'Zambia', 'Egypt', 'Morocco', 'Senegal', 'Cameroon', 'Ethiopia', 'Outside Africa'];
+const tcall = async (action, extra = {}) => {
+  const token = await auth.currentUser.getIdToken();
+  const r = await fetch('/.netlify/functions/flieks-talent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, token, ...extra }) });
+  return { ok: r.ok, status: r.status, d: await r.json().catch(() => ({})) };
+};
+const where = c => [c.city, c.province, c.country].filter(Boolean).join(', ');
+const initials = n => String(n || '?').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+let tFilters = { q: '', discipline: '', country: '', language: '', age: '' };
+function talentSearch() {
+  document.body.classList.add('home');
+  document.getElementById('docref').innerHTML = 'TALENT<br>SEARCH';
+  document.title = 'Talent search — 4flieks Lab';
+  const q = new URLSearchParams(location.search);
+  ['q', 'discipline', 'country', 'language', 'age'].forEach(k => { if (q.get(k)) tFilters[k] = q.get(k); });
+  app.innerHTML = `
+    <h1>Talent search</h1>
+    <p class="muted" style="margin-bottom:6px">Actors, directors and crew who asked to be found. You see their profile and work, never their email:
+      message them here and their reply comes straight to you.</p>
+    <p class="small"><a href="/talent" style="color:var(--sunset)">Make or edit your own profile →</a></p>
+    <form class="tsearch" onsubmit="event.preventDefault();runSearch()">
+      <div class="tq"><label for="tq">Name or keyword</label><input id="tq" type="text" maxlength="80" placeholder="e.g. Thabo, or 'Durban editor'" value="${esc(tFilters.q)}"></div>
+      <div><label for="td">What they do</label><select id="td"><option value="">Everyone</option>${DISCIPLINES.map(x => `<option${tFilters.discipline === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+      <div><label for="tc">Country</label><select id="tc"><option value="">Anywhere</option>${TCOUNTRIES.map(x => `<option${tFilters.country === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+      <div><label for="tl">Language</label><input id="tl" type="text" maxlength="30" placeholder="e.g. isiZulu" value="${esc(tFilters.language)}"></div>
+      <div><label for="ta">Can play age</label><input id="ta" type="number" min="1" max="99" placeholder="e.g. 30" value="${esc(tFilters.age)}"></div>
+      <div class="tgo"><button type="submit">Search</button></div>
+    </form>
+    <div id="tchips" class="tchips">${TCHIPS.map(([x, label]) => `<button type="button" data-d="${esc(x)}" class="ghost${tFilters.discipline === x ? ' on' : ''}" onclick="document.getElementById('td').value=this.dataset.d;runSearch()">${label}</button>`).join('')}</div>
+    <div id="tres"><p class="tiny">Searching…</p></div>`;
+  runSearch();
+}
+async function runSearch() {
+  tFilters = { q: document.getElementById('tq').value.trim(), discipline: document.getElementById('td').value, country: document.getElementById('tc').value,
+    language: document.getElementById('tl').value.trim(), age: document.getElementById('ta').value };
+  const qs = new URLSearchParams(Object.entries(tFilters).filter(([, v]) => v));
+  history.replaceState(null, '', '/lab/talent' + (qs.toString() ? '?' + qs : ''));
+  document.querySelectorAll('#tchips button').forEach(b => b.classList.toggle('on', b.dataset.d === tFilters.discipline));
+  const box = document.getElementById('tres');
+  box.innerHTML = '<p class="tiny">Searching…</p>';
+  const { ok, d } = await tcall('search', tFilters);
+  if (!ok) { box.innerHTML = `<div class="banner">${esc(d.message || 'Could not search just now.')}</div>`; return; }
+  if (!d.results.length) {
+    box.innerHTML = `<p class="muted" style="padding:20px 0">Nobody matches that yet. Try fewer filters. The directory is new and grows as people join: send actors and crew to <a href="/talent" style="color:var(--sunset)">4flieks.com/talent</a>.</p>`;
+    return;
+  }
+  box.innerHTML = `<p class="tiny" style="margin:6px 0 10px">${d.results.length} ${d.results.length === 1 ? 'person' : 'people'}${d.sources && d.sources.actorsSpaces ? ' · including Actors Spaces' : ''}</p>
+    <div class="tgrid">${d.results.map(c => `<a class="tcard" href="/lab/talent/${encodeURIComponent(c.id)}">
+      <div class="tph" style="${c.photo_url ? `background-image:url('${esc(c.photo_url)}')` : ''}">${c.photo_url ? '' : esc(initials(c.name))}</div>
+      <div class="tbody"><b>${esc(c.name)}</b>
+        <p class="troles">${esc((c.disciplines || []).join(' · '))}</p>
+        <p class="tiny">${esc(where(c))}${c.playing_age ? ` · plays ${esc(c.playing_age)}` : ''}</p>
+        ${(c.languages || []).length ? `<p class="tiny">${esc(c.languages.join(', '))}</p>` : ''}
+        ${c.source === 'actorsspaces' ? '<span class="tsrc">via Actors Spaces</span>' : (c.record && c.record.films.length ? `<span class="tsrc on">${c.record.films.length} on 4flieks</span>` : '')}
+      </div></a>`).join('')}</div>`;
+}
+
+async function talentProfile(id) {
+  document.body.classList.add('home');
+  document.getElementById('docref').innerHTML = 'TALENT<br>PROFILE';
+  app.innerHTML = '<div class="center"><div class="spin"></div></div>';
+  const { ok, d } = await tcall('profile', { id });
+  if (!ok) { gate(`<h1>Profile not found</h1><p class="muted" style="margin:8px 0 18px">${esc(d.message || 'It may be private now.')}</p><a class="btn ghost" href="/lab/talent">Back to talent search</a>`); return; }
+  const c = d.profile, rec = c.record || { films: [], clicks: 0, sales: 0 };
+  document.title = `${c.name} — 4flieks Lab`;
+  const external = c.source === 'actorsspaces';
+  app.innerHTML = `
+    <p class="small noprint" style="margin-bottom:12px"><a href="/lab/talent" style="color:var(--ink-2)">← Talent search</a></p>
+    ${d.mine && d.hidden ? `<div class="banner">This is how your profile will look. It's private right now: switch on "Show me in the talent search" in <a href="/talent">your profile</a> for others to find it.</div>` : ''}
+    <section class="thero">
+      <div class="thphoto" style="${c.photo_url ? `background-image:url('${esc(c.photo_url)}')` : ''}">${c.photo_url ? '' : esc(initials(c.name))}</div>
+      <div class="thtext">
+        <p class="eyebrow">${esc((c.disciplines || []).join(' · ') || 'Talent')}</p>
+        <h1>${esc(c.name)}</h1>
+        <p class="thfacts">${[esc(where(c)), c.playing_age && `Plays ${esc(c.playing_age)}`, (c.languages || []).length && esc(c.languages.join(', '))].filter(Boolean).map(x => `<span>${x}</span>`).join('')}</p>
+        ${c.bio ? `<p class="thbio">${esc(c.bio)}</p>` : ''}
+        <div class="actions">
+          ${external ? (c.profile_url ? `<a class="btn" href="${esc(c.profile_url)}" target="_blank" rel="noopener">View on Actors Spaces</a>` : '')
+            : d.mine ? `<a class="btn" href="/talent">Edit my profile</a>` : `<button onclick="talentContactForm('${esc(c.id)}')" id="tcbtn">${d.contacted_at ? 'Message again' : 'Send a message'}</button>`}
+          ${c.imdb ? `<a class="btn ghost" href="${esc(c.imdb)}" target="_blank" rel="noopener">IMDb</a>` : ''}
+          ${c.showreel ? `<a class="btn ghost" href="${esc(c.showreel)}" target="_blank" rel="noopener">Showreel</a>` : ''}
+          ${c.instagram ? `<a class="btn ghost" href="https://instagram.com/${encodeURIComponent(c.instagram)}" target="_blank" rel="noopener">Instagram</a>` : ''}
+        </div>
+        <div id="tcform"></div>
+        ${d.contacted_at ? `<p class="tiny" style="color:#B9AB9B;margin-top:8px">You messaged them on ${esc(dateStr(d.contacted_at))}.</p>` : ''}
+      </div>
+    </section>
+    ${(c.work || []).length ? `<h2>Featured work</h2>
+      <div class="twork">${c.work.map(w => `<a class="tw" href="${esc(w.url)}" target="_blank" rel="noopener">
+        <span class="twk">${esc(w.kind || 'Film')}${w.year ? ` · ${w.year}` : ''}</span><b>${esc(w.title)}</b>${w.role ? `<span class="small muted">${esc(w.role)}</span>` : ''}<span class="twgo">Watch or read →</span></a>`).join('')}</div>` : ''}
+    ${rec.films.length ? `<h2>On 4flieks</h2>
+      <div class="facts"><div><p class="n">${rec.films.length}</p><p class="k">Films</p></div><div><p class="n">${rec.clicks}</p><p class="k">People their link brought in</p></div><div><p class="n">${rec.sales}</p><p class="k">Bought via their link</p></div></div>
+      <ul class="plain" style="margin-top:10px">${rec.films.map(f => `<li><b>${esc(f.title)}</b>${f.role ? ` — ${esc(f.role)}` : ''}</li>`).join('')}</ul>` : ''}
+    <p class="tiny" style="margin-top:26px">${external ? 'This profile comes from Actors Spaces. Contact and bookings go through them.' : 'Profiles are written by the people themselves. 4flieks never shows anyone\'s email: messages are sent by email and replies go straight to you.'}</p>`;
+}
+function talentContactForm(id) {
+  const box = document.getElementById('tcform');
+  document.getElementById('tcbtn').disabled = true;
+  box.innerHTML = `<div class="panel" style="margin:14px 0 0">
+    <label>Your message</label>
+    <textarea id="tcmsg" maxlength="1200" placeholder="Who you are, the project, the role or job, dates and whether it is paid."></textarea>
+    <p class="tiny" style="color:#B9AB9B;margin-top:6px">4flieks emails this to them. Your email is the reply address, so their answer comes straight to you.</p>
+    <p class="msg" id="tcm" style="color:#F2C7A8"></p>
+    <div class="actions"><button id="tcsend">Send</button><button class="ghost" id="tccancel">Cancel</button></div></div>`;
+  document.getElementById('tccancel').onclick = () => { box.innerHTML = ''; document.getElementById('tcbtn').disabled = false; };
+  document.getElementById('tcsend').onclick = async () => {
+    const b = document.getElementById('tcsend'), m = document.getElementById('tcm');
+    b.disabled = true; m.textContent = 'Sending…';
+    const { ok, d } = await tcall('contact', { id, message: document.getElementById('tcmsg').value });
+    if (!ok) { b.disabled = false; m.textContent = d.message || 'Could not send.'; return; }
+    box.innerHTML = `<p style="color:#2E7D32;margin-top:12px"><b>Sent.</b> If they're interested, they'll reply to your email.</p>`;
+  };
+}
+
 /* ================= routing ================= */
 
 if (pitchId) {
@@ -1159,6 +1317,13 @@ if (pitchId) {
 } else if (reportId) {
   setNav(null, 'report');
   authReady.then(u => { setNav(u, 'report'); showReport(reportId); });
+} else if (talentMatch) {
+  auth.onAuthStateChanged(user => {
+    setNav(user, 'talent');
+    if (!user) { gate(`<h1>Talent search</h1><p class="muted" style="margin:8px 0 18px">Find actors, directors and crew across Africa. Free in 4flieks Lab.</p>
+      <a class="btn" href="/lab#join">Join or sign in</a>`); return; }
+    if (talentMatch[1]) talentProfile(decodeURIComponent(talentMatch[1])); else talentSearch();
+  });
 } else if (isReportTool) {
   auth.onAuthStateChanged(async user => {
     setNav(user, 'report');
