@@ -123,9 +123,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 <div id="view-films" class="view">
   <div class="row" style="margin-bottom:14px">
     <p class="sl" style="margin:0">ALL FILMS</p>
-    <input class="input" id="film-search" placeholder="Search…" style="width:160px;padding:7px 10px" oninput="searchFilms(this.value)">
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto" onclick="nav('lists')">📚 Lists</button>
+      <input class="input" id="film-search" placeholder="Search…" style="width:140px;padding:7px 10px" oninput="searchFilms(this.value)">
+    </div>
   </div>
   <div id="all-films-list"><div class="spinner"></div></div>
+</div>
+
+<!-- LISTS: curated lists of films for the home page and /list/<slug> -->
+<div id="view-lists" class="view">
+  <div class="row" style="margin-bottom:14px">
+    <button onclick="nav('films')" style="color:var(--muted);font-size:12px;background:none;border:none;cursor:pointer">← Films</button>
+    <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber);width:auto" onclick="editAdminList(null)">+ New list</button>
+  </div>
+  <p class="sl">LISTS</p>
+  <p style="font-size:12px;color:var(--muted);margin:-4px 0 12px">Lists marked "on home" show as rows on the home page, in order. Every published list has its own page to share: 4flieks.com/list/…</p>
+  <div id="lists-list"><div class="spinner"></div></div>
+  <div id="list-editor" style="display:none"></div>
 </div>
 
 <!-- CAST -->
@@ -239,6 +254,7 @@ function nav(v) {
   window.scrollTo(0,0);
   if (v === 'queue') loadQueue();
   if (v === 'films') loadAllFilms();
+  if (v === 'lists') loadAdminLists();
   if (v === 'cast') loadAllCast();
   if (v === 'users') loadUsers();
   if (v === 'payouts') loadPayouts();
@@ -774,6 +790,125 @@ function renderFilmsList(films) {
 function searchFilms(q) {
   const term = q.toLowerCase();
   renderFilmsList(allFilmsCache.filter(f => f.title.toLowerCase().includes(term) || f.filmmaker.toLowerCase().includes(term)));
+}
+
+/* ---- LISTS ---- */
+let adminLists = [], editingList = null;
+
+async function listsApi(action, extra) {
+  const r = await fetch('/.netlify/functions/flieks-lists', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...extra })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong.');
+  return d;
+}
+
+async function loadAdminLists() {
+  document.getElementById('list-editor').style.display = 'none';
+  const el = document.getElementById('lists-list');
+  el.style.display = '';
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    if (!allFilmsCache.length) allFilmsCache = Object.entries(await readNode('films')).map(([id, f]) => ({ id, ...f }));
+    adminLists = (await listsApi('all')).lists || [];
+  } catch (e) { el.innerHTML = `<p style="color:var(--red);font-size:14px">${escA(e.message)}</p>`; return; }
+  if (!adminLists.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No lists yet. Start with a few: "Taxi stories", "isiZulu shorts", "Made in Durban".</p>`; return; }
+  el.innerHTML = adminLists.map(l => `
+    <div class="card row" style="cursor:pointer" onclick="editAdminList('${l.id}')">
+      <div style="flex:1">
+        <p style="font-size:14px;font-weight:700">${escA(l.title)}</p>
+        <p style="font-size:12px;color:var(--muted)">${(l.films || []).length} film${(l.films || []).length === 1 ? '' : 's'} · /list/${escA(l.slug)}</p>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+        ${l.published ? '<span class="tag tag-g">PUBLISHED</span>' : '<span class="tag tag-m">DRAFT</span>'}
+        ${l.on_home ? `<span class="tag tag-a">HOME #${Number(l.order) || 0}</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function editAdminList(id) {
+  const l = adminLists.find(x => x.id === id);
+  editingList = l ? { ...l, films: [...(l.films || [])] }
+    : { id: null, title: '', description: '', published: true, on_home: true, order: adminLists.length + 1, films: [] };
+  document.getElementById('lists-list').style.display = 'none';
+  document.getElementById('list-editor').style.display = '';
+  renderListEditor();
+}
+
+function listPool() {
+  return allFilmsCache.filter(f => f.status === 'live' || f.status === 'soon');
+}
+
+function renderListEditor(q = '') {
+  const L = editingList, box = document.getElementById('list-editor');
+  const title = id => { const f = allFilmsCache.find(x => x.id === id); return f ? f.title : id; };
+  const term = q.toLowerCase();
+  const pool = listPool().filter(f => !L.films.includes(f.id))
+    .filter(f => !term || (f.title || '').toLowerCase().includes(term) || (f.filmmaker || '').toLowerCase().includes(term) ||
+      (f.language || '').toLowerCase().includes(term) || (f.genre || []).join(' ').toLowerCase().includes(term));
+  box.innerHTML = `
+    <div class="card">
+      <label style="font-size:12px;color:var(--muted)">TITLE</label>
+      <input class="input" id="le-title" maxlength="80" value="${escA(L.title)}" placeholder="e.g. Taxi stories" style="margin:4px 0 10px">
+      <label style="font-size:12px;color:var(--muted)">DESCRIPTION (optional)</label>
+      <textarea class="input" id="le-desc" maxlength="400" rows="2" placeholder="One or two lines about why these films belong together" style="margin:4px 0 10px">${escA(L.description || '')}</textarea>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)">
+        <label><input type="checkbox" id="le-pub" ${L.published ? 'checked' : ''}> Published</label>
+        <label><input type="checkbox" id="le-home" ${L.on_home ? 'checked' : ''}> Row on the home page</label>
+        <label>Order <input class="input" id="le-order" type="number" min="0" max="999" value="${Number(L.order) || 0}" style="width:70px;padding:5px 8px;display:inline-block"></label>
+      </div>
+    </div>
+    <p class="sl" style="margin-top:14px">FILMS IN THIS LIST (${L.films.length})</p>
+    ${L.films.length ? L.films.map((id, i) => `
+      <div class="card row" style="padding:8px 12px">
+        <p style="flex:1;font-size:14px">${i + 1}. ${escA(title(id))}</p>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--muted)" ${i === 0 ? 'disabled' : ''} onclick="moveListFilm(${i}, -1)">↑</button>
+          <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--muted)" ${i === L.films.length - 1 ? 'disabled' : ''} onclick="moveListFilm(${i}, 1)">↓</button>
+          <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--red)" onclick="removeListFilm(${i})">✕</button>
+        </div>
+      </div>`).join('') : '<p style="font-size:13px;color:var(--muted)">Add films below.</p>'}
+    <p class="sl" style="margin-top:14px">ADD FILMS</p>
+    <input class="input" id="le-q" placeholder="Search by title, filmmaker, language or genre" value="${escA(q)}" oninput="keepListFields();renderListEditor(this.value);const i=document.getElementById('le-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)" style="margin-bottom:8px">
+    ${pool.slice(0, 40).map(f => `
+      <div class="card row" style="padding:8px 12px">
+        <p style="flex:1;font-size:14px">${escA(f.title)} <span style="font-size:11px;color:var(--muted)">${escA(f.filmmaker || '')}${f.status === 'soon' ? ' · coming soon' : ''}</span></p>
+        <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="addListFilm('${f.id}')">+ Add</button>
+      </div>`).join('') || '<p style="font-size:13px;color:var(--muted)">No more films match.</p>'}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+      <button class="btn btn-g" onclick="saveAdminList(this)">SAVE LIST</button>
+      <button class="btn" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="loadAdminLists()">CANCEL</button>
+    </div>
+    ${L.id ? `<button class="btn btn-sm" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--red)" data-armed="" onclick="deleteAdminList(this)">Delete this list</button>` : ''}`;
+}
+
+/* Keep what's typed while the film search redraws the editor. */
+function keepListFields() {
+  const L = editingList, v = id => document.getElementById(id);
+  if (!v('le-title')) return;
+  L.title = v('le-title').value; L.description = v('le-desc').value;
+  L.published = v('le-pub').checked; L.on_home = v('le-home').checked; L.order = v('le-order').value;
+}
+function addListFilm(id) { keepListFields(); editingList.films.push(id); renderListEditor(document.getElementById('le-q').value); }
+function removeListFilm(i) { keepListFields(); editingList.films.splice(i, 1); renderListEditor(document.getElementById('le-q').value); }
+function moveListFilm(i, d) { keepListFields(); const f = editingList.films; [f[i], f[i + d]] = [f[i + d], f[i]]; renderListEditor(document.getElementById('le-q').value); }
+
+async function saveAdminList(btn) {
+  keepListFields();
+  btn.disabled = true;
+  try {
+    const d = await listsApi('save', { list: editingList });
+    snack(d.list.published ? `Saved. It's live at 4flieks.com/list/${d.list.slug}` : 'Saved as a draft.');
+    loadAdminLists();
+  } catch (e) { snack(e.message); btn.disabled = false; }
+}
+
+async function deleteAdminList(btn) {
+  if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Tap again to delete'; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Delete this list'; }, 6000); return; }
+  try { await listsApi('delete', { id: editingList.id }); snack('List deleted.'); loadAdminLists(); }
+  catch (e) { snack(e.message); }
 }
 
 /* ---- TRAILER PREMIERES ----

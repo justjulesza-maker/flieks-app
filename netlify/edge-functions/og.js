@@ -29,9 +29,55 @@ const esc = s => String(s || '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* A list page (4flieks.com/list/<slug>): its title, description and the first film's poster. */
+async function listPreview(request, context, url, slug) {
+  const response = await context.next();
+  if (!(response.headers.get('content-type') || '').includes('text/html')) return response;
+  let list = null, poster = '';
+  try {
+    const r = await fetch(`${url.origin}/.netlify/functions/flieks-lists?slug=${encodeURIComponent(slug)}`);
+    list = r.ok ? (await r.json()).list : null;
+    if (list && list.films && list.films[0]) {
+      const f = await (await fetch(`${DB}/flieks_films/${encodeURIComponent(list.films[0])}.json`)).json();
+      poster = (f && (f.og_image || f.still_url || f.poster_url)) || '';
+    }
+  } catch { return response; }
+  if (!list) return response;
+  const n = (list.films || []).length;
+  const title = `${list.title} · a list of ${n} film${n === 1 ? '' : 's'} on 4flieks`;
+  const desc = list.description || `${n} African independent film${n === 1 ? '' : 's'}, chosen by 4flieks.`;
+  const tags = `
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}">
+<meta property="og:site_name" content="4flieks">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${esc(url.origin + url.pathname)}">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(desc)}">
+${poster ? `<meta property="og:image" content="${esc(poster)}">` : ''}
+<meta name="twitter:card" content="${poster ? 'summary_large_image' : 'summary'}">`;
+  let html = await response.text();
+  html = html
+    .replace(/<title>[\s\S]*?<\/title>/i, '')
+    .replace(/<meta\s+(?:property|name)="(?:og:|twitter:|description)[^"]*"[^>]*>/gi, '')
+    .replace(/<\/head>/i, tags + '\n</head>');
+  const headers = new Headers();
+  for (const [k, v] of response.headers) {
+    const key = k.toLowerCase();
+    if (['content-length', 'content-encoding', 'transfer-encoding', 'content-type'].includes(key)) continue;
+    headers.set(k, v);
+  }
+  headers.set('content-type', 'text/html; charset=utf-8');
+  headers.set('cache-control', 'public, max-age=300');
+  return new Response(html, { status: 200, statusText: 'OK', headers });
+}
+
 export default async (request, context) => {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/|\/$/g, '');
+
+  const listMatch = path.match(/^list\/([a-z0-9-]{1,80})$/);
+  if (listMatch) return listPreview(request, context, url, listMatch[1]);
 
   // only single-segment paths that could be a film slug
   if (!path || path.includes('/') || path.includes('.') || RESERVED.has(path.toLowerCase())) {

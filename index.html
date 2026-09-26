@@ -200,6 +200,9 @@ input,textarea{font-family:var(--fb)}
 .hrow .film-thumb{height:200px}
 .row-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 20px;margin:18px 0 10px}
 .row-head a{font-size:12px;color:var(--amber);text-decoration:none}
+.list-chips{display:flex;gap:8px;flex-wrap:wrap}
+.list-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:600;text-decoration:none;cursor:pointer}
+.list-chip svg{width:14px;height:14px;stroke:var(--amber);fill:none;stroke-width:2}
 .wl-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:12px;border-radius:10px;
   border:1px solid var(--border);background:var(--card);color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .wl-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
@@ -421,6 +424,9 @@ input,textarea{font-family:var(--fb)}
     <div class="hrow" id="watch-row"></div>
   </div>
 
+  <!-- Curated lists, one row each (filled by renderHomeRows) -->
+  <div id="lists-wrap"></div>
+
   <!-- Categories -->
   <div style="margin:16px 0 10px">
     <div class="cats" id="cats">
@@ -441,6 +447,19 @@ input,textarea{font-family:var(--fb)}
   <div class="film-grid" id="film-grid">
     <div style="grid-column:span 2;text-align:center;padding:40px 0"><div class="spinner"></div></div>
   </div>
+</div>
+
+<!-- ================================================================
+     VIEW: LIST  (4flieks.com/list/<slug>)
+================================================================ -->
+<div id="view-list" class="view">
+  <div class="topbar">
+    <button onclick="navBack()" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+  </div>
+  <div id="list-content"></div>
 </div>
 
 <!-- ================================================================
@@ -1054,6 +1073,7 @@ let userProgress = {};     // filmId -> { pos, dur, at, done } — where they go
 let soonFilms = [];        // films marked "coming soon" by an admin
 let userWatch = {};        // filmId -> { at } — the viewer's watchlist
 let homeGenre = 'all';
+let allLists = [];         // published lists: { id, slug, title, description, films: [ids], on_home }
 const findFilm = id => allFilms.find(f => f.id === id) || soonFilms.find(f => f.id === id);
 let playing = null;        // { id, trailer, lastSaved } — what the player has loaded
 let navHistory = ['home'];
@@ -1185,7 +1205,17 @@ function navBack() {
 /* ============================================================
    LOAD FILMS
    ============================================================ */
+async function loadLists() {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-lists', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'public' })
+    });
+    allLists = r.ok ? ((await r.json()).lists || []) : [];
+  } catch (e) { allLists = []; }
+}
+
 async function loadFilms() {
+  const listsReady = loadLists();
   try {
     const snap = await db.ref(DB_PREFIX + 'films').orderByChild('status').equalTo('live').once('value');
     allFilms = [];
@@ -1200,6 +1230,7 @@ async function loadFilms() {
       // Soonest date first; films without a date after them.
       soonFilms.sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
     } catch (e) { soonFilms = []; }
+    await listsReady;
     renderHome();
   } catch (e) {
     console.error(e);
@@ -1255,6 +1286,46 @@ function renderHomeRows(genre = homeGenre) {
   const saved = watchlistFilms().filter(f => !userPurchases[f.id]);
   watchWrap.style.display = show && saved.length ? 'block' : 'none';
   if (show && saved.length) document.getElementById('watch-row').innerHTML = saved.map(filmCardHTML).join('');
+
+  // Curated lists marked for the home page, one row each.
+  const listsWrap = document.getElementById('lists-wrap');
+  if (listsWrap) listsWrap.innerHTML = !show ? '' : allLists.filter(l => l.on_home).map(l => {
+    const films = listFilms(l);
+    if (!films.length) return '';
+    return `<div class="row-head"><p class="section-label" style="margin:0">${escHtml(l.title.toUpperCase())}</p>
+        <a href="/list/${encodeURIComponent(l.slug)}" onclick="openList('${l.slug}');return false;">See all${films.length > 12 ? ` ${films.length}` : ''}</a></div>
+      <div class="hrow">${films.slice(0, 12).map(filmCardHTML).join('')}</div>`;
+  }).join('');
+}
+
+const listFilms = l => (l.films || []).map(findFilm).filter(Boolean);
+const LIST_ICON = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+
+/* A list's own page: 4flieks.com/list/<slug>. */
+function openList(slug) {
+  const l = allLists.find(x => x.slug === slug);
+  const box = document.getElementById('list-content');
+  if (!l) { box.innerHTML = `<div class="empty"><p>That list isn't available.</p></div>`; nav('list'); return; }
+  const films = listFilms(l);
+  box.innerHTML = `
+    <div style="padding:16px 20px 6px">
+      <p class="section-label" style="margin-bottom:6px">${l.curated ? 'A 4FLIEKS LIST' : 'LIST'} · ${films.length} FILM${films.length === 1 ? '' : 'S'}</p>
+      <p class="bbn" style="font-size:36px;line-height:1.05;color:var(--text)">${escHtml(l.title)}</p>
+      ${l.description ? `<p style="color:var(--muted);font-size:14px;line-height:1.6;margin-top:8px">${escHtml(l.description)}</p>` : ''}
+      <button class="wl-btn" style="margin:14px 0 6px" onclick="shareList('${l.slug}')"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share this list</button>
+    </div>
+    <div class="film-grid" style="margin-top:10px">${films.map(filmCardHTML).join('') || '<div style="grid-column:span 2" class="empty"><p>No films in this list yet.</p></div>'}</div>`;
+  nav('list');
+}
+
+async function shareList(slug) {
+  const l = allLists.find(x => x.slug === slug);
+  if (!l) return;
+  const url = `${location.origin}/list/${encodeURIComponent(l.slug)}`;
+  try {
+    if (navigator.share) await navigator.share({ title: l.title, text: `${l.title}: a list of films on 4flieks`, url });
+    else { await navigator.clipboard.writeText(url); showSnack('Link copied.'); }
+  } catch {}
 }
 
 function soonDate(f) {
@@ -1384,6 +1455,10 @@ function renderFilmDetail() {
       <p class="section-label">ABOUT THE FILM</p>
       <p style="color:#999;font-size:14px;line-height:1.7;white-space:pre-line">${escHtml(f.about)}</p>
     </div>` : ''}
+    ${(() => { const ls = allLists.filter(l => (l.films || []).includes(f.id)); return ls.length ? `<div style="padding:0 20px 14px">
+      <p class="section-label">IN THESE LISTS</p>
+      <div class="list-chips">${ls.map(l => `<a class="list-chip" href="/list/${encodeURIComponent(l.slug)}" onclick="openList('${l.slug}');return false;">${LIST_ICON}${escHtml(l.title)}</a>`).join('')}</div>
+    </div>` : ''; })()}
     <div id="film-cast-wall"></div>
     <div id="film-reviews"></div>
     ${f.premiere ? '' : f.status === 'soon' ? soonBlockHTML(f) : purchased ? `
@@ -3358,7 +3433,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.FlieksSocial) {
     try {
       const { filmId } = await FlieksSocial.readLink();
-      if (filmId && findFilm(filmId)) openFilm(filmId);
+      const listPath = location.pathname.match(/^\/list\/([a-z0-9-]{1,80})\/?$/);
+      if (listPath) openList(listPath[1]);
+      else if (filmId && findFilm(filmId)) openFilm(filmId);
 
       // Home-screen shortcuts land here
       const want = new URLSearchParams(location.search).get('view');
