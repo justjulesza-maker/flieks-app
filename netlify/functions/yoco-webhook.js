@@ -22,7 +22,7 @@ const WHSEC  = (process.env.YOCO_WEBHOOK_SECRET || '').trim();
 
 /* ── firebase ─────────────────────────────────────────────────────────────── */
 
-function fbRequest(path, method, value) {
+function fbRaw(path, method, value, extraHeaders = {}) {
   const body = value === undefined ? null : JSON.stringify(value);
   const url  = new URL(`${DB}/${path}.json?auth=${SECRET}`);
   return new Promise((resolve, reject) => {
@@ -30,27 +30,45 @@ function fbRequest(path, method, value) {
       hostname: url.hostname,
       path: url.pathname + url.search,
       method,
-      headers: body
-        ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-        : {}
+      headers: {
+        ...(body ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } : {}),
+        ...extraHeaders
+      }
     }, res => {
       let d = '';
       res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(d ? JSON.parse(d) : null); } catch { resolve(null); } });
+      res.on('end', () => {
+        let data = null; try { data = d ? JSON.parse(d) : null; } catch {}
+        resolve({ status: res.statusCode, etag: (res.headers || {}).etag, data });
+      });
     });
     req.on('error', reject);
     if (body) req.write(body);
     req.end();
   });
 }
+const fbRequest = (path, method, value) => fbRaw(path, method, value).then(r => r.data);
 const fbGet   = p      => fbRequest(p, 'GET');
 const fbPut   = (p, v) => fbRequest(p, 'PUT', v);
 const fbPatch = (p, v) => fbRequest(p, 'PATCH', v);
 
-async function fbIncrement(path, field) {
-  const current = await fbGet(`${path}/${field}`);
-  await fbPut(`${path}/${field}`, (parseInt(current) || 0) + 1);
+/* Counts use the database's own increment. Reading a number and writing it
+   back +1 loses sales when two payments land at the same moment. */
+const inc = (n = 1) => ({ '.sv': { increment: n } });
+const fbIncrement = (path, field) => fbPut(`${path}/${field}`, inc(1));
+
+/* Yoco can deliver the same payment more than once, sometimes at the same
+   moment. Only the delivery that claims it first does the work; a claim left
+   by a run that crashed expires after two minutes so a retry can finish it. */
+const CLAIM_TTL = 120e3;
+async function claimPayment(key) {
+  const path = `flieks_ops/webhook_claims/${key}`;
+  const cur = await fbRaw(path, 'GET', undefined, { 'X-Firebase-ETag': 'true' });
+  if (cur.data && Date.now() - (cur.data.at || 0) < CLAIM_TTL) return false;
+  const put = await fbRaw(path, 'PUT', { at: Date.now() }, cur.etag ? { 'if-match': cur.etag } : {});
+  return put.status >= 200 && put.status < 300;
 }
+const releasePayment = key => fbRaw(`flieks_ops/webhook_claims/${key}`, 'DELETE').catch(() => {});
 
 /* ── signature ────────────────────────────────────────────────────────────── */
 
@@ -101,6 +119,7 @@ exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
   const rawBody = event.body || '';
+  let claimKey = null;
 
   try {
     if (!verifySignature(event.headers || {}, rawBody)) {
@@ -146,6 +165,13 @@ exports.handler = async event => {
     if (tx.status === 'complete') {
       console.log('already processed:', txId);
       return { statusCode: 200, body: 'Already processed' };
+    }
+
+    claimKey = String(txId || payload.id || '').replace(/[.#$\[\]\/]/g, '_');
+    if (claimKey && !(await claimPayment(claimKey))) {
+      console.log('already being processed:', claimKey);
+      claimKey = null;                      // not ours to release
+      return { statusCode: 200, body: 'Already processing' };
     }
 
     const now = Date.now();
@@ -226,27 +252,18 @@ exports.handler = async event => {
       return { statusCode: 200, body: 'OK (test)' };
     }
 
+    const add = { sales: inc(1), revenue: inc(gross), [`by_${type}`]: inc(1) };
     if (ref) {
-      const s = (await fbGet(`flieks_stats/${filmId}/refs/${ref}`)) || {};
-      await fbPatch(`flieks_stats/${filmId}/refs/${ref}`, {
-        sales:   (s.sales   || 0) + 1,
-        revenue: +(((s.revenue || 0) + gross).toFixed(2)),
-        [`by_${type}`]: (s[`by_${type}`] || 0) + 1
-      });
+      await fbPatch(`flieks_stats/${filmId}/refs/${ref}`, add);
       console.log(`Attributed to ${ref}`);
     }
-
-    const t = (await fbGet(`flieks_stats/${filmId}/totals`)) || {};
-    await fbPatch(`flieks_stats/${filmId}/totals`, {
-      sales:   (t.sales   || 0) + 1,
-      revenue: +(((t.revenue || 0) + gross).toFixed(2)),
-      [`by_${type}`]: (t[`by_${type}`] || 0) + 1
-    });
+    await fbPatch(`flieks_stats/${filmId}/totals`, add);
 
     return { statusCode: 200, body: 'OK' };
 
   } catch (err) {
     console.error('webhook error:', err);
+    if (claimKey) await releasePayment(claimKey);   // let Yoco's retry finish it
     // 500 tells Yoco to retry, which is what we want if our side failed.
     return { statusCode: 500, body: 'Internal error' };
   }

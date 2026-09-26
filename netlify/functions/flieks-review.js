@@ -38,7 +38,7 @@ function req(url, opts = {}, body = null) {
   return new Promise((res, rej) => {
     const r = https.request(url, opts, x => {
       let d = ''; x.on('data', c => d += c);
-      x.on('end', () => res({ status: x.statusCode, body: d }));
+      x.on('end', () => res({ status: x.statusCode, body: d, headers: x.headers || {} }));
     });
     r.on('error', rej);
     if (body) r.write(body);
@@ -57,6 +57,27 @@ const dbWrite = (p, data, method) => {
 const dbPut    = (p, d) => dbWrite(p, d, 'PUT');
 const dbPatch  = (p, d) => dbWrite(p, d, 'PATCH');
 const dbDelete = p => req(`${DB}/${p}.json?auth=${SECRET}`, { method: 'DELETE' });
+
+/* Set or clear one record only if it isn't already that way, using the
+   database's conditional write. Returns true when this call changed it, so a
+   counter can move by exactly one even when many requests arrive together. */
+async function flip(p, value) {
+  const url = `${DB}/${p}.json?auth=${SECRET}`;
+  for (let i = 0; i < 5; i++) {
+    const cur = await req(url, { headers: { 'X-Firebase-ETag': 'true' } });
+    const exists = JSON.parse(cur.body || 'null') !== null;
+    if (exists === (value !== null)) return false;           // already as asked
+    const etag = cur.headers.etag;
+    const b = value === null ? null : JSON.stringify(value);
+    const r = await req(url, { method: value === null ? 'DELETE' : 'PUT', headers: {
+      ...(b ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) } : {}),
+      ...(etag ? { 'if-match': etag } : {}) } }, b);
+    if (r.status >= 200 && r.status < 300) return true;
+    if (r.status !== 412) throw new Error(`db write ${p}: ${r.status}`);
+  }
+  return false;
+}
+const addTo = (p, n) => dbWrite(p, { '.sv': { increment: n } }, 'PUT');
 
 async function verifyToken(token) {
   if (!API_KEY) throw new Error('FIREBASE_API_KEY is not set.');
@@ -246,10 +267,11 @@ exports.handler = async event => {
     if (action === 'like' || action === 'unlike') {
       if (reviewId === uid) return reply(400, { message: 'That is your own review.' });
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(reviewId)) return reply(404, { message: 'No such review.' });
-      if (action === 'like') await dbPut(`flieks_review_likes/${filmId}/${reviewId}/${uid}`, { at: Date.now() });
-      else await dbDelete(`flieks_review_likes/${filmId}/${reviewId}/${uid}`);
-      const n = Object.keys(await dbGet(`flieks_review_likes/${filmId}/${reviewId}`) || {}).length;
-      await dbPatch(`flieks_reviews/${filmId}/${reviewId}`, { likes: n });
+      // Only real reviews: a like must never create an empty one.
+      if (!(await dbGet(`flieks_reviews/${filmId}/${reviewId}/rating`))) return reply(404, { message: 'No such review.' });
+      const changed = await flip(`flieks_review_likes/${filmId}/${reviewId}/${uid}`, action === 'like' ? { at: Date.now() } : null);
+      if (changed) await addTo(`flieks_reviews/${filmId}/${reviewId}/likes`, action === 'like' ? 1 : -1);
+      const n = Math.max(0, Number(await dbGet(`flieks_reviews/${filmId}/${reviewId}/likes`)) || 0);
       return reply(200, { ok: true, liked: action === 'like', likes: n });
     }
 

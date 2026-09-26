@@ -132,7 +132,7 @@ exports.handler = async event => {
         const bought = await ops.dbGet(`flieks_purchases/${me.uid}/pod_${b.episodeId}`);
         if (!bought) return reply(402, { message: `This masterclass is R${ep.price}.`, code: 'buy', price: ep.price });
       }
-      await ops.dbWrite(`flieks_pod_stats/${b.episodeId}/plays`, ((await ops.dbGet(`flieks_pod_stats/${b.episodeId}/plays`)) || 0) + 1);
+      await ops.dbIncrement(`flieks_pod_stats/${b.episodeId}/plays`).catch(() => {});
       const embed = P.embedFor(ep);
       if (embed) return reply(200, { player: embed });
       const priv = await ops.dbGet(`flieks_private/pod_${b.episodeId}`) || {};

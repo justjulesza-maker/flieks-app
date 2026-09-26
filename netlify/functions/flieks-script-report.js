@@ -193,17 +193,28 @@ exports.handler = async event => {
         }
       }
 
-      if (!me.unlimited) {
-        const mine = await ops.dbGet(`flieks_script_reports_by_user/${me.uid}`) || {};
-        const since = Date.now() - 30 * DAY;
-        const used = Object.values(mine).filter(r => (r.created_at || 0) >= since).length;
-        if (used >= LIMIT) {
-          return reply(429, { message: `You've used your ${LIMIT} script reports for this month. More open up as the month rolls on.` });
-        }
-      }
-
       const id = newId();
       const now = Date.now();
+      // Check the limit and take this month's slot as one step, one start at a
+      // time per person, so several starts at the same moment can't all get in.
+      const slot = { title, created_at: now, status: 'queued' };
+      if (me.unlimited) await ops.dbWrite(`flieks_script_reports_by_user/${me.uid}/${id}`, slot);
+      else {
+        let allowed;
+        try {
+          allowed = await ops.withLock(`report_${me.uid}`, async () => {
+            const mine = await ops.dbGet(`flieks_script_reports_by_user/${me.uid}`) || {};
+            const used = Object.values(mine).filter(r => (r.created_at || 0) >= now - 30 * DAY).length;
+            if (used >= LIMIT) return false;
+            await ops.dbWrite(`flieks_script_reports_by_user/${me.uid}/${id}`, slot);
+            return true;
+          });
+        } catch (e) {
+          if (e.busy) return reply(429, { message: 'Another report is starting. Try again in a moment.' });
+          throw e;
+        }
+        if (!allowed) return reply(429, { message: `You've used your ${LIMIT} script reports for this month. More open up as the month rolls on.` });
+      }
       const filePath = text ? null : decodeURIComponent(fileUrl.slice(BUCKET_PREFIX.length).split('?')[0]);
       const source = ['docx', 'txt', 'paste'].includes(body.source) ? body.source : (text ? 'paste' : 'pdf');
       if (text) await ops.dbWrite(`flieks_script_texts/${id}`, { text, owner: me.uid, created_at: now });
@@ -238,6 +249,7 @@ exports.handler = async event => {
       const pid = rec.pitch_id || newId();
       const prev = rec.pitch_id ? await ops.dbGet(`flieks_pitches/${pid}`) : null;
       const drafts = (prev && prev.drafts) || 0;
+      if ((await ops.dbIncrement(`flieks_ops/locks/pitch_${pid}_${Math.floor(Date.now() / 30000)}`)) > 1) return reply(200, { ok: true, pid });
       if (drafts >= MAX_PITCH_DRAFTS && !me.unlimited) {
         return reply(429, { message: `That's ${MAX_PITCH_DRAFTS} drafts for this pitch. Edit the text by hand instead.` });
       }
@@ -289,6 +301,8 @@ exports.handler = async event => {
       if (!pitch || (pitch.owner !== me.uid && me.role !== 'admin')) return reply(404, { message: 'Pitch not found.' });
       const f = pitch.funding || {};
       if ((f.status === 'queued' || f.status === 'working') && Date.now() - (f.at || 0) < 15 * 60e3) return reply(200, { ok: true });
+      // Two taps at the same moment start one search, not two.
+      if ((await ops.dbIncrement(`flieks_ops/locks/funding_${body.pid}_${Math.floor(Date.now() / 30000)}`)) > 1) return reply(200, { ok: true });
       const day = new Date().toISOString().slice(0, 10);
       const runs = f.day === day ? (f.runs || 0) : 0;
       if (runs >= FUNDING_PER_DAY && !me.unlimited) {
@@ -356,8 +370,8 @@ exports.handler = async event => {
 
       const day = new Date().toISOString().slice(0, 10);
       const countPath = `flieks_ops/talent_connect/${me.uid}/${day}`;
-      const count = me.unlimited ? 0 : (await ops.dbGet(countPath)) || 0;
-      if (count >= CONNECT_PER_DAY) return reply(429, { message: `That's ${CONNECT_PER_DAY} requests today. Try again tomorrow.` });
+      if (!me.unlimited && !(await ops.takeSlot(countPath, CONNECT_PER_DAY))) return reply(429, { message: `That's ${CONNECT_PER_DAY} requests today. Try again tomorrow.` });
+      const giveBack = () => me.unlimited ? null : ops.dbIncrement(countPath, -1).catch(() => {});
 
       const from = me.name || rec.writer || 'A 4flieks filmmaker';
       const replyTo = me.email || rec.owner_email;
@@ -384,10 +398,10 @@ exports.handler = async event => {
       });
       if (!sent || !sent.ok) {
         console.error('[connect] email failed', sent && sent.reason);
+        await giveBack();
         return reply(502, { message: 'The email could not be sent. Try again in a minute.' });
       }
       await ops.dbWrite(`flieks_script_reports/${body.id}/cast_match/sent/${talentUid}`, { at: Date.now(), character });
-      if (!me.unlimited) await ops.dbWrite(countPath, count + 1);
       await ops.logLabEvent('connect', me.uid, { title: rec.title, report: body.id });
       return reply(200, { ok: true });
     }

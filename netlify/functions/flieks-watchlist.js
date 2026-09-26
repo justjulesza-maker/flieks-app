@@ -57,13 +57,13 @@ exports.handler = async event => {
       if (film.status === 'live') return reply(200, { ok: true, live: true });
       if (film.status !== 'soon') return reply(404, { message: 'Film not found.' });
       const day = new Date(Date.now() + ops.SA).toISOString().slice(0, 10);
-      const n = await ops.dbGet(`flieks_ops/watch_email_day/${b.filmId}/${day}`) || 0;
-      if (n >= EMAILS_PER_FILM_PER_DAY) return reply(429, { message: 'Too many sign-ups today. Try again tomorrow.' });
       const key = wl.emailKey(email);
       const had = await ops.dbGet(`flieks_watch_emails/${b.filmId}/${key}`);
       if (!had) {
+        if (!(await ops.takeSlot(`flieks_ops/watch_email_day/${b.filmId}/${day}`, EMAILS_PER_FILM_PER_DAY))) {
+          return reply(429, { message: 'Too many sign-ups today. Try again tomorrow.' });
+        }
         await ops.dbWrite(`flieks_watch_emails/${b.filmId}/${key}`, { email, at: Date.now() });
-        await ops.dbWrite(`flieks_ops/watch_email_day/${b.filmId}/${day}`, n + 1);
       }
       return reply(200, { ok: true });
     }
@@ -81,8 +81,7 @@ exports.handler = async event => {
 
     if (a === 'share') {
       if (!wl.okFilm(b.filmId)) return reply(404, { message: 'Film not found.' });
-      const n = await ops.dbGet(`flieks_premiere_stats/${b.filmId}/shares`) || 0;
-      await ops.dbWrite(`flieks_premiere_stats/${b.filmId}/shares`, n + 1);
+      await ops.dbIncrement(`flieks_premiere_stats/${b.filmId}/shares`).catch(() => {});
       return reply(200, { ok: true });
     }
 

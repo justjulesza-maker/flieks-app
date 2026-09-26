@@ -69,14 +69,25 @@ exports.handler = async event => {
       return reply(413, { message: 'That file is too big for Script Coach (about 4MB at most).' });
     }
 
-    if (!unlimited) {
-      const used = await ops.dbGet(`flieks_script_coach_usage/${u.localId}`) || {};
-      const since = Date.now() - 30 * DAY;
-      if (Object.values(used).filter(t => t >= since).length >= LIMIT) {
-        return reply(429, { message: `You've used your ${LIMIT} Script Coach uploads for this month.` });
+    // Check and take the slot as one step, one upload at a time per person,
+    // so uploads at the same moment can't pass the limit.
+    const nowTs = Date.now();
+    if (unlimited) await ops.dbWrite(`flieks_script_coach_usage/${u.localId}/${jobId}`, nowTs);
+    else {
+      let allowed;
+      try {
+        allowed = await ops.withLock(`coach_${u.localId}`, async () => {
+          const used = await ops.dbGet(`flieks_script_coach_usage/${u.localId}`) || {};
+          if (Object.values(used).filter(t => t >= nowTs - 30 * DAY).length >= LIMIT) return false;
+          await ops.dbWrite(`flieks_script_coach_usage/${u.localId}/${jobId}`, nowTs);
+          return true;
+        });
+      } catch (e) {
+        if (e.busy) return reply(429, { message: 'Another upload is starting. Try again in a moment.' });
+        throw e;
       }
+      if (!allowed) return reply(429, { message: `You've used your ${LIMIT} Script Coach uploads for this month.` });
     }
-    await ops.dbWrite(`flieks_script_coach_usage/${u.localId}/${jobId}`, Date.now());
 
     const base = process.env.URL || 'https://4flieks.com';
     const kick = await fetch(`${base}/.netlify/functions/script-extract-background`, {

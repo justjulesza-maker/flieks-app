@@ -220,8 +220,8 @@ exports.handler = async event => {
       if (last && Date.now() - last < 7 * 864e5 && !me.unlimited) return reply(409, { message: 'You wrote to them this week. Give them time to reply.' });
       const day = new Date().toISOString().slice(0, 10);
       const countPath = `flieks_ops/talent_connect/${me.uid}/${day}`;
-      const count = me.unlimited ? 0 : (await ops.dbGet(countPath)) || 0;
-      if (count >= CONTACT_PER_DAY) return reply(429, { message: `That's ${CONTACT_PER_DAY} messages today. Try again tomorrow.` });
+      // Counted before sending, so messages sent at the same moment can't pass the daily limit.
+      if (!me.unlimited && !(await ops.takeSlot(countPath, CONTACT_PER_DAY))) return reply(429, { message: `That's ${CONTACT_PER_DAY} messages today. Try again tomorrow.` });
       const from = me.name || 'A 4flieks Lab member';
       const sent = await ops.sendEmailTo({
         to: t.email, replyTo: me.email,
@@ -231,9 +231,11 @@ exports.handler = async event => {
           'Your email address was not shown to them; they will see it only if you reply.', '',
           `You're in the talent search because you switched it on. Turn it off any time at ${ops.SITE}/talent`, '', '4flieks'].join('\n')
       });
-      if (!sent || !sent.ok) return reply(502, { message: 'The email could not be sent. Try again in a minute.' });
+      if (!sent || !sent.ok) {
+        if (!me.unlimited) await ops.dbIncrement(countPath, -1).catch(() => {});
+        return reply(502, { message: 'The email could not be sent. Try again in a minute.' });
+      }
       await ops.dbWrite(`flieks_ops/talent_contacted/${me.uid}/${id}`, Date.now());
-      if (!me.unlimited) await ops.dbWrite(countPath, count + 1);
       await ops.logLabEvent('talent_contact', me.uid, { title: t.name });
       return reply(200, { ok: true });
     }

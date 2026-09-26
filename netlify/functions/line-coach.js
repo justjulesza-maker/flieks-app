@@ -18,16 +18,13 @@ async function withinLimits(event) {
   const now = new Date();
   const day = now.toISOString().slice(0, 10);
   const hour = now.toISOString().slice(0, 13).replace(/[-:T]/g, "");
-  const [mine, all] = await Promise.all([
-    ops.dbGet(`flieks_ops/line_coach/${day}/by/${who}/${hour}`).catch(() => 0),
-    ops.dbGet(`flieks_ops/line_coach/${day}/total`).catch(() => 0)
-  ]);
-  if ((mine || 0) >= PER_HOUR) return "You've checked a lot of lines this hour. Take a breather and try again soon.";
-  if ((all || 0) >= PER_DAY) return "Line checking is busy today. Try again tomorrow.";
-  await Promise.all([
-    ops.dbWrite(`flieks_ops/line_coach/${day}/by/${who}/${hour}`, (mine || 0) + 1),
-    ops.dbWrite(`flieks_ops/line_coach/${day}/total`, (all || 0) + 1)
-  ]);
+  // Counted with the database's own increment, so bursts of requests can't slip past.
+  const minePath = `flieks_ops/line_coach/${day}/by/${who}/${hour}`;
+  if (!(await ops.takeSlot(minePath, PER_HOUR).catch(() => true))) return "You've checked a lot of lines this hour. Take a breather and try again soon.";
+  if (!(await ops.takeSlot(`flieks_ops/line_coach/${day}/total`, PER_DAY).catch(() => true))) {
+    await ops.dbIncrement(minePath, -1).catch(() => {});
+    return "Line checking is busy today. Try again tomorrow.";
+  }
   return null;
 }
 

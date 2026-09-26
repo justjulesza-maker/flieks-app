@@ -38,7 +38,7 @@ function request(url, opts = {}, body = null) {
   return new Promise((resolve, reject) => {
     const r = https.request(url, opts, res => {
       let d = ''; res.on('data', c => d += c);
-      res.on('end', () => resolve({ status: res.statusCode, body: d }));
+      res.on('end', () => resolve({ status: res.statusCode, body: d, headers: res.headers || {} }));
     });
     r.on('error', reject);
     r.setTimeout(15000, () => r.destroy(new Error('timeout')));
@@ -58,6 +58,54 @@ const dbWrite = (p, data, method = 'PUT') => {
     method, headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) }
   }, b);
 };
+
+/* Counters and limits that many requests can hit at the same moment.
+   Reading a number and writing it back +1 loses counts when two requests
+   overlap, and lets a limit be overshot. The database's own increment is
+   applied on its side, one at a time, so none of that can happen. */
+const dbIncrement = async (p, by = 1) => {
+  const b = JSON.stringify({ '.sv': { increment: by } });
+  const r = await request(`${DB}/${p}.json?auth=${SECRET}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b) }
+  }, b);
+  if (r.status >= 400) throw new Error(`db increment ${p}: ${r.status}`);
+  let v = null; try { v = JSON.parse(r.body || 'null'); } catch {}
+  return typeof v === 'number' ? v : (Number(await dbGet(p)) || 0);
+};
+
+/* Take one of `limit` uses of a counter. Counts first, then checks, and
+   hands the use back if it went over — so at most `limit` ever get through. */
+async function takeSlot(p, limit) {
+  const n = await dbIncrement(p, 1);
+  if (n > limit) { await dbIncrement(p, -1).catch(() => {}); return false; }
+  return true;
+}
+
+/* One request at a time for a given key (per person), across all function
+   instances: a check-then-write done inside is safe from requests arriving at
+   the same moment. Others wait their turn briefly. A lock left by a crashed
+   run expires after `ttl`. Uses the database's conditional write (ETag). */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function withLock(name, fn, { ttl = 20e3, wait = 6e3 } = {}) {
+  const path = `flieks_ops/locks/${name}`;
+  const url = `${DB}/${path}.json?auth=${SECRET}`;
+  const until = Date.now() + wait;
+  for (;;) {
+    const cur = await request(url, { headers: { 'X-Firebase-ETag': 'true' } });
+    let held = null; try { held = JSON.parse(cur.body || 'null'); } catch {}
+    if (!held || Date.now() - (held.at || 0) > ttl) {
+      const b = JSON.stringify({ at: Date.now() });
+      const etag = (cur.headers || {}).etag;
+      const put = await request(url, { method: 'PUT', headers: {
+        'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(b), ...(etag ? { 'if-match': etag } : {}) } }, b);
+      if (put.status >= 200 && put.status < 300) break;
+    }
+    if (Date.now() > until) { const e = new Error('busy'); e.busy = true; throw e; }
+    await sleep(120 + Math.random() * 180);
+  }
+  try { return await fn(); }
+  finally { await dbWrite(path, null).catch(() => {}); }
+}
 
 async function verifyAdmin(token) {
   const key = process.env.FIREBASE_API_KEY;
@@ -517,4 +565,4 @@ function channelStatus() {
   };
 }
 
-module.exports = { logLabEvent, labFacts, sendEmailTo, SITE, buildFacts, writeBriefing, parseBriefing, fallbackHeadline, answer, notify, channelStatus, verifyAdmin, dbGet, dbWrite, dayStart, SA };
+module.exports = { logLabEvent, labFacts, sendEmailTo, SITE, buildFacts, writeBriefing, parseBriefing, fallbackHeadline, answer, notify, channelStatus, verifyAdmin, dbGet, dbWrite, dbIncrement, takeSlot, withLock, dayStart, SA };
