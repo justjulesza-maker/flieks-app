@@ -46,9 +46,9 @@
    The two logos carry their own backgrounds — a dark ticket and a bone one —
    so this is a swap, not a recolour. */
 .logo-dark,.logo-light{display:block}
-html[data-mode="light"] .logo-dark{display:none}
-html[data-mode="dark"]  .logo-light{display:none}
-html:not([data-mode="light"]) .logo-light{display:none}
+html[data-mode="light"] .logo-dark{display:none!important}
+html[data-mode="dark"]  .logo-light{display:none!important}
+html:not([data-mode="light"]) .logo-light{display:none!important}
 
 
 /* ---------- daylight ----------
@@ -4044,10 +4044,19 @@ function dismissFmBanner() {
 /* ============================================================
    BOOT
    ============================================================ */
+// If someone taps a tab or a film while the page is still loading, that tap
+// wins: the link they arrived on must not pull them back once loading ends.
+let movedDuringBoot = false;
+document.addEventListener('click', e => {
+  const el = e.target.closest && e.target.closest('[onclick]');
+  if (el && /\b(nav|openFilm|openPodcasts|openPodChannel|openList|openMaker|openBrowse)\(/.test(el.getAttribute('onclick') || '')) movedDuringBoot = true;
+}, true);
+
 document.addEventListener('DOMContentLoaded', async () => {
   paintModeToggle();
   initFmBanner();
   await loadFilms();
+  if (movedDuringBoot) return;
   // a link like 4flieks.com/fhf?a=someone opens that film straight away
   if (window.FlieksSocial) {
     try {
