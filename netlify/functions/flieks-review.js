@@ -16,6 +16,14 @@
  *   hide   { reviewId, reason }     filmmaker or admin hides the text
  *   unhide { reviewId }             admin only
  *   report { reviewId }             any signed-in viewer flags it
+ *   like / unlike { reviewId }      any signed-in viewer (not your own review)
+ *   my-likes                        which reviews of this film I've liked
+ *
+ * POST { action: 'top' }             no sign-in: the most-liked reviews this week (home page)
+ *
+ * Ratings go in half stars (0.5 to 5). A review can be marked as containing
+ * spoilers; the site hides its text until tapped.
+ *   flieks_review_likes/{filmId}/{reviewId}/{uid}  { at }   (server only)
  */
 const https = require('https');
 
@@ -66,16 +74,41 @@ const clean = s => String(s || '')
   .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
   .trim().slice(0, MAX_BODY);
 
-const reply = (code, obj) => ({
+const reply = (code, obj, cache) => ({
   statusCode: code,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', 'Cache-Control': cache ? 'public, max-age=300' : 'no-store' },
   body: JSON.stringify(obj)
 });
+
+const halfStar = n => Number.isFinite(n) && n >= 0.5 && n <= 5 && Math.round(n * 2) === n * 2;
+
+/* Reviews people liked most in the last week, with the film they're about.
+   Falls back to the most-liked of all time while the site is young. */
+async function topReviews() {
+  const [likes, reviews, films] = await Promise.all([dbGet('flieks_review_likes'), dbGet('flieks_reviews'), dbGet('flieks_films')]);
+  const weekAgo = Date.now() - 7 * 864e5;
+  const rows = [];
+  for (const [filmId, byReview] of Object.entries(reviews || {})) {
+    const f = (films || {})[filmId];
+    if (!f || f.status !== 'live') continue;
+    for (const [reviewId, r] of Object.entries(byReview || {})) {
+      if (!r || r.hidden || !r.body || String(r.body).length < 20) continue;
+      const L = Object.values(((likes || {})[filmId] || {})[reviewId] || {});
+      if (!L.length) continue;
+      rows.push({ filmId, reviewId, week: L.filter(x => x && x.at >= weekAgo).length, all: L.length,
+        name: r.name || 'A viewer', rating: r.rating, body: String(r.body).slice(0, 280), spoiler: !!r.spoiler,
+        bought_type: r.bought_type || null, title: f.title || '' });
+    }
+  }
+  const week = rows.filter(r => r.week).sort((a, b) => b.week - a.week || b.all - a.all);
+  const pick = (week.length ? week : rows.sort((a, b) => b.all - a.all)).slice(0, 8);
+  return { thisWeek: week.length > 0, reviews: pick.map(r => ({ ...r, likes: r.all })) };
+}
 
 /* Recalculates the film's average from every review, hidden ones included. */
 async function recount(filmId) {
   const all = await dbGet(`flieks_reviews/${filmId}`) || {};
-  const ratings = Object.values(all).map(r => Number(r.rating)).filter(n => n >= 1 && n <= 5);
+  const ratings = Object.values(all).map(r => Number(r.rating)).filter(n => n >= 0.5 && n <= 5);
   const count = ratings.length;
   const avg = count ? +(ratings.reduce((a, b) => a + b, 0) / count).toFixed(2) : 0;
   await dbPatch(`flieks_films/${filmId}`, { rating_avg: avg, rating_count: count });
@@ -88,7 +121,9 @@ exports.handler = async event => {
   try {
     const p = JSON.parse(event.body || '{}');
     const { token, filmId, action } = p;
+    if (action === 'top') return reply(200, await topReviews(), true);
     if (!token || !filmId || !action) return reply(400, { message: 'Missing details.' });
+    if (!/^[A-Za-z0-9_-]{1,120}$/.test(filmId)) return reply(404, { message: 'No such film.' });
 
     const user = await verifyToken(token);
     const uid = user.localId;
@@ -105,7 +140,7 @@ exports.handler = async event => {
     /* ---- leave or update a review ---- */
     if (action === 'post') {
       const rating = Number(p.rating);
-      if (!(rating >= 1 && rating <= 5)) return reply(400, { message: 'Pick a rating from 1 to 5.' });
+      if (!halfStar(rating)) return reply(400, { message: 'Pick a rating from half a star to 5 stars.' });
 
       // Only people who paid. Checked here, not trusted from the browser.
       const bought = await dbGet(`flieks_purchases/${uid}/${filmId}`);
@@ -121,6 +156,8 @@ exports.handler = async event => {
         name: (profile && profile.name) || user.displayName || 'A viewer',
         rating,
         body,
+        spoiler: !!p.spoiler && !!body,
+        likes: existing.likes || 0,
         // Editing your own words shouldn't quietly un-hide them.
         hidden: existing.hidden || false,
         hidden_reason: existing.hidden_reason || null,
@@ -142,6 +179,11 @@ exports.handler = async event => {
       await dbDelete(`flieks_reviews/${filmId}/${uid}`);
       const totals = await recount(filmId);
       return reply(200, { ok: true, ...totals });
+    }
+
+    if (action === 'my-likes') {
+      const all = await dbGet(`flieks_review_likes/${filmId}`) || {};
+      return reply(200, { liked: Object.keys(all).filter(rid => all[rid] && all[rid][uid]) });
     }
 
     const reviewId = p.reviewId;
@@ -198,6 +240,17 @@ exports.handler = async event => {
       });
       await dbDelete(`flieks_moderation/${filmId}_${reviewId}`);
       return reply(200, { ok: true });
+    }
+
+    /* ---- likes: anyone signed in, not on their own review ---- */
+    if (action === 'like' || action === 'unlike') {
+      if (reviewId === uid) return reply(400, { message: 'That is your own review.' });
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(reviewId)) return reply(404, { message: 'No such review.' });
+      if (action === 'like') await dbPut(`flieks_review_likes/${filmId}/${reviewId}/${uid}`, { at: Date.now() });
+      else await dbDelete(`flieks_review_likes/${filmId}/${reviewId}/${uid}`);
+      const n = Object.keys(await dbGet(`flieks_review_likes/${filmId}/${reviewId}`) || {}).length;
+      await dbPatch(`flieks_reviews/${filmId}/${reviewId}`, { likes: n });
+      return reply(200, { ok: true, liked: action === 'like', likes: n });
     }
 
     /* ---- a viewer flags something ---- */
