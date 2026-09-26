@@ -21,7 +21,7 @@ exports.handler = async event => {
     const admin = await ops.verifyAdmin(b.token);
     if (!admin) return reply(403, { message: 'Admin only.' });
     connectLambda(event);
-    const store = getStore({ name: 'flieks-backups', consistency: 'strong' });
+    const store = getStore('flieks-backups');
 
     if (b.action === 'list') {
       const [items, last] = await Promise.all([backup.list(store), ops.dbGet('flieks_ops/backup/last')]);

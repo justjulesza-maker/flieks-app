@@ -18,7 +18,7 @@ exports.handler = async event => {
   try { const b = JSON.parse(event.body || '{}'); kind = b.kind === 'manual' ? 'manual' : 'nightly'; by = b.by || null; } catch {}
   try {
     connectLambda(event);
-    const store = getStore({ name: 'flieks-backups', consistency: 'strong' });
+    const store = getStore('flieks-backups');
     const m = await backup.run(store, { kind, by });
     await ops.dbWrite('flieks_ops/backup/last', { at: m.at, stamp: m.stamp, kind, ok: true, parts: m.parts.length, raw: m.raw, gz: m.gz, nodes: m.nodes });
     console.log('[backup] done', m.stamp, m.parts.length, 'parts', m.raw, 'bytes');
