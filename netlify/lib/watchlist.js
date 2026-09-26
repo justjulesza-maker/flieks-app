@@ -10,6 +10,14 @@
  *
  * Each person gets the "it's live" email once per film, however many times the
  * film goes up and down. People who already bought the film are skipped.
+ *
+ * Trailer premieres (film.premiere: a big film's exclusive trailer, not sold here)
+ * use the same list with two more emails:
+ *   premiere  "the trailer is out now"   once, when premiere_at passes
+ *               flieks_ops/premiere_notified/{filmId}/{key}
+ *   update    an admin's news message (tickets, release date), once per update
+ *               flieks_ops/watch_updates/{filmId}/{updateId}  { subject, message, link, at, by }
+ *               flieks_ops/update_notified/{filmId}/{updateId}/{key}
  */
 const crypto = require('crypto');
 const ops = require('./ops-core');
@@ -21,6 +29,7 @@ const MAX_ITEMS = 200;
 const okFilm = id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(id);
 const validEmail = e => typeof e === 'string' && e.length <= 200 && /^[^\s@<>()",;]+@[^\s@<>()",;]+\.[a-z]{2,}$/i.test(e.trim());
 const emailKey = e => 'e_' + crypto.createHash('sha256').update(String(e).trim().toLowerCase()).digest('hex').slice(0, 24);
+const str = (v, n) => (v == null ? '' : String(v)).trim().slice(0, n);
 const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -67,6 +76,54 @@ function liveNowEmail(film) {
   return { subject, text, html };
 }
 
+function shell({ kicker, heading, by, poster, url, body, price, cta, footer }) {
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#F2EADA">
+<div style="max-width:560px;margin:0 auto;padding:28px 18px;font-family:Arial,Helvetica,sans-serif;color:#1C1512">
+  <div style="background:#1C1512;border-radius:14px;padding:22px 22px 18px">
+    <img src="${SITE}/brand/png/logo-reversed-2x.png" width="220" alt="4flieks" style="display:block;width:220px;height:auto;border:0">
+  </div>
+  <p style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#B0441A;font-weight:700;margin:26px 0 6px">${escHtml(kicker)}</p>
+  <h1 style="font-size:28px;line-height:1.2;margin:0 0 8px">${escHtml(heading)}</h1>
+  ${by ? `<p style="font-size:15px;color:#54483F;margin:0 0 16px">${escHtml(by)}</p>` : ''}
+  ${poster ? `<a href="${escHtml(url)}"><img src="${escHtml(poster)}" width="220" alt="" style="display:block;width:220px;height:auto;border-radius:10px;border:0;margin:0 0 16px"></a>` : ''}
+  ${body ? `<p style="font-size:16px;line-height:1.55;margin:0 0 16px;white-space:pre-line">${escHtml(body)}</p>` : ''}
+  ${price ? `<p style="font-size:15px;font-weight:700;margin:0 0 18px">${escHtml(price)}</p>` : ''}
+  <p style="margin:0 0 28px"><a href="${escHtml(url)}" style="display:inline-block;padding:14px 24px;border-radius:10px;font:700 16px/1 Arial,Helvetica,sans-serif;text-decoration:none;background:#D85A2C;color:#1C1512">${escHtml(cta)}</a></p>
+  <p style="font-size:13px;line-height:1.5;color:#6E6157;margin:0">${escHtml(footer)}</p>
+  <p style="font-size:13px;color:#6E6157;margin:10px 0 0"><a href="${SITE}" style="color:#6E6157">4flieks.com</a> · African independent films</p>
+</div></body></html>`;
+}
+const filmUrl = film => `${SITE}/${encodeURIComponent(film.slug || film.id)}`;
+const posterOf = film => /^https:\/\//.test(film.poster_url || '') ? film.poster_url : '';
+
+/** A trailer premiere: "the trailer is out now, only on 4flieks". */
+function premiereEmail(film) {
+  const title = film.title || 'The trailer';
+  const url = filmUrl(film);
+  const by = film.filmmaker ? `A film by ${film.filmmaker}` : '';
+  const release = str(film.release_line, 120);
+  const footer = 'You asked us to remind you when this trailer came out.';
+  return {
+    subject: `${title}: the trailer is out, only on 4flieks`,
+    text: [`${title}: the trailer is out now, exclusively on 4flieks.`, '', by, release, '', `Watch it here: ${url}`, '', footer].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n'),
+    html: shell({ kicker: 'Exclusive trailer', heading: `${title}: the trailer is out`, by, poster: posterOf(film), url,
+      body: 'Watch it first, only on 4flieks.', price: release, cta: 'Watch the trailer', footer })
+  };
+}
+
+/** An admin's news about a film to everyone who asked (tickets, a release date). */
+function updateEmail(film, u) {
+  const title = film.title || 'A film on 4flieks';
+  const link = /^https:\/\/\S+$/.test(u.link || '') ? u.link : filmUrl(film);
+  const footer = `You asked for news about ${title} on 4flieks.`;
+  return {
+    subject: str(u.subject, 140) || `News about ${title}`,
+    text: [str(u.message, 2000), '', link, '', footer].join('\n'),
+    html: shell({ kicker: title, heading: str(u.subject, 140) || `News about ${title}`, poster: posterOf(film), url: link,
+      body: str(u.message, 2000), cta: /4flieks\.com/.test(link) ? 'Open on 4flieks' : 'Find out more', footer })
+  };
+}
+
 /* Resend's batch endpoint: up to 100 emails per call. */
 async function sendBatch(msgs, fetchImpl = fetch) {
   const key = process.env.RESEND_API_KEY;
@@ -103,21 +160,35 @@ async function counts(filmIds) {
  * Email everyone waiting for a film that is now live. Safe to run again: anyone
  * already emailed for this film is skipped.
  */
-async function notifyWatchers(filmId, { send = sendBatch, pauseMs = 600 } = {}) {
+async function notifyWatchers(filmId, { kind = 'live', updateId = null, send = sendBatch, pauseMs = 600 } = {}) {
   if (!okFilm(filmId)) return { ok: false, reason: 'bad film id' };
   const film = await ops.dbGet(`flieks_films/${filmId}`);
   if (!film) return { ok: false, reason: 'film not found' };
-  if (film.status !== 'live') return { ok: false, reason: 'the film is not live' };
   film.id = filmId;
+  let mail, donePath, skipBuyers = false;
+  if (kind === 'live') {
+    if (film.status !== 'live') return { ok: false, reason: 'the film is not live' };
+    if (film.premiere) return { ok: false, reason: 'trailer premieres are not sold on 4flieks' };
+    mail = liveNowEmail(film); donePath = `flieks_ops/watch_notified/${filmId}`; skipBuyers = true;
+  } else if (kind === 'premiere') {
+    if (!film.premiere) return { ok: false, reason: 'not a trailer premiere' };
+    if (film.premiere_at && film.premiere_at > Date.now()) return { ok: false, reason: 'the trailer is not out yet' };
+    mail = premiereEmail(film); donePath = `flieks_ops/premiere_notified/${filmId}`;
+  } else if (kind === 'update') {
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(updateId || '')) return { ok: false, reason: 'bad update id' };
+    const u = await ops.dbGet(`flieks_ops/watch_updates/${filmId}/${updateId}`);
+    if (!u || !u.message) return { ok: false, reason: 'update not found' };
+    mail = updateEmail(film, u); donePath = `flieks_ops/update_notified/${filmId}/${updateId}`;
+  } else return { ok: false, reason: 'unknown kind' };
 
-  const [w, done] = await Promise.all([waiting(filmId), ops.dbGet(`flieks_ops/watch_notified/${filmId}`)]);
+  const [w, done] = await Promise.all([waiting(filmId), ops.dbGet(donePath)]);
   const already = done || {};
   const seen = new Set();          // one email per address, even if saved twice
   const todo = [];
   let skipped = 0;
   for (const uid of w.accounts) {
     if (already[uid]) { skipped++; continue; }
-    const [user, bought] = await Promise.all([ops.dbGet(`flieks_users/${uid}`), ops.dbGet(`flieks_purchases/${uid}/${filmId}`)]);
+    const [user, bought] = await Promise.all([ops.dbGet(`flieks_users/${uid}`), skipBuyers ? ops.dbGet(`flieks_purchases/${uid}/${filmId}`) : null]);
     const email = user && user.email;
     if (bought || !validEmail(email || '')) { skipped++; continue; }
     const k = emailKey(email);
@@ -129,20 +200,32 @@ async function notifyWatchers(filmId, { send = sendBatch, pauseMs = 600 } = {}) 
     seen.add(key); todo.push({ keys: [key], email });
   }
 
-  const mail = liveNowEmail(film);
   let sent = 0, failed = 0, lastError = null;
   for (let i = 0; i < todo.length; i += 100) {
     const chunk = todo.slice(i, i + 100);
     const r = await send(chunk.map(t => ({ to: t.email, ...mail })));
     const at = Date.now(), marks = {};
     chunk.forEach(t => t.keys.forEach(k => { marks[k] = { at, ok: !!r.ok }; }));
-    if (r.ok) { sent += chunk.length; await ops.dbWrite(`flieks_ops/watch_notified/${filmId}`, marks, 'PATCH'); }
+    if (r.ok) { sent += chunk.length; await ops.dbWrite(donePath, marks, 'PATCH'); }
     else { failed += chunk.length; lastError = r.reason; }
     if (i + 100 < todo.length && pauseMs) await new Promise(res => setTimeout(res, pauseMs));
   }
-  const run = { at: Date.now(), waiting: w.accounts.length + w.emails.length, sent, skipped, failed, error: lastError };
-  await ops.dbWrite(`flieks_ops/watch_runs/${filmId}`, run);
+  const run = { at: Date.now(), kind, waiting: w.accounts.length + w.emails.length, sent, skipped, failed, error: lastError };
+  await ops.dbWrite(`flieks_ops/watch_runs/${filmId}${kind === 'live' ? '' : '_' + kind}`, run);
   return { ok: true, ...run };
 }
 
-module.exports = { okFilm, validEmail, emailKey, saveable, whenText, liveNowEmail, sendBatch, waiting, counts, notifyWatchers, MAX_ITEMS };
+/** Start watch-notify-background (it answers 202 at once). */
+async function startNotify(filmId, extra = {}, fetchImpl = fetch) {
+  const secret = crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':watch-notify').digest('hex');
+  const base = process.env.URL || 'https://4flieks.com';
+  const kick = await fetchImpl(`${base}/.netlify/functions/watch-notify-background`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-job-secret': secret },
+    body: JSON.stringify({ filmId, ...extra })
+  }).catch(e => ({ ok: false, status: 0, statusText: e.message }));
+  const ok = kick.ok || kick.status === 202;
+  if (!ok) console.error('[watchlist] notify did not start', filmId, kick.status, kick.statusText);
+  return ok;
+}
+
+module.exports = { startNotify, okFilm, validEmail, emailKey, saveable, whenText, liveNowEmail, premiereEmail, updateEmail, sendBatch, waiting, counts, notifyWatchers, MAX_ITEMS };

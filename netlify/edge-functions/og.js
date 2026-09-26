@@ -87,7 +87,7 @@ export default async (request, context) => {
     // WhatsApp to fetch. The portal's Link Preview Image fixes both.
     console.log(`[og] ${path}: no og_image, falling back to the poster`);
   }
-  const maker = (film.filmmaker ? ` — a film by ${film.filmmaker}` : '') + (soon ? ' · Coming soon to 4flieks' : '');
+  const maker = (film.filmmaker ? ` — a film by ${film.filmmaker}` : '') + (film.premiere ? ' · Exclusive trailer, only on 4flieks' : soon ? ' · Coming soon to 4flieks' : '');
 
   /* ---------- structured data ----------
      Google renders ratings, runtime and price directly in results for a film
@@ -129,7 +129,7 @@ export default async (request, context) => {
       bestRating: 5, worstRating: 1
     };
   }
-  if (film.price_rent || film.price_own) {
+  if (!film.premiere && (film.price_rent || film.price_own)) {
     ld.offers = [];
     if (film.price_rent) ld.offers.push({
       '@type': 'Offer', price: String(film.price_rent), priceCurrency: 'ZAR',
@@ -154,8 +154,9 @@ export default async (request, context) => {
   ${actors.length ? `<p>Starring ${actors.slice(0, 8).map(a => esc(a.name)).join(', ')}</p>` : ''}
   ${crew.length ? `<p>Crew: ${crew.slice(0, 8).map(c =>
       esc(c.name) + (c.role ? ` (${esc(c.role)})` : '')).join(', ')}</p>` : ''}
-  <p>Watch ${esc(title)} on 4flieks — South African independent film, streaming
-  ${film.price_rent ? `from R${esc(film.price_rent)}` : ''}.</p>
+  ${film.premiere ? `<p>Watch the ${esc(title)} trailer, exclusively on 4flieks.${film.release_line ? ' ' + esc(film.release_line) + '.' : ''}</p>`
+    : `<p>Watch ${esc(title)} on 4flieks — South African independent film, streaming
+  ${film.price_rent ? `from R${esc(film.price_rent)}` : ''}.</p>`}
 </div>`;
 
   const tags = `

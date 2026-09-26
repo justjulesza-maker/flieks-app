@@ -7,10 +7,27 @@
  *   - someone applies to be a filmmaker
  *   - a filmmaker requests a payout
  *   - a support ticket comes in
+ * It also sends trailer-premiere reminders when a premiere time passes.
  * Abandoned checkouts never alert. Several things at once go out as one
  * message. What has been alerted on is remembered in flieks_ops/seen.
  */
 const ops = require('../lib/ops-core');
+const { startNotify } = require('../lib/watchlist');
+
+/* Trailer premieres: once the premiere time passes, email everyone who asked
+   for a reminder. Once per film (flieks_ops/premiere_kicked); the email itself
+   also skips anyone already sent it. */
+async function premiereReminders() {
+  const [films, kicked] = await Promise.all([ops.dbGet('flieks_films'), ops.dbGet('flieks_ops/premiere_kicked')]);
+  const now = Date.now();
+  for (const [id, f] of Object.entries(films || {})) {
+    if (!f || !f.premiere || !f.premiere_at || f.premiere_at > now) continue;
+    if (now - f.premiere_at > 7 * 864e5 || (kicked || {})[id]) continue;
+    await ops.dbWrite(`flieks_ops/premiere_kicked/${id}`, { at: now, by: 'schedule' });
+    const ok = await startNotify(id, { kind: 'premiere' });
+    console.log('[ops-watch] premiere reminders', id, ok ? 'started' : 'did not start');
+  }
+}
 
 const LABEL = {
   paidNoAccess: n => `${n} buyer${n === 1 ? '' : 's'} paid but got no access`,
@@ -21,6 +38,7 @@ const LABEL = {
 };
 
 exports.handler = async () => {
+  await premiereReminders().catch(e => console.error('[ops-watch] premiere reminders', e));
   try {
     const [facts, seenRaw] = await Promise.all([
       ops.buildFacts(),

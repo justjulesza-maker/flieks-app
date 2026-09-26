@@ -363,7 +363,7 @@ async function openReview(filmId, queueId) {
       <textarea class="input" id="rej-reason" placeholder="Optional — explain why the film was not approved…" style="resize:vertical;min-height:60px;font-size:14px"></textarea>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${f.awaiting_film ? `<button class="btn btn-g" disabled title="No film file yet" style="opacity:.4">✓ APPROVE (needs the film)</button>`
+      ${f.awaiting_film || f.premiere ? `<button class="btn btn-g" disabled title="No film file yet" style="opacity:.4">✓ APPROVE (needs the film)</button>`
         : `<button class="btn btn-g" onclick="approveFilm('${filmId}','${queueId}')">✓ ${f.status === 'soon' ? 'APPROVE AND GO LIVE' : 'APPROVE'}</button>`}
       <button class="btn btn-r" onclick="rejectFilm('${filmId}','${queueId}')">✗ REJECT</button>
     </div>
@@ -729,28 +729,31 @@ function renderFilmsList(films) {
   if (!films.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films.</p>`; return; }
   const statusTag = { live:'tag-g', review:'tag-a', draft:'tag-m', rejected:'tag-r', soon:'tag-a' };
   const statusName = { soon: 'COMING SOON' };
+  const localDT = ms => { if (!ms) return ''; const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
   el.innerHTML = films.map(f => `
     <div class="card row">
       <div style="flex:1">
         <div class="row" style="margin-bottom:4px">
           <p style="font-size:14px;font-weight:700">${f.title}</p>
-          <span class="tag ${statusTag[f.status]||'tag-m'}">${statusName[f.status] || (f.status||'').toUpperCase()}${f.status === 'soon' && f.release_date ? ' · ' + f.release_date : ''}</span>
+          <span class="tag ${statusTag[f.status]||'tag-m'}">${f.premiere ? 'TRAILER PREMIERE' : (statusName[f.status] || (f.status||'').toUpperCase())}${f.status === 'soon' && f.release_date && !f.premiere ? ' · ' + f.release_date : ''}</span>
+          ${f.premiere && f.featured ? `<span class="tag tag-a">★ ON HOME</span>` : ''}
           <span class="tag tag-m" id="wait-${f.id}" style="display:none"></span>
           ${f.awaiting_film ? `<span class="tag tag-r">NO FILM YET</span>` : ''}
           ${f.featured && f.status === 'live' ? `<span class="tag tag-a">★ ON HOME</span>` : ''}
         </div>
         <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
         <p style="font-size:11px;margin-top:3px" id="stream-${f.id}">checking…</p>
-        ${f.status !== 'live' ? `<div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        ${f.status !== 'live' ? premierePanel(f, localDT) : ''}
+        ${f.status !== 'live' && !f.premiere ? `<div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
           <input type="date" class="input" id="soon-date-${f.id}" value="${f.release_date || ''}" style="max-width:160px;font-size:12px;padding:6px 8px">
           <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="setSoon('${f.id}')">${f.status === 'soon' ? 'Change date' : 'Coming soon'}</button>
         </div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-left:10px">
-        <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)${f.awaiting_film && f.status !== 'live' ? ';opacity:.4' : ''}"
+        ${f.premiere ? '' : `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)${f.awaiting_film && f.status !== 'live' ? ';opacity:.4' : ''}"
           ${f.awaiting_film && f.status !== 'live' ? 'disabled title="Trailer only: the filmmaker has not uploaded the film yet"' : ''} onclick="toggleFilmStatus('${f.id}','${f.status}')">
           ${f.status === 'live' ? 'Take Down' : 'Go Live'}
-        </button>
+        </button>`}
         <button class="btn btn-sm" id="prep-${f.id}" style="display:none;background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="prepareStream('${f.id}')">
           Prepare
         </button>
@@ -771,6 +774,105 @@ function renderFilmsList(films) {
 function searchFilms(q) {
   const term = q.toLowerCase();
   renderFilmsList(allFilmsCache.filter(f => f.title.toLowerCase().includes(term) || f.filmmaker.toLowerCase().includes(term)));
+}
+
+/* ---- TRAILER PREMIERES ----
+   A big film's exclusive trailer: no prices, a premiere time with a countdown,
+   reminders emailed when it drops, and a report for the film's team. */
+function premierePanel(f, localDT) {
+  const on = !!f.premiere;
+  const open = on && (!f.premiere_at || Date.now() >= f.premiere_at);
+  const inp = 'class="input" style="font-size:12px;padding:6px 8px"';
+  return `<details style="margin-top:8px" ${on ? 'open' : ''}>
+    <summary style="font-size:12px;color:var(--amber);cursor:pointer">${on ? 'Trailer premiere settings' : 'Make this a trailer premiere (exclusive trailer, not sold here)'}</summary>
+    <div style="display:grid;gap:6px;margin-top:8px">
+      <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center"><input type="checkbox" id="pm-on-${f.id}" ${on ? 'checked' : ''}> Trailer premiere</label>
+      <label style="font-size:12px;color:var(--muted)">Trailer unlocks at (leave empty to show it straight away)
+        <input type="datetime-local" ${inp} id="pm-at-${f.id}" value="${localDT(f.premiere_at)}"></label>
+      <label style="font-size:12px;color:var(--muted)">Release line, e.g. "In cinemas March 2027"
+        <input type="text" ${inp} id="pm-line-${f.id}" maxlength="80" value="${escA(f.release_line || '')}"></label>
+      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber)" onclick="premiereSave('${f.id}', this)">Save premiere</button>
+      ${on ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${!f.featured ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="featureFilm('${f.id}', this)">★ Feature on home</button>` : ''}
+          <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="premiereReport('${f.id}', this)">Report link for their team</button>
+          ${open ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="premiereCall('premiere-remind', '${f.id}', this)">Send "trailer is out" now</button>` : ''}
+        </div>
+        <p style="font-size:11px;color:var(--muted)">${f.premiere_at ? (open ? 'The trailer is out. Reminder emails go automatically within 15 minutes of the premiere time.' : `Reminders go automatically within 15 minutes of ${escA(new Date(f.premiere_at).toLocaleString('en-ZA'))}.`) : 'No premiere time: the trailer shows straight away.'}
+          Tracked links: add <b>?a=name</b> to the film link (e.g. ?a=instagram) to see where viewers came from in the report.</p>
+        <div style="border-top:1px solid var(--border);padding-top:8px">
+          <p style="font-size:12px;color:var(--text);font-weight:700">Email everyone who asked for news</p>
+          <input ${inp} id="up-subj-${f.id}" placeholder="Subject, e.g. Tickets are on sale" maxlength="140" style="margin-top:6px">
+          <textarea ${inp} id="up-msg-${f.id}" rows="3" placeholder="The news, in a few lines" maxlength="2000" style="margin-top:6px"></textarea>
+          <input ${inp} id="up-link-${f.id}" placeholder="Link (optional), https://…" style="margin-top:6px">
+          <button class="btn btn-sm" style="margin-top:6px;background:var(--card);border:1px solid var(--border);color:var(--amber)" data-armed="" onclick="premiereUpdate('${f.id}', this)">Send the email…</button>
+        </div>` : ''}
+    </div>
+  </details>`;
+}
+
+async function watchAdmin(action, extra) {
+  const r = await fetch('/.netlify/functions/flieks-watchlist', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...extra })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong.');
+  return d;
+}
+
+async function premiereSave(id, btn) {
+  const on = document.getElementById('pm-on-' + id).checked;
+  const at = document.getElementById('pm-at-' + id).value;
+  btn.disabled = true;
+  try {
+    await watchAdmin('premiere-save', { filmId: id, on, premiere_at: at ? new Date(at).getTime() : null,
+      release_line: document.getElementById('pm-line-' + id).value });
+    snack(on ? (at ? 'Premiere saved. The trailer is hidden until then; the countdown is on the film page.' : 'Premiere saved. The trailer shows straight away.') : 'Premiere ended. The trailer shows as normal.');
+    loadAllFilms();
+  } catch (e) { snack(e.message); btn.disabled = false; }
+}
+
+async function premiereReport(id, btn) {
+  btn.disabled = true;
+  try {
+    const d = await watchAdmin('premiere-report', { filmId: id });
+    try { await navigator.clipboard.writeText(d.url); snack('Report link copied: ' + d.url); }
+    catch { snack('Report link: ' + d.url); }
+  } catch (e) { snack(e.message); }
+  btn.disabled = false;
+}
+
+async function premiereCall(action, id, btn) {
+  btn.disabled = true;
+  try {
+    const d = await watchAdmin(action, { filmId: id });
+    snack(`Emailing ${d.waiting} ${d.waiting === 1 ? 'person' : 'people'}. Anyone already emailed is skipped.`);
+  } catch (e) { snack(e.message); btn.disabled = false; }
+}
+
+/* Two taps: the first shows who it goes to, the second sends. */
+async function premiereUpdate(id, btn) {
+  const subject = document.getElementById('up-subj-' + id).value.trim();
+  const message = document.getElementById('up-msg-' + id).value.trim();
+  const link = document.getElementById('up-link-' + id).value.trim();
+  if (message.length < 10) { snack('Write the message first.'); return; }
+  if (!btn.dataset.armed) {
+    const c = ((await watchAdmin('counts', { filmIds: [id] }).catch(() => ({}))).counts || {})[id] || { total: 0 };
+    if (!c.total) { snack('Nobody has asked for news about this film yet.'); return; }
+    btn.dataset.armed = '1';
+    btn.textContent = `Tap again to email ${c.total} ${c.total === 1 ? 'person' : 'people'}`;
+    btn.style.borderColor = 'var(--amber)';
+    setTimeout(() => { if (btn.dataset.armed) { btn.dataset.armed = ''; btn.textContent = 'Send the email…'; btn.style.borderColor = ''; } }, 8000);
+    return;
+  }
+  btn.dataset.armed = ''; btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const d = await watchAdmin('send-update', { filmId: id, subject, message, link });
+    snack(`Sending to ${d.waiting} ${d.waiting === 1 ? 'person' : 'people'}.`);
+    btn.textContent = 'Sent ✓';
+    ['up-subj-', 'up-msg-', 'up-link-'].forEach(k => { document.getElementById(k + id).value = ''; });
+  } catch (e) { snack(e.message); btn.disabled = false; btn.textContent = 'Send the email…'; }
 }
 
 /* One featured film: the big hero on the home page. Switched in a single
@@ -795,6 +897,7 @@ async function featureFilm(id, btn) {
 async function toggleFilmStatus(id, status) {
   const newStatus = status === 'live' ? 'draft' : 'live';
   const film = allFilmsCache.find(f => f.id === id);
+  if (newStatus === 'live' && film && film.premiere) { snack('Trailer premieres are not sold on 4flieks. End the premiere first if the film is coming here.'); return; }
   if (newStatus === 'live' && film && film.awaiting_film) { snack('No film file yet: the filmmaker uploads it from their portal.'); return; }
   await db.ref(DB+'films/'+id).update({ status: newStatus, ...(newStatus === 'live' ? { published_at: Date.now(), film_added_at: null } : {}) });
   snack(`Film ${newStatus === 'live' ? 'published' : 'taken down'}.`);

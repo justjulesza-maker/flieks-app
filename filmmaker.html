@@ -1295,7 +1295,8 @@ function openFilmDetail(filmId) {
     <p class="section-label">SYNOPSIS</p>
     <p style="color:#999;font-size:14px;line-height:1.65;margin-bottom:16px">${esc(f.synopsis||'')}</p>
     <div id="watch-count-box"></div>
-    ${f.status === 'soon' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Your film is on the home page as <b>coming soon</b>${f.release_date ? `, from ${esc(f.release_date)}` : ''}. Share its link now: people can watch the trailer and tap "Tell me when it's live". On release day we email every one of them.${f.awaiting_film ? ' <b>Upload your film below when it\'s ready.</b>' : ''}</p></div>` : ''}
+    ${f.premiere ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><p>This is an <b>exclusive trailer premiere</b> on 4flieks${f.premiere_at ? `, from ${esc(new Date(f.premiere_at).toLocaleString('en-ZA'))}` : ''}. Share the film's link: people can set a reminder, and we email them all the moment the trailer drops.</p></div>` : ''}
+    ${f.status === 'soon' && !f.premiere ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Your film is on the home page as <b>coming soon</b>${f.release_date ? `, from ${esc(f.release_date)}` : ''}. Share its link now: people can watch the trailer and tap "Tell me when it's live". On release day we email every one of them.${f.awaiting_film ? ' <b>Upload your film below when it\'s ready.</b>' : ''}</p></div>` : ''}
     ${f.status === 'review' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>${f.awaiting_film ? 'Your trailer is under review. Once it\'s approved your film shows as coming soon. Upload the film below whenever it\'s ready.' : 'This film is under review. We\'ll notify you by email once it goes live (1–2 business days).'}</p></div>` : ''}
     ${f.status === 'rejected' ? `<div class="info-box" style="background:rgba(232,70,42,.08);border:1px solid rgba(232,70,42,.3)"><svg viewBox="0 0 24 24" style="stroke:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p>This film was not approved. ${esc(f.rejection_reason || 'Please contact support for details.')}</p></div>` : ''}
     ${f.status === 'live' || f.status === 'soon' ? `
@@ -1430,7 +1431,7 @@ function openFilmDetail(filmId) {
       <div id="castPanel"></div>
     </div>
 
-    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:4px">
+    <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:4px;${f.premiere ? 'display:none' : ''}">
       <p class="section-label" style="margin-bottom:10px">${f.awaiting_film ? 'UPLOAD YOUR FILM' : 'REPLACE FILM FILE'}</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">${f.awaiting_film
         ? (f.status === 'soon' ? 'When the film is ready, upload it here. It stays on the home page as coming soon while we check it, then we put it live and email everyone waiting.' : 'When the film is ready, upload it here and we\'ll review it with your trailer.')

@@ -8,7 +8,16 @@
  *   notify-email { filmId, email } signed out: email me when this coming-soon film is live (no token)
  *   counts  { filmIds? }          filmmaker: how many are waiting for my films; admin: any film
  *   last-run { filmId }           admin: the last "it's live" send for a film
+ *
+ * Trailer premieres (a big film's exclusive trailer, not for sale here):
+ *   premiere-trailer { filmId }   the trailer link, once the premiere time has passed (no token)
+ *   share   { filmId }            count a tap on Share (no token)
+ *   premiere-save { filmId, on, premiere_at, release_line }   admin: set up / change / end a premiere
+ *   premiere-remind { filmId }    admin: send "the trailer is out" now (it also goes automatically)
+ *   send-update { filmId, subject, message, link }            admin: email everyone who asked
+ *   premiere-report { filmId }    admin: a shareable results link for the film's team
  */
+const crypto = require('crypto');
 const ops = require('../lib/ops-core');
 const wl = require('../lib/watchlist');
 
@@ -59,6 +68,24 @@ exports.handler = async event => {
       return reply(200, { ok: true });
     }
 
+    /* ---- trailer premiere: the trailer only once the time has passed ---- */
+    if (a === 'premiere-trailer') {
+      if (!wl.okFilm(b.filmId)) return reply(404, { message: 'Film not found.' });
+      const film = await ops.dbGet(`flieks_films/${b.filmId}`);
+      if (!film || !film.premiere) return reply(404, { message: 'Film not found.' });
+      if (film.premiere_at && film.premiere_at > Date.now()) return reply(403, { message: 'The trailer isn\'t out yet.', premiere_at: film.premiere_at });
+      const priv = await ops.dbGet(`flieks_private/${b.filmId}`) || {};
+      const url = priv.premiere_trailer || film.trailer_url;
+      return url ? reply(200, { url }) : reply(404, { message: 'Trailer not yet available.' });
+    }
+
+    if (a === 'share') {
+      if (!wl.okFilm(b.filmId)) return reply(404, { message: 'Film not found.' });
+      const n = await ops.dbGet(`flieks_premiere_stats/${b.filmId}/shares`) || 0;
+      await ops.dbWrite(`flieks_premiere_stats/${b.filmId}/shares`, n + 1);
+      return reply(200, { ok: true });
+    }
+
     const me = await lookup(b.token);
     if (!me) return reply(401, { message: 'Please sign in.' });
 
@@ -98,6 +125,70 @@ exports.handler = async event => {
         ids = [...new Set(ids)].filter(wl.okFilm);
       }
       return reply(200, { counts: await wl.counts(ids) });
+    }
+
+    /* ---- admin: trailer premieres ---- */
+    if (['premiere-save', 'premiere-remind', 'send-update', 'premiere-report'].includes(a)) {
+      if (me.role !== 'admin') return reply(403, { message: 'Admin only.' });
+      if (!wl.okFilm(b.filmId)) return reply(404, { message: 'Film not found.' });
+      const film = await ops.dbGet(`flieks_films/${b.filmId}`);
+      if (!film) return reply(404, { message: 'Film not found.' });
+
+      if (a === 'premiere-save') {
+        const priv = await ops.dbGet(`flieks_private/${b.filmId}`) || {};
+        if (!b.on) {
+          // End the premiere: the trailer goes back on the page as normal.
+          await ops.dbWrite(`flieks_films/${b.filmId}`, { premiere: null, premiere_at: null, release_line: null, trailer_hidden: null,
+            ...(priv.premiere_trailer ? { trailer_url: priv.premiere_trailer } : {}) }, 'PATCH');
+          return reply(200, { ok: true, premiere: false });
+        }
+        if (film.status === 'live') return reply(400, { message: 'This film is on sale. A trailer premiere is for a film that isn\'t sold on 4flieks.' });
+        const at = b.premiere_at ? Number(b.premiere_at) : null;
+        if (at !== null && !(at > 1.6e12 && at < 2.2e12)) return reply(400, { message: 'That premiere time doesn\'t look right.' });
+        const trailer = priv.premiere_trailer || film.trailer_url || null;
+        if (!trailer) return reply(400, { message: 'Add the trailer first (the filmmaker uploads it, or put it on the film).' });
+        // The trailer link is kept private and handed out only after the premiere time.
+        await ops.dbWrite(`flieks_private/${b.filmId}/premiere_trailer`, trailer);
+        await ops.dbWrite(`flieks_films/${b.filmId}`, {
+          premiere: true, premiere_at: at, release_line: String(b.release_line || '').trim().slice(0, 80) || null,
+          trailer_url: null, trailer_hidden: true, status: 'soon', awaiting_film: null
+        }, 'PATCH');
+        return reply(200, { ok: true, premiere: true, premiere_at: at });
+      }
+
+      if (a === 'premiere-remind') {
+        if (!film.premiere) return reply(400, { message: 'Not a trailer premiere.' });
+        if (film.premiere_at && film.premiere_at > Date.now()) return reply(400, { message: 'The trailer isn\'t out yet.' });
+        const w = await wl.waiting(b.filmId);
+        await ops.dbWrite(`flieks_ops/premiere_kicked/${b.filmId}`, { at: Date.now(), by: me.uid });
+        const ok = await wl.startNotify(b.filmId, { kind: 'premiere' });
+        return reply(ok ? 200 : 502, { ok, waiting: w.accounts.length + w.emails.length });
+      }
+
+      if (a === 'send-update') {
+        const message = String(b.message || '').trim().slice(0, 2000);
+        const subject = String(b.subject || '').trim().slice(0, 140);
+        const link = String(b.link || '').trim().slice(0, 500);
+        if (message.length < 10) return reply(400, { message: 'Write the message first.' });
+        if (link && !/^https:\/\/\S+$/.test(link)) return reply(400, { message: 'The link must start with https://' });
+        const w = await wl.waiting(b.filmId);
+        const n = w.accounts.length + w.emails.length;
+        if (!n) return reply(400, { message: 'Nobody has asked for news about this film yet.' });
+        const updateId = Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
+        await ops.dbWrite(`flieks_ops/watch_updates/${b.filmId}/${updateId}`, { subject: subject || null, message, link: link || null, at: Date.now(), by: me.uid });
+        const ok = await wl.startNotify(b.filmId, { kind: 'update', updateId });
+        return reply(ok ? 200 : 502, { ok, waiting: n, updateId });
+      }
+
+      if (a === 'premiere-report') {
+        let key = film.results_key;
+        if (!key || !(await ops.dbGet(`flieks_result_keys/${key}`))) {
+          key = crypto.randomBytes(12).toString('hex');
+          await ops.dbWrite(`flieks_result_keys/${key}`, b.filmId);
+        }
+        await ops.dbWrite(`flieks_films/${b.filmId}`, { results_public: true, results_key: key, results_show_revenue: false }, 'PATCH');
+        return reply(200, { ok: true, url: `${ops.SITE}/report/${key}` });
+      }
     }
 
     if (a === 'last-run') {

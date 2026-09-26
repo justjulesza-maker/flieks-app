@@ -100,6 +100,21 @@ exports.handler = async event => {
       get(`flieks_reviews/${filmId}`)
     ]);
 
+    /* A trailer premiere: nothing is sold, so the evidence is attention —
+       trailer plays, reminders set, shares, and where people came from. */
+    let premiere = null;
+    if (film.premiere) {
+      const [byFilm, emails, pstats] = await Promise.all([
+        get(`flieks_watch_by_film/${filmId}`), get(`flieks_watch_emails/${filmId}`), get(`flieks_premiere_stats/${filmId}`)
+      ]);
+      premiere = {
+        at: film.premiere_at || null,
+        releaseLine: film.release_line || '',
+        reminders: Object.keys(byFilm || {}).length + Object.keys(emails || {}).length,
+        shares: (pstats && pstats.shares) || 0
+      };
+    }
+
     const refs = (stats && stats.refs) || {};
     const totals = (stats && stats.totals) || {};
 
@@ -209,7 +224,8 @@ exports.handler = async event => {
         pct: sharePct,
         type: (film.cast_share && film.cast_share.type) || 'none'
       } } : {}),
-      reviews: reviewList
+      reviews: reviewList,
+      premiere
     });
 
   } catch (e) {
