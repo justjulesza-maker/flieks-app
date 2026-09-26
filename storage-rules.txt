@@ -43,6 +43,21 @@ service firebase.storage {
       allow delete: if ownsIt();
     }
 
+    // Podcast episodes (video or audio) and channel covers, uploaded in the
+    // Podcast Studio. Playback goes through the flieks-podcasts function, which
+    // only hands the link to signed-in viewers (and buyers, for paid episodes).
+    function isAudio()      { return request.resource.contentType.matches('audio/.*'); }
+    match /flieks_podcasts/{channelId}/{file} {
+      allow get:    if ownsIt();
+      allow list:   if false;
+      allow create: if isNew() && stampedByMe()
+                    && ((isVideo() && request.resource.size < 2 * 1024 * 1024 * 1024)
+                     || (isAudio() && underMB(500))
+                     || (isImage() && underMB(10)));
+      allow update: if ownsIt() && stampedByMe();
+      allow delete: if ownsIt();
+    }
+
     // Screenplays (PDF). Readers get them through the flieks-script
     // function, which hands out the stored link to signed-in accounts
     // only when the filmmaker has made the script public.

@@ -268,6 +268,9 @@ body.home .sheet{max-width:1040px}
   .noprint{display:none!important}
   h2{break-after:avoid} .char,.note,.box,.chart{break-inside:avoid}
 }
+.podrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+.podc{text-decoration:none;color:var(--ink);display:flex;flex-direction:column;gap:3px}
+.podimg{aspect-ratio:1/1;border-radius:8px;background:#2A1A12 center/cover no-repeat;display:flex;align-items:flex-end;padding:10px;color:#F4F0E6;font-weight:700;font-size:14px;margin-bottom:4px}
 </style>
 </head>
 <body>
@@ -1014,12 +1017,13 @@ const TOOLS = [
   { k: 'search', name: 'Talent search', tag: 'Cast and crew, found fast', href: '/lab/talent', cta: 'Search talent',
     text: 'Search actors, directors, DOPs, editors and crew by name or what they do, then by country, language and playing age. See their work and message them without ever seeing their email.' },
   { k: 'talent', name: 'Talent profile', tag: 'For actors and crew', href: '/talent', cta: 'Make my profile',
-    text: 'One profile for your credits and the people your cast links brought in. Switch on suggestions and filmmakers casting in the Lab can find you. Your email stays private.' }
+    text: 'One profile for your credits and the people your cast links brought in. Switch on suggestions and filmmakers casting in the Lab can find you. Your email stays private.' },
+  { k: 'podcasts', name: 'Podcasts & masterclasses', tag: 'Learn from people who make films', href: '/podcasts', cta: 'Watch and listen',
+    text: 'Conversations with African filmmakers, actors and crew, and masterclasses on the craft. Free with your Lab account. Filmmakers can add their own podcast in the Podcast Studio.' }
 ];
 const SOON = [
   ['Budget builder', 'A production budget built from your script: cast, locations, days.'],
-  ['Screenwriting course', 'Learn to write for the screen, with AI feedback on every exercise.'],
-  ['Masterclasses', 'Podcasts and sessions with African filmmakers, free in the Lab.']
+  ['Screenwriting course', 'Learn to write for the screen, with AI feedback on every exercise.']
 ];
 
 const isReportTool = /^\/lab\/report\/?$/.test(location.pathname);
@@ -1062,6 +1066,8 @@ function showHome(user) {
       ${SOON.map(([name, text]) => `<div class="tool soon"><p class="num">SOON</p><h3>${esc(name)}</h3><p class="tag">Coming to the Lab</p><p class="desc">${esc(text)}</p></div>`).join('')}
     </div>
 
+    <div id="labpods"></div>
+
     <h2>From page to screen</h2>
     <div class="steps">
       <div><span>01</span><b>Write</b><p>Get a Script Report on every draft and see what to fix next.</p></div>
@@ -1093,8 +1099,25 @@ function showHome(user) {
     <p class="tiny" style="margin-top:14px">The Lab's AI tools are built on Claude, the AI made by Anthropic, with briefs written by 4flieks for African film.
       Each report explains how it is made. <a href="/terms" style="color:var(--ink-2)">Terms and privacy</a></p>`;
   if (!user) authForm();
+  loadLabPods();
   if (location.hash === '#join' && !user) setTimeout(focusJoin, 50);
   if (location.hash === '#work' && user) setTimeout(() => document.getElementById('work').scrollIntoView(), 50);
+}
+
+/* Listen and learn: the podcast channels, from the main site. */
+async function loadLabPods() {
+  const box = document.getElementById('labpods');
+  if (!box) return;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-podcasts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'catalog' }) });
+    const d = await r.json();
+    if (!r.ok || !(d.channels || []).length) return;
+    box.innerHTML = `<h2>Listen and learn</h2>
+      <div class="podrow">${d.channels.slice(0, 8).map(c => `<a class="podc" href="/podcasts/${encodeURIComponent(c.slug)}">
+        <span class="podimg" style="${c.cover_url ? `background-image:url('${esc(c.cover_url)}')` : ''}">${c.cover_url ? '' : esc(c.title)}</span>
+        <b>${esc(c.title)}</b><span class="tiny">${esc(c.host || '')}${c.host ? ' · ' : ''}${c.episodes} episode${c.episodes === 1 ? '' : 's'}</span></a>`).join('')}</div>
+      <p class="tiny" style="margin-top:8px">Free with your account. <a href="/studio" style="color:var(--ink-2)">Add your own podcast</a> (filmmakers).</p>`;
+  } catch {}
 }
 
 function focusJoin() {

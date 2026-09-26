@@ -200,6 +200,18 @@ input,textarea{font-family:var(--fb)}
 .hrow .film-thumb{height:200px}
 .row-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 20px;margin:18px 0 10px}
 .row-head a{font-size:12px;color:var(--amber);text-decoration:none}
+.pod-card{flex:0 0 150px;scroll-snap-align:start;cursor:pointer}
+.pod-cover{width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid var(--border);background:#2A1A12 center/cover no-repeat;position:relative;display:flex;align-items:flex-end;padding:10px;overflow:hidden}
+.pod-cover .ph{font-family:var(--fn);font-size:17px;color:#fff;line-height:1.1;position:relative;z-index:1}
+.pod-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent 55%)}
+.pod-cover.has-img::after{display:none}
+.pod-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 20px}
+.pod-ep{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--border);cursor:pointer}
+.pod-ep .th{width:92px;height:52px;border-radius:8px;background:#2A1A12 center/cover no-repeat;flex-shrink:0;position:relative}
+.pod-ep.on .th{outline:2px solid var(--amber)}
+.pod-player{border-radius:12px;overflow:hidden;background:#000}
+.pod-player iframe{display:block;width:100%;border:0}
+.pod-gate{border:1px solid rgba(245,166,35,.35);background:rgba(245,166,35,.06);border-radius:12px;padding:18px;text-align:center}
 .rv-spoiler{position:relative;cursor:pointer}
 .rv-spoiler p{filter:blur(6px);user-select:none}
 .rv-spoiler span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--amber);letter-spacing:.5px}
@@ -386,6 +398,10 @@ input,textarea{font-family:var(--fb)}
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <span>SEARCH</span>
   </button>
+  <button class="bnav-btn" data-view="podcasts" onclick="openPodcasts()">
+    <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    <span>PODCASTS</span>
+  </button>
   <button class="bnav-btn" data-view="library" onclick="nav('library')">
     <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
     <span>LIBRARY</span>
@@ -436,6 +452,9 @@ input,textarea{font-family:var(--fb)}
     <div class="hrow" id="watch-row"></div>
   </div>
 
+  <!-- Podcasts (filled by renderHomeRows) -->
+  <div id="pods-wrap"></div>
+
   <!-- Curated lists, one row each (filled by renderHomeRows) -->
   <div id="lists-wrap"></div>
   <!-- The reviews people liked most -->
@@ -461,6 +480,30 @@ input,textarea{font-family:var(--fb)}
   <div class="film-grid" id="film-grid">
     <div style="grid-column:span 2;text-align:center;padding:40px 0"><div class="spinner"></div></div>
   </div>
+</div>
+
+<!-- ================================================================
+     VIEW: PODCASTS  (4flieks.com/podcasts)
+================================================================ -->
+<div id="view-podcasts" class="view">
+  <div class="topbar">
+    <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
+    <span style="font-size:14px;color:var(--muted)">Podcasts</span>
+  </div>
+  <div id="podcasts-content"></div>
+</div>
+
+<!-- ================================================================
+     VIEW: PODCAST CHANNEL  (4flieks.com/podcasts/<slug>[/<episode>])
+================================================================ -->
+<div id="view-pod" class="view">
+  <div class="topbar">
+    <button onclick="navBack()" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+  </div>
+  <div id="pod-content"></div>
 </div>
 
 <!-- ================================================================
@@ -993,7 +1036,7 @@ async function filmIdFromSlug(slug){
         return s.val() || null; } catch { return null; }
 }
 
-const RESERVED = /^(index|admin|filmmaker|cast|attribution|about|terms|privacy|login|signup|account|assets|images|static)$|\.[a-z0-9]+$/i;
+const RESERVED = /^(index|admin|filmmaker|cast|attribution|about|terms|privacy|login|signup|account|assets|images|static|podcasts|studio|lab|talent)$|\.[a-z0-9]+$/i;
 
 /* Reads /slug or ?f=slug plus ?a=castmember. Returns {filmId, ref}. */
 async function readLink(){
@@ -1107,6 +1150,10 @@ let homeGenre = 'all';
 let userFollows = {};      // filmmaker uid -> { slug, name } — who this viewer follows
 const makerPages = {};     // cache: uid -> public page
 let topReviews = { reviews: [], thisWeek: false };
+let podCatalog = { channels: [], latest: [] };
+let podChannel = null;       // { channel, episodes } open in view-pod
+let podPlaying = null;       // episode id in the player
+let podHls = null;
 let allLists = [];         // published lists: { id, slug, title, description, films: [ids], on_home }
 const findFilm = id => allFilms.find(f => f.id === id) || soonFilms.find(f => f.id === id);
 let playing = null;        // { id, trailer, lastSaved } — what the player has loaded
@@ -1160,6 +1207,7 @@ auth.onAuthStateChanged(async user => {
     const open = document.querySelector('.view.active');
     if (open && open.id === 'view-library') loadLibrary();
     if (open && open.id === 'view-profile') loadProfile();
+    if (open && open.id === 'view-pod' && podChannel) renderPodChannel();
   } catch (e) { console.warn('view refresh failed:', e); }
   if (user) {
     await loadUserPurchases();
@@ -1216,6 +1264,7 @@ function nav(viewId, pushHistory = true) {
   // behind (e.g. via the back button) used to leak that theme's dark
   // background onto every other view. Strip it before showing anything else.
   if (viewId !== 'film' && window.FlieksThemes) FlieksThemes.reset();
+  if (viewId !== 'pod') stopPodPlayer();
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + viewId).classList.add('active');
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.toggle('on', b.dataset.view === viewId));
@@ -1232,6 +1281,8 @@ function navBack() {
   if (navHistory.length > 1) {
     navHistory.pop();
     nav(navHistory[navHistory.length - 1], false);
+    // Back on a podcast (e.g. after signing in): redraw so the player appears.
+    if (navHistory[navHistory.length - 1] === 'pod' && podChannel) renderPodChannel();
   } else {
     nav('home');
   }
@@ -1249,6 +1300,15 @@ async function loadLists() {
   } catch (e) { allLists = []; }
 }
 
+async function loadPodCatalog() {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-podcasts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'catalog' })
+    });
+    if (r.ok) podCatalog = await r.json();
+  } catch {}
+}
+
 async function loadTopReviews() {
   try {
     const r = await fetch('/.netlify/functions/flieks-review', {
@@ -1259,7 +1319,7 @@ async function loadTopReviews() {
 }
 
 async function loadFilms() {
-  const listsReady = Promise.all([loadLists(), loadTopReviews()]);
+  const listsReady = Promise.all([loadLists(), loadTopReviews(), loadPodCatalog()]);
   try {
     const snap = await db.ref(DB_PREFIX + 'films').orderByChild('status').equalTo('live').once('value');
     allFilms = [];
@@ -1331,6 +1391,13 @@ function renderHomeRows(genre = homeGenre) {
   watchWrap.style.display = show && saved.length ? 'block' : 'none';
   if (show && saved.length) document.getElementById('watch-row').innerHTML = saved.map(filmCardHTML).join('');
 
+  // Podcasts: a row of channels.
+  const podsWrap = document.getElementById('pods-wrap');
+  if (podsWrap) podsWrap.innerHTML = show && podCatalog.channels.length ? `
+    <div class="row-head"><p class="section-label" style="margin:0">PODCASTS &amp; MASTERCLASSES</p>
+      <a href="/podcasts" onclick="openPodcasts();return false;">See all</a></div>
+    <div class="hrow">${podCatalog.channels.slice(0, 12).map(podCardHTML).join('')}</div>` : '';
+
   // What viewers are saying: the reviews people liked most.
   const rvWrap = document.getElementById('toprev-wrap');
   const top = (topReviews.reviews || []).filter(r => findFilm(r.filmId));
@@ -1356,6 +1423,174 @@ function renderHomeRows(genre = homeGenre) {
 
 const listFilms = l => (l.films || []).map(findFilm).filter(Boolean);
 const LIST_ICON = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+
+/* ---- Podcasts ----
+   Anyone can browse; watching or listening needs a free account (that's the
+   point: podcasts bring people in). Masterclass episodes can carry a price. */
+function podCardHTML(c) {
+  return `<div class="pod-card" onclick="openPodChannel('${c.slug}')">
+    <div class="pod-cover${c.cover_url ? ' has-img' : ''}" style="${c.cover_url ? `background-image:url('${escHtml(c.cover_url)}')` : ''}">${c.cover_url ? '' : `<span class="ph">${escHtml(c.title)}</span>`}</div>
+    <p style="font-size:13px;font-weight:600;color:var(--text);margin-top:6px;line-height:1.25">${escHtml(c.title)}</p>
+    <p style="font-size:11px;color:var(--muted)">${escHtml(c.host || '')}${c.host ? ' · ' : ''}${c.episodes} ep${c.episodes === 1 ? '' : 's'}</p>
+  </div>`;
+}
+
+async function openPodcasts() {
+  if (!podCatalog.channels.length) await loadPodCatalog();
+  const c = podCatalog;
+  document.getElementById('podcasts-content').innerHTML = `
+    <div style="padding:16px 20px 8px">
+      <p class="bbn" style="font-size:34px;line-height:1.05;color:var(--text)">Podcasts &amp; masterclasses</p>
+      <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-top:6px">Conversations with African filmmakers, and masterclasses on the craft. Free with a 4flieks account.</p>
+      ${!auth.currentUser ? `<button class="btn btn-amber" style="margin-top:12px" onclick="podSignup()">CREATE A FREE ACCOUNT</button>` : ''}
+    </div>
+    ${c.channels.length ? `<p class="section-label" style="padding:0 20px;margin:14px 0 10px">CHANNELS</p>
+      <div class="pod-grid">${c.channels.map(podCardHTML).join('')}</div>` : '<div class="empty"><p>The first podcasts are on their way.</p></div>'}
+    ${c.latest.length ? `<p class="section-label" style="padding:0 20px;margin:22px 0 4px">LATEST EPISODES</p>
+      <div style="padding:0 20px">${c.latest.map(e => podEpRow(e, e.channel_slug, e.channel_title)).join('')}</div>` : ''}`;
+  nav('podcasts');
+}
+
+function podEpRow(e, slug, channelTitle) {
+  return `<div class="pod-ep${podPlaying === e.id ? ' on' : ''}" onclick="openPodChannel('${slug}', '${e.id}')">
+    <div class="th" style="${e.thumbnail_url ? `background-image:url('${escHtml(e.thumbnail_url)}')` : ''}"></div>
+    <div style="flex:1;min-width:0">
+      <p style="font-size:14px;font-weight:600;color:var(--text);line-height:1.3">${e.number ? `<span style="color:var(--muted)">${e.number}.</span> ` : ''}${escHtml(e.title)}</p>
+      <p style="font-size:11px;color:var(--muted);margin-top:2px">${channelTitle ? escHtml(channelTitle) + ' · ' : ''}${e.kind === 'audio' ? 'Audio' : 'Video'}${e.duration_mins ? ` · ${e.duration_mins} min` : ''}${e.price > 0 ? ` · <span style="color:var(--amber);font-weight:700">MASTERCLASS R${e.price}</span>` : ''}${e.price > 0 && userPurchases['pod_' + e.id] ? ' ✓' : ''}</p>
+    </div>
+  </div>`;
+}
+
+async function openPodChannel(slug, episodeId) {
+  const box = document.getElementById('pod-content');
+  if (!podChannel || podChannel.channel.slug !== slug) {
+    box.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+    nav('pod');
+    try {
+      const r = await fetch('/.netlify/functions/flieks-podcasts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'channel', slug })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message || 'That podcast isn\'t available.');
+      podChannel = d;
+    } catch (e) { box.innerHTML = `<div class="empty"><p>${escHtml(e.message)}</p></div>`; return; }
+  } else if (!document.getElementById('view-pod').classList.contains('active')) nav('pod');
+  podPlaying = episodeId || null;
+  renderPodChannel();
+  if (episodeId) window.scrollTo(0, 0);
+}
+
+function renderPodChannel() {
+  const { channel: c, episodes } = podChannel;
+  const ep = episodes.find(e => e.id === podPlaying);
+  document.getElementById('pod-content').innerHTML = `
+    <div id="pod-stage" style="padding:12px 20px 0">${ep ? '' : ''}</div>
+    <div style="padding:14px 20px 6px;display:flex;gap:14px;align-items:center">
+      <div class="pod-cover${c.cover_url ? ' has-img' : ''}" style="width:92px;flex-shrink:0;${c.cover_url ? `background-image:url('${escHtml(c.cover_url)}')` : ''}">${c.cover_url ? '' : `<span class="ph" style="font-size:13px">${escHtml(c.title)}</span>`}</div>
+      <div style="min-width:0">
+        <p class="section-label" style="margin-bottom:2px">PODCAST</p>
+        <p class="bbn" style="font-size:26px;line-height:1.05;color:var(--text)">${escHtml(c.title)}</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:3px">${c.maker ? `<a href="/by/${encodeURIComponent(c.maker.slug)}" onclick="openMaker({ slug: '${c.maker.slug}' });return false;" style="color:var(--amber)">${escHtml(c.host || c.maker.name)}</a>` : escHtml(c.host || '')}${c.host || c.maker ? ' · ' : ''}${episodes.length} episode${episodes.length === 1 ? '' : 's'}</p>
+      </div>
+    </div>
+    ${c.description ? `<p style="padding:4px 20px 0;color:var(--muted);font-size:14px;line-height:1.6;white-space:pre-line">${escHtml(c.description)}</p>` : ''}
+    <div style="padding:8px 20px 0"><button class="wl-btn" onclick="sharePod()">Share this podcast</button></div>
+    <p class="section-label" style="padding:0 20px;margin:18px 0 0">EPISODES</p>
+    <div style="padding:0 20px">${episodes.map(e => podEpRow(e, c.slug)).join('')}</div>`;
+  if (ep) playPodEpisode(ep);
+}
+
+function stopPodPlayer() {
+  if (podHls) { podHls.destroy(); podHls = null; }
+  const stage = document.getElementById('pod-stage');
+  if (stage) stage.innerHTML = '';
+}
+
+function podSignup() { switchAuthTab('register'); nav('auth'); }
+
+async function playPodEpisode(ep) {
+  const stage = document.getElementById('pod-stage');
+  if (!stage) return;
+  if (podHls) { podHls.destroy(); podHls = null; }
+  const head = `<p class="section-label" style="margin:0 0 8px">NOW PLAYING${ep.number ? ` · EPISODE ${ep.number}` : ''}</p>
+    <p style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px">${escHtml(ep.title)}</p>`;
+  const foot = ep.description ? `<p style="color:var(--muted);font-size:14px;line-height:1.6;margin-top:10px;white-space:pre-line">${escHtml(ep.description)}</p>` : '';
+  const user = await requireUser();
+  if (!user) {
+    stage.innerHTML = head + `<div class="pod-gate">
+      <p style="font-size:16px;font-weight:700;color:var(--text)">Free with a 4flieks account</p>
+      <p style="font-size:13px;color:var(--muted);margin:6px 0 14px">Create an account in a minute to watch and listen to every podcast.</p>
+      <button class="btn btn-amber" onclick="podSignup()">CREATE A FREE ACCOUNT</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="switchAuthTab('signin');nav('auth')">I HAVE AN ACCOUNT</button>
+    </div>` + foot;
+    return;
+  }
+  stage.innerHTML = head + '<div class="loading-wrap"><div class="spinner"></div></div>';
+  let d;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-podcasts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'play', episodeId: ep.id, token: await user.getIdToken() })
+    });
+    d = await r.json();
+    if (r.status === 402) {
+      stage.innerHTML = head + `<div class="pod-gate">
+        <p style="font-size:16px;font-weight:700;color:var(--text)">Masterclass · R${ep.price}</p>
+        <p style="font-size:13px;color:var(--muted);margin:6px 0 14px">Buy it once and keep it. Most of the price goes to the people who made it.</p>
+        <button class="btn btn-amber" onclick="buyPodEpisode('${ep.id}', this)">BUY FOR R${ep.price}</button>
+      </div>` + foot;
+      return;
+    }
+    if (!r.ok) throw new Error(d.message || 'This episode can\'t play right now.');
+  } catch (e) { stage.innerHTML = head + `<div class="pod-gate"><p style="color:var(--muted)">${escHtml(e.message)}</p></div>` + foot; return; }
+  const p = d.player;
+  let html = '';
+  if (p.type === 'iframe') {
+    html = p.ratio === '16:9'
+      ? `<div class="pod-player" style="aspect-ratio:16/9"><iframe src="${escHtml(p.url)}" style="height:100%" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="${escHtml(ep.title)}"></iframe></div>`
+      : `<div class="pod-player" style="background:transparent"><iframe src="${escHtml(p.url)}" height="${p.height || 232}" allow="autoplay; encrypted-media; clipboard-write" title="${escHtml(ep.title)}" loading="lazy"></iframe></div>`;
+  } else if (p.type === 'audio') {
+    html = `<audio id="pod-audio" controls preload="metadata" style="width:100%" src="${escHtml(p.url)}"></audio>`;
+  } else {
+    html = `<div class="pod-player"><video id="pod-video" controls playsinline style="width:100%;display:block;aspect-ratio:16/9;background:#000"></video></div>`;
+  }
+  stage.innerHTML = head + html + foot;
+  if (p.type === 'hls' || p.type === 'video') {
+    const v = document.getElementById('pod-video');
+    if (p.type === 'hls' && window.Hls && Hls.isSupported()) {
+      podHls = new Hls(); podHls.loadSource(p.url); podHls.attachMedia(v);
+      podHls.on(Hls.Events.ERROR, (e, data) => { if (data.fatal && p.fallback) { podHls.destroy(); podHls = null; v.src = p.fallback; } });
+    } else v.src = p.url;
+  }
+}
+
+async function buyPodEpisode(episodeId, btn) {
+  const user = await requireUser();
+  if (!user) { podSignup(); return; }
+  btn.disabled = true; btn.textContent = 'OPENING CHECKOUT…';
+  try {
+    sessionStorage.setItem('flieks_pod_return', JSON.stringify({ slug: podChannel.channel.slug, episodeId }));
+  } catch {}
+  try {
+    const r = await fetch('/.netlify/functions/flieks-checkout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await user.getIdToken(), podEpisodeId: episodeId, type: 'own', returnUrl: location.origin })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.redirectUrl) throw new Error(d.message || 'Could not start checkout.');
+    location.href = d.redirectUrl;
+  } catch (e) { showSnack(e.message); btn.disabled = false; btn.textContent = 'TRY AGAIN'; }
+}
+
+async function sharePod() {
+  const c = podChannel && podChannel.channel;
+  if (!c) return;
+  const url = `${location.origin}/podcasts/${encodeURIComponent(c.slug)}${podPlaying ? '/' + podPlaying : ''}`;
+  try {
+    if (navigator.share) await navigator.share({ title: c.title, text: `${c.title} on 4flieks`, url });
+    else { await navigator.clipboard.writeText(url); showSnack('Link copied.'); }
+  } catch {}
+}
 
 /* ---- Filmmakers' pages and following ---- */
 async function followApi(action, extra = {}) {
@@ -1817,6 +2052,14 @@ async function handlePaymentReturn(txId) {
       message: order.message,
       buyerName: order.buyerName
     });
+    return;
+  }
+
+  if (String(order.filmId || '').startsWith('pod_')) {
+    let back = null;
+    try { back = JSON.parse(sessionStorage.getItem('flieks_pod_return') || 'null'); sessionStorage.removeItem('flieks_pod_return'); } catch {}
+    showSnack('Unlocked. Enjoy the masterclass.');
+    if (back && back.slug) { podChannel = null; openPodChannel(back.slug, back.episodeId); } else openPodcasts();
     return;
   }
 
@@ -3728,6 +3971,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { filmId } = await FlieksSocial.readLink();
       const listPath = location.pathname.match(/^\/list\/([a-z0-9-]{1,80})\/?$/);
       const byPath = location.pathname.match(/^\/by\/([a-z0-9-]{1,60})\/?$/);
+      const podPath = location.pathname.match(/^\/podcasts(?:\/([a-z0-9-]{1,60})(?:\/([A-Za-z0-9_-]{1,120}))?)?\/?$/);
+      if (podPath) { if (podPath[1]) openPodChannel(podPath[1], podPath[2]); else openPodcasts(); } else
       if (listPath) openList(listPath[1]);
       else if (byPath) openMaker({ slug: byPath[1] });
       else if (filmId && findFilm(filmId)) openFilm(filmId);

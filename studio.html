@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Podcast Studio — 4flieks</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F0E6; --card:#FBF8F1; --ink:#17110E; --ink-2:#5E564D; --ink-3:#8A8177;
+  --rule:#D9D1C2; --sunset:#C2501F; --green:#2E7D32; --amber:#B7791F;
+  --fb:'Archivo Black',sans-serif; --fn:'DM Sans',system-ui,sans-serif; --fm:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8E2D4;color:var(--ink);font-family:var(--fn);padding:22px 12px 70px;-webkit-font-smoothing:antialiased}
+.sheet{position:relative;max-width:720px;margin:0 auto;background:var(--paper);padding:34px 30px 30px}
+.sheet::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;background:repeating-linear-gradient(90deg,var(--sunset) 0 15px,transparent 15px 24px)}
+@media (max-width:520px){.sheet{padding:28px 16px 24px}}
+.masthead{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px;border-bottom:1px solid var(--rule);margin-bottom:22px}
+.mark{font-family:var(--fb);font-size:15px;color:var(--ink);text-decoration:none}
+.mark em{color:var(--sunset);font-style:normal}
+.docref{font-family:var(--fm);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-family:var(--fb);font-size:28px;line-height:1.1;margin-bottom:8px}
+h2{font-family:var(--fm);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--sunset);margin:26px 0 10px}
+p{font-size:15px;line-height:1.55}
+.muted{color:var(--ink-2)} .tiny{font-size:12px;color:var(--ink-3);line-height:1.55}
+label{display:block;font-family:var(--fm);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:12px 0 5px}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=url],select,textarea{width:100%;font:15px var(--fn);padding:10px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink)}
+textarea{min-height:80px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:90px 1fr 110px;gap:10px}
+@media (max-width:520px){.row3{grid-template-columns:70px 1fr 90px}}
+button,.btn{font:700 13px var(--fn);padding:10px 15px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink)}
+button.danger{background:transparent;color:var(--sunset);border-color:var(--sunset)}
+button.small{padding:6px 10px;font-size:12px}
+button:disabled{opacity:.5;cursor:default}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;margin-bottom:10px}
+.chan{display:flex;gap:14px;align-items:center;cursor:pointer}
+.cover{width:64px;height:64px;border-radius:8px;background:#2A1A12 center/cover no-repeat;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#F4F0E6;font-family:var(--fb);font-size:26px}
+.badge{display:inline-block;font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;border-radius:4px;border:1px solid var(--rule);color:var(--ink-2);margin-right:4px}
+.badge.live{border-color:var(--green);color:var(--green)} .badge.pending{border-color:var(--amber);color:var(--amber)} .badge.paid{border-color:var(--sunset);color:var(--sunset)}
+.ep{border-top:1px solid var(--rule);padding:12px 0}
+.ep:first-child{border-top:0}
+.ep-head{display:flex;gap:10px;align-items:center;cursor:pointer}
+.thumb{width:72px;height:42px;border-radius:5px;background:#2A1A12 center/cover no-repeat;flex-shrink:0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{background:transparent;color:var(--ink);border-color:var(--rule)}
+.tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.bar{height:6px;background:var(--rule);border-radius:3px;overflow:hidden;margin-top:8px;display:none}
+.bar div{height:100%;width:0;background:var(--sunset)}
+.msg{font-size:13px;margin-top:8px;min-height:1.2em}
+.msg.bad{color:var(--sunset)} .msg.ok{color:var(--green)}
+#snack{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:8px;font-size:14px;display:none;max-width:92vw;z-index:9}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <a class="mark" href="/">4<em>FLIEKS</em></a>
+    <span class="docref">Podcast Studio</span>
+  </div>
+  <div id="app"><p class="muted">Loading…</p></div>
+</div>
+<div id="snack"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const API = '/.netlify/functions/flieks-podcasts';
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const SOURCE = { youtube: 'YouTube', vimeo: 'Vimeo', spotify: 'Spotify', soundcloud: 'SoundCloud', apple: 'Apple Podcasts', bunny: 'Bunny video', upload: 'Uploaded' };
+
+let state = { role: null, channels: [], bunny: false, open: null, openEp: null };
+
+function snack(t) { const s = $('snack'); s.textContent = t; s.style.display = 'block'; clearTimeout(snack.t); snack.t = setTimeout(() => s.style.display = 'none', 4200); }
+
+async function api(action, extra = {}) {
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, token: await auth.currentUser.getIdToken(), ...extra }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(d.message || 'Something went wrong.'), { status: r.status });
+  return d;
+}
+
+/* ---------- sign in ---------- */
+function renderSignIn(msg) {
+  $('app').innerHTML = `
+    <h1>Podcast Studio</h1>
+    <p class="muted">Add your podcast to 4flieks: link episodes from YouTube, Vimeo, Spotify, SoundCloud or Apple Podcasts, or upload video and audio. Sign in with your filmmaker account.</p>
+    <label>Email</label><input type="email" id="si-email" autocomplete="email">
+    <label>Password</label><input type="password" id="si-pass" autocomplete="current-password">
+    <div class="actions"><button onclick="signIn()">Sign in</button><a class="btn ghost" href="/filmmaker.html?tab=register">Apply to be a filmmaker</a></div>
+    <p class="msg bad" id="si-msg">${esc(msg || '')}</p>`;
+}
+async function signIn() {
+  try { await auth.signInWithEmailAndPassword($('si-email').value.trim(), $('si-pass').value); }
+  catch (e) { $('si-msg').textContent = 'Sign in failed. Check your email and password.'; }
+}
+
+/* ---------- channels ---------- */
+async function load(keepOpen = true) {
+  try {
+    const d = await api('studio');
+    state.role = d.role; state.channels = d.channels; state.bunny = d.bunny;
+    if (!keepOpen || !state.channels.some(c => c.id === state.open)) state.open = null;
+  } catch (e) {
+    $('app').innerHTML = `<h1>Podcast Studio</h1><p class="muted">${esc(e.message)}</p>
+      <div class="actions"><a class="btn ghost" href="/filmmaker.html?tab=register">Apply to be a filmmaker</a><button class="ghost" onclick="auth.signOut()">Sign out</button></div>`;
+    return;
+  }
+  state.open ? renderChannel() : renderHome();
+}
+
+function coverHTML(c, size) {
+  return `<div class="cover" style="${size ? `width:${size}px;height:${size}px;` : ''}${c.cover_url ? `background-image:url('${esc(c.cover_url)}')` : ''}">${c.cover_url ? '' : esc((c.title || '?').charAt(0))}</div>`;
+}
+
+function renderHome() {
+  const pending = state.channels.filter(c => c.status === 'pending');
+  $('app').innerHTML = `
+    <h1>Podcast Studio</h1>
+    <p class="muted">${state.role === 'admin' ? 'Every channel on 4flieks. New filmmaker channels wait here for your approval.' : 'Your podcast channels. A new channel goes live once the 4flieks team approves it; after that, new episodes go straight up.'}</p>
+    <p class="tiny" style="margin-top:6px">Podcasts are free for anyone with a 4flieks account. Put a price on an episode only for a masterclass; you earn 70% like a film.</p>
+    ${state.role === 'admin' && pending.length ? `<h2>Waiting for approval (${pending.length})</h2>` + pending.map(chanCard).join('') : ''}
+    <h2>${state.role === 'admin' ? 'All channels' : 'Your channels'}</h2>
+    ${state.channels.filter(c => state.role !== 'admin' || c.status !== 'pending').map(chanCard).join('') || '<p class="tiny">No channels yet.</p>'}
+    <h2>New channel</h2>
+    <div class="card">
+      <label>Channel name</label><input type="text" id="nc-title" maxlength="80" placeholder="e.g. Talk with Thabo">
+      <label>Host</label><input type="text" id="nc-host" maxlength="80" placeholder="Who presents it">
+      <label>About the channel</label><textarea id="nc-desc" maxlength="800" placeholder="What it's about and who it's for"></textarea>
+      <div class="actions"><button onclick="createChannel(this)">Create channel</button></div>
+      <p class="msg" id="nc-msg"></p>
+    </div>
+    <div class="actions"><a class="btn ghost" href="/podcasts">See podcasts on 4flieks</a><button class="ghost" onclick="auth.signOut()">Sign out</button></div>`;
+}
+
+function chanCard(c) {
+  const paid = c.episodes.some(e => e.price > 0);
+  return `<div class="card chan" onclick="openChannel('${c.id}')">
+    ${coverHTML(c)}
+    <div style="flex:1;min-width:0">
+      <p style="font-weight:700">${esc(c.title)}</p>
+      <p class="tiny">${esc(c.host || '')}${c.host ? ' · ' : ''}${c.episodes.length} episode${c.episodes.length === 1 ? '' : 's'}</p>
+      <div style="margin-top:4px"><span class="badge ${c.status}">${c.status === 'pending' ? 'waiting for approval' : c.status}</span>${c.featured ? '<span class="badge live">featured</span>' : ''}${paid ? '<span class="badge paid">has paid episodes</span>' : ''}</div>
+    </div>
+  </div>`;
+}
+
+async function createChannel(btn) {
+  btn.disabled = true;
+  try {
+    const d = await api('save-channel', { channel: { title: $('nc-title').value, host: $('nc-host').value, description: $('nc-desc').value } });
+    state.open = d.id;
+    snack(d.status === 'pending' ? 'Channel created. Add episodes now; it goes live once we approve it.' : 'Channel created and live.');
+    await load();
+  } catch (e) { $('nc-msg').className = 'msg bad'; $('nc-msg').textContent = e.message; btn.disabled = false; }
+}
+
+function openChannel(id) { state.open = id; state.openEp = null; renderChannel(); window.scrollTo(0, 0); }
+
+function renderChannel() {
+  const c = state.channels.find(x => x.id === state.open);
+  if (!c) return renderHome();
+  const admin = state.role === 'admin';
+  $('app').innerHTML = `
+    <p><a href="#" onclick="state.open=null;renderHome();return false" class="tiny">← All channels</a></p>
+    <div style="display:flex;gap:16px;align-items:center;margin:10px 0 6px">
+      ${coverHTML(c, 88)}
+      <div><h1 style="margin:0">${esc(c.title)}</h1>
+        <p class="tiny"><span class="badge ${c.status}">${c.status === 'pending' ? 'waiting for approval' : c.status}</span>
+        ${c.status === 'live' ? `<a href="/podcasts/${esc(c.slug)}" target="_blank" rel="noopener">4flieks.com/podcasts/${esc(c.slug)}</a>` : ''}</p></div>
+    </div>
+    ${admin ? `<div class="actions">
+      ${c.status !== 'live' ? `<button class="small" onclick="setChannel({ status: 'live' })">Approve · make live</button>` : `<button class="small ghost" onclick="setChannel({ status: 'pending' })">Take offline</button>`}
+      ${c.status === 'pending' ? `<button class="small danger" onclick="setChannel({ status: 'rejected' })">Decline</button>` : ''}
+      <button class="small ghost" onclick="setChannel({ featured: ${!c.featured} })">${c.featured ? 'Unfeature' : '★ Feature first on 4flieks'}</button>
+      <button class="small danger" data-armed="" onclick="deleteChannel(this)">Delete channel</button>
+    </div>` : c.status === 'pending' ? `<p class="tiny" style="margin-top:8px">The 4flieks team will look at your channel soon. You can add episodes in the meantime.</p>` : ''}
+
+    <h2>Channel details</h2>
+    <div class="card">
+      <label>Channel name</label><input type="text" id="ch-title" maxlength="80" value="${esc(c.title)}">
+      <label>Host</label><input type="text" id="ch-host" maxlength="80" value="${esc(c.host || '')}">
+      <label>About the channel</label><textarea id="ch-desc" maxlength="800">${esc(c.description || '')}</textarea>
+      <label>Cover image (square works best)</label><input type="file" id="ch-cover" accept="image/jpeg,image/png">
+      <div class="bar" id="cover-bar"><div></div></div>
+      <div class="actions"><button onclick="saveChannel(this)">Save details</button></div>
+      <p class="msg" id="ch-msg"></p>
+    </div>
+
+    <h2>Add episodes</h2>
+    <div class="card">
+      <div class="tabs">
+        <button class="on" data-t="links" onclick="addTab('links')">From links</button>
+        <button data-t="upload" onclick="addTab('upload')">Upload video or audio</button>
+        ${admin && state.bunny ? `<button data-t="bunny" onclick="addTab('bunny')">Bunny video</button>` : ''}
+      </div>
+      <div id="add-links">
+        <p class="tiny">Paste one link per line: YouTube, Vimeo, Spotify, SoundCloud or Apple Podcasts. We fetch each title and picture, and number them in order. Paste the oldest first.</p>
+        <textarea id="bulk-links" rows="6" placeholder="https://www.youtube.com/watch?v=…&#10;https://youtu.be/…"></textarea>
+        <div class="actions"><button onclick="bulkAdd(this)">Add episodes</button></div>
+      </div>
+      <div id="add-upload" style="display:none">
+        <label>Episode title</label><input type="text" id="up-title" maxlength="140">
+        <label>File</label><input type="file" id="up-file" accept="video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav">
+        <p class="tiny">Video (MP4 or MOV, up to 2GB) streams through Bunny. Audio (MP3, M4A or WAV, up to 500MB) plays in our audio player.</p>
+        <div class="bar" id="up-bar"><div></div></div>
+        <div class="actions"><button onclick="uploadEpisode(this)">Upload</button></div>
+      </div>
+      <div id="add-bunny" style="display:none">
+        <label>Episode title</label><input type="text" id="bn-title" maxlength="140">
+        <label>Bunny video ID</label><input type="text" id="bn-id" placeholder="e.g. 3f2c…-…">
+        <p class="tiny">For a video already uploaded in the Bunny dashboard.</p>
+        <div class="actions"><button onclick="bunnyEpisode(this)">Add</button></div>
+      </div>
+      <p class="msg" id="add-msg"></p>
+    </div>
+
+    <h2>Episodes (${c.episodes.length})</h2>
+    <div class="card" id="ep-list">${c.episodes.map(epRow).join('') || '<p class="tiny">No episodes yet.</p>'}</div>`;
+}
+
+function epRow(e) {
+  const open = state.openEp === e.id;
+  const media = e.source === 'upload' || e.source === 'bunny'
+    ? (e.media.bunny ? (e.media.bunny_ready ? 'streaming ready' : 'preparing on Bunny') : e.media.audio ? 'audio ready' : e.media.video ? 'uploaded' : 'no file yet') : SOURCE[e.source];
+  return `<div class="ep">
+    <div class="ep-head" onclick="state.openEp = state.openEp === '${e.id}' ? null : '${e.id}'; renderChannel(); document.getElementById('ep-${e.id}')?.scrollIntoView({ block: 'center' })">
+      <div class="thumb" style="${e.thumbnail_url ? `background-image:url('${esc(e.thumbnail_url)}')` : ''}"></div>
+      <div style="flex:1;min-width:0">
+        <p style="font-weight:700;font-size:14px">${e.number ? e.number + '. ' : ''}${esc(e.title)}</p>
+        <p class="tiny">${e.kind === 'audio' ? 'Audio' : 'Video'} · ${esc(media)}${e.duration_mins ? ` · ${e.duration_mins} min` : ''}</p>
+      </div>
+      <div>${e.status === 'draft' ? '<span class="badge">draft</span>' : ''}${e.price > 0 ? `<span class="badge paid">R${e.price}</span>` : '<span class="badge live">free</span>'}</div>
+    </div>
+    ${open ? `<div id="ep-${e.id}" style="margin-top:10px">
+      <div class="row3">
+        <div><label>No.</label><input type="number" id="e-num" min="0" value="${e.number || ''}"></div>
+        <div><label>Title</label><input type="text" id="e-title" maxlength="140" value="${esc(e.title)}"></div>
+        <div><label>Minutes</label><input type="number" id="e-dur" min="0" value="${e.duration_mins || ''}"></div>
+      </div>
+      <label>Description</label><textarea id="e-desc" maxlength="2000">${esc(e.description || '')}</textarea>
+      <div class="row2">
+        <div><label>Price (R) · 0 = free</label><input type="number" id="e-price" min="0" max="5000" value="${e.price || 0}"></div>
+        <div><label>Status</label><select id="e-status"><option value="live" ${e.status !== 'draft' ? 'selected' : ''}>Live</option><option value="draft" ${e.status === 'draft' ? 'selected' : ''}>Draft (hidden)</option></select></div>
+      </div>
+      <p class="tiny" style="margin-top:6px">Keep episodes free unless it's a masterclass. Paid episodes are bought once and kept; you earn 70% of the price before VAT.</p>
+      <div class="actions">
+        <button onclick="saveEpisode('${e.id}', this)">Save</button>
+        ${e.source === 'upload' || e.source === 'bunny' ? `<button class="ghost small" onclick="checkMedia('${e.id}', this)">Check file</button>` : ''}
+        <button class="danger small" data-armed="" onclick="deleteEpisode('${e.id}', this)">Delete</button>
+      </div>
+      <p class="msg" id="e-msg"></p>
+    </div>` : ''}
+  </div>`;
+}
+
+function addTab(t) {
+  ['links', 'upload', 'bunny'].forEach(k => { const el = $('add-' + k); if (el) el.style.display = k === t ? '' : 'none'; });
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  $('add-msg').textContent = '';
+}
+
+async function setChannel(patch) {
+  try { await api('set-channel', { id: state.open, ...patch }); snack('Saved.'); await load(); }
+  catch (e) { snack(e.message); }
+}
+
+async function deleteChannel(btn) {
+  if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Tap again: deletes every episode'; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Delete channel'; }, 6000); return; }
+  try { await api('delete-channel', { id: state.open }); snack('Channel deleted.'); state.open = null; await load(false); }
+  catch (e) { snack(e.message); }
+}
+
+function uploadFile(file, path, barId) {
+  const bar = $(barId);
+  return new Promise((resolve, reject) => {
+    const ref = firebase.storage().ref(path);
+    const task = ref.put(file, { contentType: file.type, customMetadata: { owner: auth.currentUser.uid } });
+    if (bar) bar.style.display = 'block';
+    task.on('state_changed', s => { if (bar) bar.firstElementChild.style.width = (s.bytesTransferred / s.totalBytes * 100).toFixed(0) + '%'; },
+      e => { if (bar) bar.style.display = 'none'; reject(e); },
+      async () => { if (bar) bar.style.display = 'none'; resolve(await ref.getDownloadURL()); });
+  });
+}
+const fresh = (name, ext) => `${name}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+async function saveChannel(btn) {
+  const c = state.channels.find(x => x.id === state.open);
+  const m = $('ch-msg'); m.className = 'msg'; m.textContent = '';
+  btn.disabled = true;
+  try {
+    let cover_url = c.cover_url || null;
+    const f = $('ch-cover').files[0];
+    if (f) {
+      if (!/^image\/(jpeg|png)$/.test(f.type) || f.size > 10 * 1048576) throw new Error('The cover must be a JPG or PNG under 10MB.');
+      cover_url = await uploadFile(f, `flieks_podcasts/${c.id}/${fresh('cover', f.type === 'image/png' ? 'png' : 'jpg')}`, 'cover-bar');
+    }
+    await api('save-channel', { channel: { id: c.id, title: $('ch-title').value, host: $('ch-host').value, description: $('ch-desc').value, cover_url } });
+    snack('Channel saved.'); await load();
+  } catch (e) { m.className = 'msg bad'; m.textContent = e.message; btn.disabled = false; }
+}
+
+async function bulkAdd(btn) {
+  const links = $('bulk-links').value.split(/\s+/).filter(Boolean);
+  const m = $('add-msg');
+  if (!links.length) { m.className = 'msg bad'; m.textContent = 'Paste at least one link.'; return; }
+  btn.disabled = true; btn.textContent = `Adding ${links.length}…`;
+  try {
+    const d = await api('bulk-add', { channelId: state.open, links });
+    snack(`${d.added.length} episode${d.added.length === 1 ? '' : 's'} added.`);
+    await load();
+    if (d.skipped.length) { $('add-msg').className = 'msg bad'; $('add-msg').textContent = `Skipped ${d.skipped.length}: ` + d.skipped.map(s => `${s.link} (${s.why})`).join('; '); }
+  } catch (e) { m.className = 'msg bad'; m.textContent = e.message; btn.disabled = false; btn.textContent = 'Add episodes'; }
+}
+
+async function uploadEpisode(btn) {
+  const f = $('up-file').files[0], title = $('up-title').value.trim(), m = $('add-msg');
+  m.className = 'msg bad';
+  if (!title) { m.textContent = 'Give the episode a title.'; return; }
+  if (!f) { m.textContent = 'Choose a file.'; return; }
+  const audio = /^audio\//.test(f.type), video = /^video\//.test(f.type);
+  if (!audio && !video) { m.textContent = 'That file isn\'t video or audio.'; return; }
+  if (video && f.size > 2 * 1024 ** 3) { m.textContent = 'Videos up to 2GB, please.'; return; }
+  if (audio && f.size > 500 * 1048576) { m.textContent = 'Audio up to 500MB, please.'; return; }
+  btn.disabled = true; m.className = 'msg'; m.textContent = 'Uploading… keep this page open.';
+  try {
+    const made = await api('save-episode', { episode: { channel_id: state.open, title, kind: audio ? 'audio' : 'video', status: 'draft' } });
+    const ext = (f.name.split('.').pop() || (audio ? 'mp3' : 'mp4')).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5);
+    const url = await uploadFile(f, `flieks_podcasts/${state.open}/${fresh(made.id, ext)}`, 'up-bar');
+    const d = await api('episode-media', { episodeId: made.id, kind: audio ? 'audio' : 'video', url });
+    await api('save-episode', { episode: { ...made.episode, id: made.id, channel_id: state.open, status: 'live' } });
+    snack(d.note || 'Uploaded and live.');
+    state.openEp = made.id; await load();
+  } catch (e) { m.className = 'msg bad'; m.textContent = e.code === 'storage/unauthorized' ? 'The upload was refused. Check the file type and size.' : e.message; btn.disabled = false; }
+}
+
+async function bunnyEpisode(btn) {
+  const title = $('bn-title').value.trim(), id = $('bn-id').value.trim(), m = $('add-msg');
+  m.className = 'msg bad';
+  if (!title || !id) { m.textContent = 'Add a title and the Bunny video ID.'; return; }
+  btn.disabled = true;
+  try {
+    const made = await api('save-episode', { episode: { channel_id: state.open, title, kind: 'video', status: 'draft' } });
+    const d = await api('link-bunny', { episodeId: made.id, bunnyId: id });
+    await api('save-episode', { episode: { ...made.episode, id: made.id, channel_id: state.open, status: 'live' } });
+    snack(`Added (${d.state}).`); await load();
+  } catch (e) { m.textContent = e.message; btn.disabled = false; }
+}
+
+async function saveEpisode(id, btn) {
+  const c = state.channels.find(x => x.id === state.open), e = c.episodes.find(x => x.id === id);
+  btn.disabled = true;
+  try {
+    await api('save-episode', { episode: { id, channel_id: c.id, number: $('e-num').value, title: $('e-title').value, duration_mins: $('e-dur').value,
+      description: $('e-desc').value, price: $('e-price').value, status: $('e-status').value, thumbnail_url: e.thumbnail_url } });
+    snack('Episode saved.'); await load();
+  } catch (err) { $('e-msg').className = 'msg bad'; $('e-msg').textContent = err.message; btn.disabled = false; }
+}
+
+async function checkMedia(id, btn) {
+  btn.disabled = true;
+  try { const d = await api('media-status', { episodeId: id }); snack(`File: ${d.state}${d.progress && d.state !== 'ready' ? ` (${d.progress}%)` : ''}`); await load(); }
+  catch (e) { snack(e.message); }
+}
+
+async function deleteEpisode(id, btn) {
+  if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Tap again to delete'; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Delete'; }, 6000); return; }
+  try { await api('delete-episode', { id }); snack('Episode deleted.'); state.openEp = null; await load(); }
+  catch (e) { snack(e.message); }
+}
+
+auth.onAuthStateChanged(u => { if (u) load(); else renderSignIn(); });
+</script>
+</body>
+</html>

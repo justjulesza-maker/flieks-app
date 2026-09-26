@@ -201,7 +201,9 @@ exports.handler = async event => {
         mode,
         status: 'complete'
       });
-      await fbIncrement(`flieks_films/${filmId}`, type === 'own' ? 'own_count' : 'rent_count');
+      // Podcast episodes ("pod_<id>") aren't films: count them on the episode's stats instead.
+      if (String(filmId).startsWith('pod_')) await fbIncrement(`flieks_pod_stats/${String(filmId).slice(4)}`, 'sales');
+      else await fbIncrement(`flieks_films/${filmId}`, type === 'own' ? 'own_count' : 'rent_count');
       console.log(`Access granted: ${uid} -> ${filmId} (${type})`);
     }
 

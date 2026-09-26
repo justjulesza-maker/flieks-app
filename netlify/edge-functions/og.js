@@ -22,7 +22,7 @@ const DB = 'https://flieks-app-default-rtdb.firebaseio.com';
 
 const RESERVED = new Set([
   'index', 'admin', 'filmmaker', 'cast', 'attribution', 'about', 'terms',
-  'privacy', 'login', 'signup', 'account', 'assets', 'images', 'static', 'brand'
+  'privacy', 'login', 'signup', 'account', 'assets', 'images', 'static', 'brand', 'podcasts', 'studio', 'lab', 'talent'
 ]);
 
 const esc = s => String(s || '')
@@ -76,6 +76,34 @@ ${poster ? `<meta property="og:image" content="${esc(poster)}">` : ''}
 <meta name="twitter:card" content="${poster ? 'summary_large_image' : 'summary'}">`);
 }
 
+/* A podcast channel (4flieks.com/podcasts/<slug>[/<episode>]): title, host, cover. */
+async function podPreview(request, context, url, slug, episodeId) {
+  const response = await context.next();
+  if (!(response.headers.get('content-type') || '').includes('text/html')) return response;
+  let d = null;
+  try {
+    const r = await fetch(`${url.origin}/.netlify/functions/flieks-podcasts`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'channel', slug })
+    });
+    d = r.ok ? await r.json() : null;
+  } catch { return response; }
+  if (!d || !d.channel) return response;
+  const c = d.channel, ep = episodeId && (d.episodes || []).find(e => e.id === episodeId);
+  const title = ep ? `${ep.title} · ${c.title}` : `${c.title} · podcast on 4flieks`;
+  const desc = ((ep && ep.description) || c.description || `${c.episodes} episodes${c.host ? ' with ' + c.host : ''}. Free with a 4flieks account.`).slice(0, 200);
+  const image = (ep && ep.thumbnail_url) || c.cover_url || '';
+  return withTags(response, `
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}">
+<meta property="og:site_name" content="4flieks">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${esc(url.origin + url.pathname)}">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(desc)}">
+${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
+<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">`);
+}
+
 /* A list page (4flieks.com/list/<slug>): its title, description and the first film's poster. */
 async function listPreview(request, context, url, slug) {
   const response = await context.next();
@@ -125,6 +153,8 @@ export default async (request, context) => {
 
   const listMatch = path.match(/^list\/([a-z0-9-]{1,80})$/);
   if (listMatch) return listPreview(request, context, url, listMatch[1]);
+  const podMatch = path.match(/^podcasts\/([a-z0-9-]{1,60})(?:\/([A-Za-z0-9_-]{1,120}))?$/);
+  if (podMatch) return podPreview(request, context, url, podMatch[1], podMatch[2]);
   const byMatch = path.match(/^by\/([a-z0-9-]{1,60})$/);
   if (byMatch) return makerPreview(request, context, url, byMatch[1]);
 

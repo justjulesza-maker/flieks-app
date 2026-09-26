@@ -14,6 +14,7 @@
 /lab             /lab.html          200
 /lab/*           /lab.html          200
 /talent          /talent.html       200
+/studio          /studio.html       200
 /privacy         /terms.html#privacy 302
 /refunds         /terms.html#refunds 302
 

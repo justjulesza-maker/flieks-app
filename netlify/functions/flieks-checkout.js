@@ -78,8 +78,23 @@ exports.handler = async event => {
   try {
     if (!YOCO) return fail(500, 'Payments are not configured yet.');
 
-    const { token, filmId, type, giftTo, giftMsg, ref, returnUrl } =
-      JSON.parse(event.body || '{}');
+    const body = JSON.parse(event.body || '{}');
+    const { token, giftTo, giftMsg, ref, returnUrl } = body;
+    let { filmId, type } = body;
+
+    /* A paid podcast episode (a masterclass): bought once, kept. Sold like a
+       film under the id "pod_<episode>", so payouts and receipts just work. */
+    let podcast = null;
+    if (body.podEpisodeId) {
+      if (!/^[A-Za-z0-9_-]{1,120}$/.test(body.podEpisodeId)) return fail(400, 'Missing or invalid request.');
+      const ep = await dbGet(`flieks_pod_episodes/${body.podEpisodeId}`);
+      const ch = ep && await dbGet(`flieks_pod_channels/${ep.channel_id}`);
+      if (!ep || ep.status !== 'live' || !ch || ch.status !== 'live') return fail(404, 'That episode could not be found.');
+      if (!(Number(ep.price) > 0)) return fail(400, 'That episode is free.');
+      podcast = { title: `${ch.title}: ${ep.title}`, price_own: Number(ep.price), filmmaker_uid: ch.owner_uid || null, status: 'live' };
+      filmId = `pod_${body.podEpisodeId}`;
+      type = 'own';
+    }
 
     if (!token || !filmId || !['rent', 'own', 'gift'].includes(type)) {
       return fail(400, 'Missing or invalid request.');
@@ -91,7 +106,7 @@ exports.handler = async event => {
     }
 
     const user = await verifyToken(token);
-    const film = await dbGet(`flieks_films/${filmId}`);
+    const film = podcast || await dbGet(`flieks_films/${filmId}`);
 
     if (!film) return fail(404, 'That film could not be found.');
     if (film.status !== 'live') return fail(403, 'That film is not on sale.');
@@ -109,7 +124,7 @@ exports.handler = async event => {
     if (type !== 'gift') {
       const existing = await dbGet(`flieks_purchases/${user.localId}/${filmId}`);
       if (existing && existing.type === 'own') {
-        return fail(409, 'You already own this film.');
+        return fail(409, podcast ? 'You already have this episode.' : 'You already own this film.');
       }
       if (existing && existing.type === 'rent' && existing.expires_at > Date.now()) {
         return fail(409, 'Your rental of this film is still active.');
