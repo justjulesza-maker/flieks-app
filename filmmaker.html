@@ -199,6 +199,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <p>You earn <strong style="color:var(--green)">70%</strong> of every rental and purchase. Platform takes 30% for hosting, payment processing, and distribution.</p>
     </div>
+    <div id="msg-card"></div>
     <div id="my-page-card"></div>
     <a href="/studio" style="display:block;text-decoration:none;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--card)">
       <p class="section-label" style="margin-bottom:4px;color:var(--amber)">NEW · PODCAST STUDIO</p>
@@ -300,6 +301,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
         <input class="input" id="up-own" type="number" value="49" min="0">
       </div>
     </div>
+    <p class="price-note" style="font-size:12px;color:var(--muted);line-height:1.5;margin:-6px 0 14px"></p>
     <div class="input-group" style="margin-bottom:4px">
       <label class="input-label">Free Film?</label>
       <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
@@ -1177,6 +1179,8 @@ async function loadDashboard() {
   try {
     statement = await refreshMyFilms();
     loadMyPage();
+    loadMessages(location.hash === '#messages');
+    loadPriceRules();
   } catch (e) {
     console.error('[filmmaker] dashboard load failed:', e);
     document.getElementById('stats-grid').innerHTML =
@@ -1252,6 +1256,83 @@ function filmRowHTML(f) {
     </div>
     <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--dim);fill:none;stroke-width:2;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`;
+}
+
+/* ---- Messages from the 4flieks team ---- */
+async function msgApi(action, extra = {}) {
+  const r = await fetch('/.netlify/functions/flieks-messages', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, token: await auth.currentUser.getIdToken(), ...extra })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong.');
+  return d;
+}
+
+let msgOpen = false;
+async function loadMessages(open) {
+  const box = document.getElementById('msg-card');
+  if (!box || !auth.currentUser) return;
+  if (open) msgOpen = true;
+  let unread = 0, messages = null;
+  try {
+    if (msgOpen) messages = (await msgApi('mine')).messages;
+    else unread = (await msgApi('unread')).unread;
+  } catch { box.innerHTML = ''; return; }
+  if (!msgOpen) {
+    box.innerHTML = unread ? `<div onclick="loadMessages(true)" style="cursor:pointer;border:1px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:rgba(245,166,35,.08)">
+        <p class="section-label" style="margin-bottom:4px;color:var(--amber)">MESSAGES FROM 4FLIEKS</p>
+        <p style="font-size:15px;font-weight:700;color:var(--text)">${unread} new message${unread === 1 ? '' : 's'} →</p></div>`
+      : `<p style="margin:-4px 0 14px"><a href="#messages" onclick="loadMessages(true);return false" style="font-size:13px;color:var(--amber)">Messages from 4flieks</a></p>`;
+    return;
+  }
+  const when = t => new Date(t).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  box.innerHTML = `<div id="messages" style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--card)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><p class="section-label" style="margin:0;color:var(--amber)">MESSAGES FROM 4FLIEKS</p>
+      <a href="#" onclick="msgOpen=false;loadMessages();return false" style="font-size:12px;color:var(--muted)">Close</a></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin:12px 0;max-height:420px;overflow:auto" id="msg-list">
+      ${messages.length ? messages.map(m => `<div style="align-self:${m.from === 'maker' ? 'flex-end' : 'flex-start'};max-width:88%;background:${m.from === 'maker' ? 'rgba(245,166,35,.12)' : 'var(--surface)'};border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:4px">${m.from === 'maker' ? 'You' : esc(m.by || '4flieks') + ' · 4flieks'} · ${when(m.at)}${m.film_title ? ' · about ' + esc(m.film_title) : ''}</p>
+        <p style="font-size:14px;color:var(--text);line-height:1.5;white-space:pre-line">${esc(m.body)}</p></div>`).join('')
+        : '<p style="font-size:13px;color:var(--muted)">No messages yet. Questions about your film, prices or payouts? Write to us here.</p>'}
+    </div>
+    <textarea class="input" id="msg-reply" rows="3" maxlength="3000" placeholder="Write to the 4flieks team"></textarea>
+    <button class="btn btn-amber btn-sm" style="margin-top:8px" onclick="sendReply(this)">SEND</button>
+  </div>`;
+  const list = document.getElementById('msg-list'); list.scrollTop = list.scrollHeight;
+}
+
+async function sendReply(btn) {
+  const body = document.getElementById('msg-reply').value.trim();
+  if (!body) return showSnack('Write your message first.');
+  btn.disabled = true;
+  try { await msgApi('reply', { body }); showSnack('Sent to the 4flieks team.'); loadMessages(true); }
+  catch (e) { showSnack(e.message); btn.disabled = false; }
+}
+
+/* ---- Price guidance: the norm, and the ceiling (set by the 4flieks team) ---- */
+let priceRules = { norm: { rent: 25, own: 49 }, cap: null };
+async function loadPriceRules() {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-moderate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'settings' }) });
+    if (r.ok) priceRules = await r.json();
+  } catch {}
+  const n = priceRules.norm, c = priceRules.cap;
+  document.querySelectorAll('.price-note').forEach(el => {
+    el.innerHTML = `Most films on 4flieks are <b>R${n.rent}</b> to rent and <b>R${n.own}</b> to own, and those sell the most tickets. Higher prices mean fewer viewers.` +
+      (c ? ` Prices above R${c.rent || '–'} / R${c.own || '–'} need the 4flieks team to approve them first.` : '');
+  });
+}
+/* Above the ceiling? The film keeps prices within it, and the higher ones go to the team to approve. */
+function withinCap(rent, own) {
+  const c = priceRules.cap;
+  if (!c) return { rent, own, over: false };
+  const r2 = c.rent ? Math.min(rent, c.rent) : rent, o2 = c.own ? Math.min(own, c.own) : own;
+  return { rent: r2, own: o2, over: r2 !== rent || o2 !== own };
+}
+async function requestPrice(filmId, rent, own) {
+  await fetch('/.netlify/functions/flieks-moderate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'request-price', token: await auth.currentUser.getIdToken(), filmId, rent, own }) }).catch(() => {});
 }
 
 /* Your public page on 4flieks (4flieks.com/by/<you>): followers, and what it says. */
@@ -2746,6 +2827,8 @@ async function submitFilm() {
     cancelBtn.style.display = 'none';
     btn.textContent = 'SAVING…';
 
+    // Prices above the ceiling wait for the team; the film goes up within it.
+    const capped = isFree ? { rent: 0, own: 0, over: false } : withinCap(priceRent, priceOwn);
     // Save to database
     await db.ref(`${DB_PREFIX}films/${filmId}`).set({
       title,
@@ -2754,9 +2837,10 @@ async function submitFilm() {
       language,
       genre: [genre],
       subtitles: subs,
-      price_rent: isFree ? 0 : priceRent,
-      price_own: isFree ? 0 : priceOwn,
+      price_rent: capped.rent,
+      price_own: capped.own,
       free: isFree,
+      updated_at: Date.now(),
       filmmaker: currentUser.displayName || '',
       filmmaker_uid: currentUser.uid,
       filmmaker_email: currentUser.email,
@@ -2775,6 +2859,7 @@ async function submitFilm() {
       release_date: releaseDate
     });
     if (videoUrl) await db.ref(`${DB_PREFIX}private/${filmId}`).set({ video_url: videoUrl });
+    if (capped.over) await requestPrice(filmId, priceRent, priceOwn);
 
     // Notify admin
     await db.ref(`${DB_PREFIX}admin_queue`).push({
@@ -2999,6 +3084,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <textarea class="input" id="edit-synopsis" rows="4"></textarea>
     </div>
     <div class="input-group">
+      <p class="price-note" style="font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 10px"></p>
       <label class="input-label">About the film <span style="color:var(--dim);font-weight:400">(optional)</span></label>
       <textarea class="input" id="edit-about" rows="4" maxlength="1500" placeholder="A director's note, behind the scenes, festival selections, awards."></textarea>
     </div>
@@ -3107,6 +3193,7 @@ async function openEditFilm(filmId) {
   document.getElementById('edit-release-wrap').style.display = f.status === 'soon' ? 'block' : 'none';
   document.getElementById('edit-release').value = f.release_date || '';
   editFilmStatus = f.status;
+  loadPriceRules();
   document.getElementById('edit-duration').value = f.duration_mins || '';
   fillEditSelect('edit-language', 'up-language', f.language, 'English');
   fillEditSelect('edit-genre', 'up-genre', f.genre && f.genre[0], 'Drama');
@@ -3167,15 +3254,17 @@ async function saveFilmEdit() {
   btn.disabled = true;
 
   try {
+    const capped = free ? { rent: 0, own: 0, over: false } : withinCap(rent, own);
     const updates = {
+      updated_at: Date.now(),
       synopsis,
       duration_mins: duration,
       language: document.getElementById('edit-language').value,
       subtitles: document.getElementById('edit-subtitles').value,
       genre: [document.getElementById('edit-genre').value],
       free,
-      price_rent: free ? 0 : rent,
-      price_own: free ? 0 : own,
+      price_rent: capped.rent,
+      price_own: capped.own,
       about: document.getElementById('edit-about').value.trim().slice(0, 1500) || null
     };
     if (editFilmStatus === 'soon') updates.release_date = document.getElementById('edit-release').value || null;
@@ -3195,8 +3284,9 @@ async function saveFilmEdit() {
     }
 
     await db.ref(DB_PREFIX + 'films/' + currentFilmId).update(updates);
+    if (capped.over) await requestPrice(currentFilmId, rent, own);
     btn.textContent = 'SAVED ✓';
-    showSnack('Changes saved.');
+    showSnack(capped.over ? `Saved. R${rent} / R${own} is above our ceiling, so we've asked the team to approve it. Until then it's R${capped.rent} / R${capped.own}.` : 'Changes saved.');
     // Re-read before showing the film page again, so it shows what was
     // just saved rather than the version from before the edit.
     await refreshMyFilms().catch(() => {});

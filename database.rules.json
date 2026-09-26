@@ -12,8 +12,14 @@
           ".validate": "newData.isNumber() && (newData.val() === data.val() || newData.val() === (data.exists() ? data.val() : 0) + 1 || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin')"
         },
         "rent_count": { ".validate": "newData.val() === data.val() || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
-        "own_count":  { ".validate": "newData.val() === data.val() || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" }
+        "own_count":  { ".validate": "newData.val() === data.val() || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
+        "price_rent": { ".validate": "newData.isNumber() && (newData.val() === data.val() || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || !root.child('flieks_settings').child('price_cap').child('rent').exists() || newData.val() <= root.child('flieks_settings').child('price_cap').child('rent').val())" },
+        "price_own": { ".validate": "newData.isNumber() && (newData.val() === data.val() || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || !root.child('flieks_settings').child('price_cap').child('own').exists() || newData.val() <= root.child('flieks_settings').child('price_cap').child('own').val())" }
       }
+    },
+    "flieks_settings": {
+      ".read": true,
+      ".write": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'"
     },
     "flieks_users": {
       ".read": "auth != null && root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",

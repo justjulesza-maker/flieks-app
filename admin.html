@@ -81,6 +81,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 #sb{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:var(--toast-bg,#222);border:1px solid var(--border);color:var(--toast-text,var(--text));padding:9px 18px;border-radius:8px;font-size:14px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw}
 #sb.show{opacity:1}
 .video-preview{width:100%;border-radius:8px;border:1px solid var(--border);margin-top:8px}
+.ev-tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px}
+.ev-tabs button{flex-shrink:0;padding:6px 12px;border-radius:16px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;cursor:pointer}
+.ev-tabs button.on{border-color:var(--amber);color:var(--amber);font-weight:700}
+.ev-new{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:var(--amber);color:#111;margin-left:6px}
+.ev-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ev-acts .btn,.ev-acts a.btn{width:auto;padding:6px 10px;font-size:11px;background:var(--card);border:1px solid var(--border);color:var(--muted);text-decoration:none}
 </style>
 </head>
 <body>
@@ -126,10 +132,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
     <div style="display:flex;gap:8px;align-items:center">
       <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto" onclick="nav('lists')">📚 Lists</button>
       <a class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto;text-decoration:none" href="/studio" target="_blank" rel="noopener">🎙 Podcasts</a>
+      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto" onclick="nav('everything')">🔍 Everything</button>
+      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto" onclick="nav('messages')">✉ Messages <span id="msg-badge"></span></button>
       <input class="input" id="film-search" placeholder="Search…" style="width:140px;padding:7px 10px" oninput="searchFilms(this.value)">
     </div>
   </div>
   <div id="all-films-list"><div class="spinner"></div></div>
+</div>
+
+<!-- MESSAGES: conversations with filmmakers -->
+<div id="view-messages" class="view">
+  <div class="row" style="margin-bottom:14px">
+    <button onclick="nav('films')" style="color:var(--muted);font-size:12px;background:none;border:none;cursor:pointer">← Films</button>
+  </div>
+  <p class="sl">MESSAGES WITH FILMMAKERS</p>
+  <p style="font-size:12px;color:var(--muted);margin:-4px 0 12px">Start one from any film (Message) or any filmmaker in Users. They get an email and it waits in their portal; their replies come back here and to your email.</p>
+  <div id="threads-list"><div class="spinner"></div></div>
+</div>
+
+<!-- EVERYTHING: every page and profile on 4flieks, for checking content -->
+<div id="view-everything" class="view">
+  <div class="row" style="margin-bottom:14px">
+    <button onclick="nav('films')" style="color:var(--muted);font-size:12px;background:none;border:none;cursor:pointer">← Films</button>
+    <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--green);color:var(--green);width:auto" onclick="markChecked(this)">✓ Mark all as checked</button>
+  </div>
+  <p class="sl">EVERYTHING ON 4FLIEKS</p>
+  <div class="ev-tabs" id="ev-tabs"></div>
+  <div id="ev-body"><div class="spinner"></div></div>
 </div>
 
 <!-- LISTS: curated lists of films for the home page and /list/<slug> -->
@@ -232,6 +261,10 @@ auth.onAuthStateChanged(async user => {
     loadUsers();
     loadPayouts();
     loadStats();
+    refreshMsgBadge();
+    // Links from emails: /admin#messages, /admin#everything
+    if (location.hash === '#messages') nav('messages');
+    if (location.hash === '#everything') nav('everything');
   } else if (user) {
     auth.signOut();
     snack('Access denied. Admin only.');
@@ -256,6 +289,8 @@ function nav(v) {
   if (v === 'queue') loadQueue();
   if (v === 'films') loadAllFilms();
   if (v === 'lists') loadAdminLists();
+  if (v === 'messages') loadThreads();
+  if (v === 'everything') loadEverything();
   if (v === 'cast') loadAllCast();
   if (v === 'users') loadUsers();
   if (v === 'payouts') loadPayouts();
@@ -355,6 +390,7 @@ async function openReview(filmId, queueId) {
       <p style="font-size:12px;color:var(--muted);margin-top:4px">Approve it as coming soon below${f.release_date ? ` (the filmmaker's release date is ${escA(f.release_date)})` : ''}. It can't go live until the filmmaker uploads the film; that brings it back to this queue.</p></div>` : ''}
     ${f.status === 'soon' && f.film_added_at ? `<div class="card" style="border-color:var(--green)"><p style="font-size:14px;color:var(--green);font-weight:700">The film has been added to this coming-soon title</p>
       <p style="font-size:12px;color:var(--muted);margin-top:4px">Check it plays, then APPROVE to put it live. Everyone who asked to hear gets an email.</p></div>` : ''}
+    ${f.filmmaker_uid ? `<p style="margin:-6px 0 12px"><a href="#" onclick="openThread('${f.filmmaker_uid}', '${filmId}');return false" style="font-size:12px;color:var(--amber)">✉ Message ${escA(f.filmmaker || 'the filmmaker')}</a></p>` : ''}
     <div id="review-video"><p style="color:var(--muted);font-size:14px;margin-bottom:8px">Loading the film…</p></div>
     ${f.trailer_url ? `<p class="sl" style="margin-top:12px">TRAILER</p><video controls playsinline preload="metadata" class="video-preview" src="${escA(f.trailer_url)}"></video>` : ''}
     <div class="card" style="margin-top:12px">
@@ -793,6 +829,10 @@ function renderFilmsList(films) {
         </button>
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E)"
           onclick="filmUpdate('${f.id}')">Update</button>
+        ${f.filmmaker_uid ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)"
+          onclick="openThread('${f.filmmaker_uid}', '${f.id}')">Message</button>` : ''}
+        <a class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);text-decoration:none;text-align:center"
+          href="/?preview=${encodeURIComponent(f.id)}" target="_blank" rel="noopener">Preview</a>
         ${f.status === 'live' && !f.featured ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)"
           onclick="featureFilm('${f.id}', this)">★ Feature on home</button>` : ''}
         ${f.status === 'live' ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)"
@@ -805,6 +845,233 @@ function renderFilmsList(films) {
 function searchFilms(q) {
   const term = q.toLowerCase();
   renderFilmsList(allFilmsCache.filter(f => f.title.toLowerCase().includes(term) || f.filmmaker.toLowerCase().includes(term)));
+}
+
+/* ---- MESSAGES ---- */
+async function adminApi(fn, action, extra = {}) {
+  const r = await fetch('/.netlify/functions/' + fn, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...extra })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong.');
+  return d;
+}
+const whenA = t => t ? new Date(t).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+async function refreshMsgBadge() {
+  try {
+    const { threads } = await adminApi('flieks-messages', 'threads');
+    const n = threads.reduce((s, t) => s + (t.unread_admin || 0), 0);
+    const b = document.getElementById('msg-badge'); if (b) b.textContent = n ? `(${n})` : '';
+    return threads;
+  } catch { return []; }
+}
+
+async function loadThreads() {
+  const el = document.getElementById('threads-list');
+  el.innerHTML = '<div class="spinner"></div>';
+  const threads = await refreshMsgBadge();
+  el.innerHTML = threads.length ? threads.map(t => `<div class="card row" style="cursor:pointer" onclick="openThread('${t.uid}')">
+      <div style="flex:1;min-width:0">
+        <p style="font-size:14px;font-weight:700">${escA(t.name || t.email || 'Filmmaker')}${t.unread_admin ? ` <span class="ev-new">${t.unread_admin} NEW</span>` : ''}</p>
+        <p style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.last_from === 'admin' ? 'You: ' : ''}${escA(t.last_body || '')}</p>
+      </div>
+      <span style="font-size:11px;color:var(--muted);margin-left:10px">${whenA(t.last_at)}</span>
+    </div>`).join('') : '<p style="color:var(--muted);font-size:14px">No conversations yet.</p>';
+}
+
+/* A conversation with one filmmaker, in a panel over the page. */
+async function openThread(uid, filmId) {
+  const wrap = document.createElement('div');
+  wrap.id = 'thread-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:16px';
+  wrap.innerHTML = `<div style="background:var(--surface);border-radius:14px;padding:18px;max-width:560px;width:100%;max-height:92dvh;display:flex;flex-direction:column" id="thread-body">
+    <p style="color:var(--muted);font-size:14px">Loading…</p></div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+  let d;
+  try { d = await adminApi('flieks-messages', 'thread', { uid }); }
+  catch (e) { document.getElementById('thread-body').innerHTML = `<p style="color:var(--red)">${escA(e.message)}</p>`; return; }
+  const film = filmId && (allFilmsCache.find(f => f.id === filmId) || (evData && evData.films.find(f => f.id === filmId)));
+  const pricey = film && !film.free && (film.price_own > 49 || film.price_rent > 25);
+  const draft = pricey ? `Hi ${(d.name || '').split(' ')[0] || 'there'}, thanks for putting ${film.title} on 4flieks. We noticed it's R${film.price_rent} to rent and R${film.price_own} to own. Films at R25 / R49 sell far more tickets on 4flieks, and at 70% you'd likely earn more overall. Would you be happy for us to set it to R25 / R49?` : '';
+  document.getElementById('thread-body').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+      <p style="font-size:16px;font-weight:700">${escA(d.name || 'Filmmaker')}</p>
+      <button onclick="document.getElementById('thread-modal').remove()" style="background:none;border:0;color:var(--muted);cursor:pointer">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">${escA(d.email)}${film ? ` · about <b>${escA(film.title)}</b>` : ''}</p>
+    <div id="thread-list" style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:12px 0;min-height:80px">
+      ${d.messages.map(m => `<div style="align-self:${m.from === 'admin' ? 'flex-end' : 'flex-start'};max-width:86%;background:${m.from === 'admin' ? 'rgba(245,166,35,.12)' : 'var(--card)'};border:1px solid var(--border);border-radius:10px;padding:9px 11px">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:3px">${m.from === 'admin' ? escA(m.by || 'You') : escA(d.name || 'Filmmaker')} · ${whenA(m.at)}${m.film_title ? ' · ' + escA(m.film_title) : ''}</p>
+        <p style="font-size:14px;line-height:1.5;white-space:pre-line">${escA(m.body)}</p></div>`).join('') || '<p style="font-size:13px;color:var(--muted)">No messages yet.</p>'}
+    </div>
+    <textarea class="input" id="thread-text" rows="4" maxlength="3000" placeholder="Write to ${escA((d.name || 'them').split(' ')[0])}. They get an email and it waits in their portal.">${escA(draft)}</textarea>
+    <button class="btn btn-a" style="margin-top:8px" onclick="sendThread('${uid}', ${filmId ? `'${filmId}'` : 'null'}, this)">SEND</button>`;
+  const list = document.getElementById('thread-list'); list.scrollTop = list.scrollHeight;
+  refreshMsgBadge();
+}
+
+async function sendThread(uid, filmId, btn) {
+  const body = document.getElementById('thread-text').value.trim();
+  if (!body) { snack('Write the message first.'); return; }
+  btn.disabled = true;
+  try {
+    const d = await adminApi('flieks-messages', 'send', { uid, body, filmId });
+    snack(d.emailed ? 'Sent. They have an email and it waits in their portal.' : 'Saved to their portal (the email did not go out).');
+    document.getElementById('thread-modal').remove();
+    openThread(uid, filmId);
+    if (document.getElementById('view-messages').classList.contains('active')) loadThreads();
+  } catch (e) { snack(e.message); btn.disabled = false; }
+}
+
+/* ---- EVERYTHING: every page and profile, for checking content ---- */
+let evData = null, evTab = 'look';
+async function loadEverything() {
+  document.getElementById('ev-body').innerHTML = '<div class="spinner"></div>';
+  try { evData = await adminApi('flieks-moderate', 'everything'); }
+  catch (e) { document.getElementById('ev-body').innerHTML = `<p style="color:var(--red)">${escA(e.message)}</p>`; return; }
+  renderEverything();
+}
+
+function renderEverything() {
+  const d = evData, isNew = x => (x.changed_at || 0) > (d.seen || 0);
+  const films = d.films.sort((a, b) => b.changed_at - a.changed_at);
+  const look = [
+    ...films.filter(f => f.price_request).map(f => ({ kind: 'film', f, why: `Price request: R${f.price_request.rent} / R${f.price_request.own}` })),
+    ...films.filter(f => f.over_cap && !f.price_request).map(f => ({ kind: 'film', f, why: `Above the ceiling: R${f.price_rent} / R${f.price_own}` })),
+    ...d.reviews.filter(r => r.reports && !r.hidden).map(r => ({ kind: 'review', r, why: `Reported ${r.reports}×` })),
+    ...films.filter(isNew).map(f => ({ kind: 'film', f, why: 'New or changed' })),
+    ...d.makers.filter(isNew).map(m => ({ kind: 'maker', m, why: 'New or changed' })),
+    ...d.talent.filter(isNew).map(t => ({ kind: 'talent', t, why: 'New or changed' })),
+    ...d.podcasts.filter(isNew).map(p => ({ kind: 'pod', p, why: 'New or changed' })),
+    ...d.reviews.filter(r => isNew(r) && !r.reports).map(r => ({ kind: 'review', r, why: 'New review' }))
+  ];
+  // One card per thing, with all its reasons.
+  const merged = [], byKey = {};
+  look.forEach(x => {
+    const k = x.kind + ':' + (x.f ? x.f.id : x.m ? x.m.uid : x.t ? x.t.uid : x.p ? x.p.id : x.r.filmId + '/' + x.r.reviewId);
+    if (byKey[k]) { if (!byKey[k].why.includes(x.why)) byKey[k].why += ' · ' + x.why; }
+    else { byKey[k] = { ...x }; merged.push(byKey[k]); }
+  });
+  look.length = 0; look.push(...merged);
+  const tabs = [['look', `Needs a look (${look.length})`], ['films', `Films (${films.length})`], ['makers', `Filmmaker pages (${d.makers.length})`],
+    ['talent', `Talent (${d.talent.length})`], ['pods', `Podcasts (${d.podcasts.length})`], ['lists', `Lists (${d.lists.length})`], ['reviews', 'Reviews'], ['prices', 'Price rules']];
+  document.getElementById('ev-tabs').innerHTML = tabs.map(([k, l]) => `<button class="${evTab === k ? 'on' : ''}" onclick="evTab='${k}';renderEverything()">${l}</button>`).join('');
+  const badge = x => isNew(x) ? '<span class="ev-new">NEW</span>' : '';
+  const filmCard = (f, why) => `<div class="card"><div style="display:flex;gap:10px">
+      ${f.poster_url ? `<img src="${escA(f.poster_url)}" alt="" style="width:48px;height:72px;object-fit:cover;border-radius:6px;flex-shrink:0">` : ''}
+      <div style="flex:1;min-width:0">
+        <p style="font-size:14px;font-weight:700">${escA(f.title)}${badge(f)} <span class="tag ${f.status === 'live' ? 'tag-g' : 'tag-m'}">${escA((f.status || '').toUpperCase())}</span></p>
+        <p style="font-size:12px;color:var(--muted)">${escA(f.filmmaker)} · ${f.free ? 'Free' : `R${f.price_rent} / R${f.price_own}`}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
+        ${f.synopsis ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5">${escA(f.synopsis)}</p>` : ''}
+        ${f.about ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5;white-space:pre-line"><b>About:</b> ${escA(f.about)}</p>` : ''}
+      </div></div>
+      <div class="ev-acts">
+        <a class="btn" href="/?preview=${encodeURIComponent(f.id)}" target="_blank" rel="noopener">View as viewers see it</a>
+        ${f.price_request ? `<button class="btn" style="color:var(--green)" onclick="decidePrice('${f.id}', true)">Approve R${f.price_request.rent} / R${f.price_request.own}</button>
+          <button class="btn" style="color:var(--red)" onclick="decidePrice('${f.id}', false)">Decline</button>` : ''}
+        <button class="btn" onclick="editPrice('${f.id}')">Change price</button>
+        ${f.filmmaker_uid ? `<button class="btn" style="color:var(--amber)" onclick="openThread('${f.filmmaker_uid}', '${f.id}')">Message</button>` : ''}
+        ${f.status === 'live' ? `<button class="btn" style="color:var(--red)" onclick="evTakeDown('${f.id}')">Take down</button>` : ''}
+      </div></div>`;
+  const makerCard = (m, why) => `<div class="card"><p style="font-size:14px;font-weight:700">${escA(m.name)}${badge(m)}${m.hidden ? ' <span class="tag tag-r">HIDDEN</span>' : ''}</p>
+      <p style="font-size:12px;color:var(--muted)">/by/${escA(m.slug)}${m.location ? ' · ' + escA(m.location) : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
+      ${m.bio ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5;white-space:pre-line">${escA(m.bio)}</p>` : ''}
+      ${m.instagram || m.website ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${m.instagram ? '@' + escA(m.instagram) : ''} ${escA(m.website || '')}</p>` : ''}
+      <div class="ev-acts"><a class="btn" href="/by/${encodeURIComponent(m.slug)}" target="_blank" rel="noopener">Open page</a>
+        <button class="btn" style="color:${m.hidden ? 'var(--green)' : 'var(--red)'}" onclick="evHide('maker', '${m.uid}', ${!m.hidden})">${m.hidden ? 'Show page again' : 'Hide page'}</button>
+        <button class="btn" style="color:var(--amber)" onclick="openThread('${m.uid}')">Message</button></div></div>`;
+  const talentCard = (t, why) => `<div class="card"><div style="display:flex;gap:10px">
+      ${t.photo_url ? `<img src="${escA(t.photo_url)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:50%;flex-shrink:0">` : ''}
+      <div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700">${escA(t.name || '—')}${badge(t)} ${t.suggest ? '<span class="tag tag-g">IN SEARCH</span>' : '<span class="tag tag-m">PRIVATE</span>'}${t.hidden ? ' <span class="tag tag-r">HIDDEN</span>' : ''}</p>
+      <p style="font-size:12px;color:var(--muted)">${escA((t.disciplines || []).join(', '))}${t.city || t.country ? ' · ' + escA([t.city, t.country].filter(Boolean).join(', ')) : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
+      ${t.bio ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5">${escA(t.bio)}</p>` : ''}</div></div>
+      <div class="ev-acts"><a class="btn" href="/lab/talent/${encodeURIComponent(t.uid)}" target="_blank" rel="noopener">Open profile</a>
+        <button class="btn" style="color:${t.hidden ? 'var(--green)' : 'var(--red)'}" onclick="evHide('talent', '${t.uid}', ${!t.hidden})">${t.hidden ? 'Show again' : 'Hide from search'}</button></div></div>`;
+  const podCard = (p, why) => `<div class="card"><p style="font-size:14px;font-weight:700">${escA(p.title)}${badge(p)} <span class="tag ${p.status === 'live' ? 'tag-g' : 'tag-a'}">${escA((p.status || '').toUpperCase())}</span></p>
+      <p style="font-size:12px;color:var(--muted)">${escA(p.host)} · ${p.episodes} episodes${p.paid ? ` · ${p.paid} paid` : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
+      ${p.description ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5">${escA(p.description)}</p>` : ''}
+      <div class="ev-acts">${p.status === 'live' ? `<a class="btn" href="/podcasts/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">Open channel</a>` : ''}<a class="btn" href="/studio" target="_blank" rel="noopener">Manage in Studio</a></div></div>`;
+  const reviewCard = (r, why) => `<div class="card"><p style="font-size:13px"><b>${escA(r.name)}</b> on <b>${escA(r.film)}</b> · ${r.rating}★${badge(r)}${r.hidden ? ' <span class="tag tag-r">HIDDEN</span>' : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
+      ${r.body ? `<p style="font-size:13px;color:#bbb;margin-top:4px;line-height:1.5">${escA(r.body)}</p>` : ''}
+      <div class="ev-acts">${!r.hidden && r.body ? `<button class="btn" style="color:var(--red)" onclick="evHideReview('${r.filmId}', '${r.reviewId}')">Hide comment</button>` : ''}</div></div>`;
+  const draw = x => x.kind === 'film' ? filmCard(x.f, x.why) : x.kind === 'maker' ? makerCard(x.m, x.why) : x.kind === 'talent' ? talentCard(x.t, x.why) : x.kind === 'pod' ? podCard(x.p, x.why) : reviewCard(x.r, x.why);
+  let html = '';
+  if (evTab === 'look') html = look.length ? `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Price requests, prices above your ceiling, reported reviews, and anything new or changed since you last marked everything as checked${d.seen ? ` (${whenA(d.seen)})` : ''}.</p>` + look.map(draw).join('') : '<p style="color:var(--muted);font-size:14px">Nothing new since your last check.</p>';
+  if (evTab === 'films') html = films.map(f => filmCard(f)).join('');
+  if (evTab === 'makers') html = d.makers.map(m => makerCard(m)).join('') || '<p style="color:var(--muted)">No filmmaker pages yet.</p>';
+  if (evTab === 'talent') html = d.talent.map(t => talentCard(t)).join('') || '<p style="color:var(--muted)">No talent profiles yet.</p>';
+  if (evTab === 'pods') html = d.podcasts.map(p => podCard(p)).join('') || '<p style="color:var(--muted)">No podcast channels yet.</p>';
+  if (evTab === 'lists') html = d.lists.map(l => `<div class="card"><p style="font-size:14px;font-weight:700">${escA(l.title)}${badge(l)}</p><p style="font-size:12px;color:var(--muted)">${l.films} films · ${l.published ? 'published' : 'draft'}</p>
+      <div class="ev-acts">${l.published ? `<a class="btn" href="/list/${encodeURIComponent(l.slug)}" target="_blank" rel="noopener">Open list</a>` : ''}<button class="btn" onclick="nav('lists')">Edit in Lists</button></div></div>`).join('') || '<p style="color:var(--muted)">No lists yet.</p>';
+  if (evTab === 'reviews') html = d.reviews.map(r => reviewCard(r)).join('') || '<p style="color:var(--muted)">No reviews yet.</p>';
+  if (evTab === 'prices') html = `<div class="card">
+      <p style="font-size:14px;font-weight:700">Price ceiling</p>
+      <p style="font-size:12px;color:var(--muted);margin:4px 0 10px">Filmmakers see the norm (R${d.norm.rent} rent / R${d.norm.own} own). A price above the ceiling stays at the ceiling until you approve it here. Leave empty for no ceiling.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px;color:var(--muted)">Rent up to R <input class="input" id="cap-rent" type="number" min="0" value="${d.cap && d.cap.rent || ''}" style="width:90px;display:inline-block;padding:6px 8px"></label>
+        <label style="font-size:12px;color:var(--muted)">Own up to R <input class="input" id="cap-own" type="number" min="0" value="${d.cap && d.cap.own || ''}" style="width:90px;display:inline-block;padding:6px 8px"></label>
+        <button class="btn btn-sm btn-a" style="width:auto" onclick="saveCap(this)">Save</button>
+      </div></div>`;
+  document.getElementById('ev-body').innerHTML = html;
+}
+
+async function markChecked(btn) {
+  btn.disabled = true;
+  try { await adminApi('flieks-moderate', 'mark-checked'); snack('Marked as checked. Only new changes will show under "Needs a look".'); await loadEverything(); }
+  catch (e) { snack(e.message); }
+  btn.disabled = false;
+}
+async function decidePrice(filmId, approve) {
+  try { await adminApi('flieks-moderate', 'decide-price', { filmId, approve }); snack(approve ? 'Approved. The filmmaker has been told.' : 'Declined. The filmmaker has been told.'); loadEverything(); }
+  catch (e) { snack(e.message); }
+}
+function editPrice(filmId) {
+  const f = evData.films.find(x => x.id === filmId);
+  const wrap = document.createElement('div');
+  wrap.id = 'price-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:16px';
+  wrap.innerHTML = `<div style="background:var(--surface);border-radius:14px;padding:18px;max-width:420px;width:100%">
+    <p style="font-size:16px;font-weight:700;margin-bottom:4px">Price for ${escA(f.title)}</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Now ${f.free ? 'free' : `R${f.price_rent} / R${f.price_own}`}. Tell the filmmaker why (Message) before or after you change it.</p>
+    <div style="display:flex;gap:8px"><label style="flex:1;font-size:12px;color:var(--muted)">Rent (R)<input class="input" id="pm-rent" type="number" min="0" value="${f.price_rent || 25}"></label>
+      <label style="flex:1;font-size:12px;color:var(--muted)">Own (R)<input class="input" id="pm-own" type="number" min="0" value="${f.price_own || 49}"></label></div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin-top:10px"><input type="checkbox" id="pm-free" ${f.free ? 'checked' : ''}> Free to watch</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+      <button class="btn btn-g" onclick="savePrice('${f.id}', this)">SAVE</button>
+      <button class="btn" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="document.getElementById('price-modal').remove()">CANCEL</button></div></div>`;
+  document.body.appendChild(wrap);
+}
+async function savePrice(filmId, btn) {
+  btn.disabled = true;
+  try {
+    const d = await adminApi('flieks-moderate', 'set-price', { filmId, rent: document.getElementById('pm-rent').value, own: document.getElementById('pm-own').value, free: document.getElementById('pm-free').checked });
+    snack(d.free ? 'Now free to watch.' : `Now R${d.price_rent} / R${d.price_own}.`);
+    document.getElementById('price-modal').remove(); loadEverything();
+  } catch (e) { snack(e.message); btn.disabled = false; }
+}
+async function saveCap(btn) {
+  btn.disabled = true;
+  try { await adminApi('flieks-moderate', 'settings-save', { rent: document.getElementById('cap-rent').value, own: document.getElementById('cap-own').value }); snack('Price ceiling saved.'); loadEverything(); }
+  catch (e) { snack(e.message); btn.disabled = false; }
+}
+async function evHide(kind, uid, hidden) {
+  try { await adminApi('flieks-moderate', 'hide', { kind, uid, hidden }); snack(hidden ? 'Hidden from the site.' : 'Showing again.'); loadEverything(); }
+  catch (e) { snack(e.message); }
+}
+async function evTakeDown(filmId) {
+  await db.ref(DB + 'films/' + filmId).update({ status: 'draft' });
+  snack('Taken down. It is no longer on the site.'); loadEverything();
+}
+async function evHideReview(filmId, reviewId) {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-review', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, action: 'hide', reviewId, reason: 'Hidden by 4flieks' }) });
+    const d = await r.json(); if (!r.ok) throw new Error(d.message);
+    snack('Comment hidden. The rating still counts.'); loadEverything();
+  } catch (e) { snack(e.message || 'Could not hide it.'); }
 }
 
 /* ---- LISTS ---- */
@@ -1179,6 +1446,8 @@ async function loadUsers() {
           </div>
           ${u.agreement_ref ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-left:10px;white-space:nowrap"
              onclick="sendAgreementCopy('${u.id}', this)">Email agreement</button>` : ''}
+          ${isMaker(u) ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);margin-left:6px;white-space:nowrap"
+             onclick="openThread('${u.id}')">Message</button>` : ''}
         </div>
       `).join('');
     }

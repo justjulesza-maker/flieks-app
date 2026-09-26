@@ -1639,6 +1639,25 @@ async function sharePod() {
   } catch {}
 }
 
+/* ---- Preview: a film page exactly as viewers will see it, before it goes live ---- */
+async function openPreview(filmId) {
+  const user = await requireUser();
+  if (!user) { showSnack('Sign in to preview.'); nav('auth'); return; }
+  let film = null, role = null;
+  try {
+    const [f, r] = await Promise.all([db.ref(DB_PREFIX + 'films/' + filmId).once('value'), db.ref(DB_PREFIX + 'users/' + user.uid + '/role').once('value')]);
+    film = f.val(); role = r.val();
+  } catch (e) { console.warn('preview:', e); }
+  if (!film) { showSnack('That film could not be found.'); return; }
+  if (role !== 'admin' && film.filmmaker_uid !== user.uid) { showSnack('Only 4flieks admins and the filmmaker can preview this.'); return; }
+  currentFilm = { id: filmId, ...film };
+  renderFilmDetail();
+  nav('film');
+  const box = document.getElementById('film-detail-content');
+  box.insertAdjacentHTML('afterbegin', `<div style="margin:0 20px 12px;padding:10px 12px;border-radius:10px;border:1px solid var(--amber);background:rgba(245,166,35,.08);font-size:12px;color:var(--text)">
+    <b>Preview</b> · ${film.status === 'live' ? 'this film is live' : `status: ${escHtml(film.status || 'draft')} (not on the site)`}. This is how viewers ${film.status === 'live' ? 'see' : 'will see'} the page.</div>`);
+}
+
 /* ---- Filmmakers' pages and following ---- */
 async function followApi(action, extra = {}) {
   const body = { action, ...extra };
@@ -1869,7 +1888,7 @@ function renderFilmDetail() {
       <div class="stats-row"${f.status === 'soon' ? ' style="display:none"' : ''}>
         <div class="stat"><p style="color:var(--text)">${views}</p><p>Views</p></div>
         <div class="stat"><p style="color:var(--amber)">${rating}★</p><p>Rating</p></div>
-        <div class="stat"><p style="color:var(--text)">${f.duration_mins}</p><p>min</p></div>
+        <div class="stat"><p style="color:var(--text)">${f.duration_mins || '—'}</p><p>min</p></div>
       </div>
     </div>
     <!-- The main action sits right under the poster: watch now, watch free, or rent / own. -->
@@ -4033,6 +4052,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.FlieksSocial) {
     try {
       const { filmId } = await FlieksSocial.readLink();
+      // ?preview=<film>: an admin (or the film's own filmmaker) sees any film's page as viewers will, live or not.
+      const previewId = new URLSearchParams(location.search).get('preview');
+      if (previewId && /^[A-Za-z0-9_-]{1,120}$/.test(previewId)) { openPreview(previewId); return; }
       const listPath = location.pathname.match(/^\/list\/([a-z0-9-]{1,80})\/?$/);
       const byPath = location.pathname.match(/^\/by\/([a-z0-9-]{1,60})\/?$/);
       const podPath = location.pathname.match(/^\/podcasts(?:\/([a-z0-9-]{1,60})(?:\/([A-Za-z0-9_-]{1,120}))?)?\/?$/);

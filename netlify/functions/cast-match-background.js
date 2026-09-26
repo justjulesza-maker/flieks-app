@@ -28,7 +28,7 @@ exports.handler = async event => {
     // Only people who switched on "suggest me", and who act.
     const all = await ops.dbGet('flieks_talent') || {};
     const opted = Object.entries(all)
-      .filter(([uid, p]) => p && p.suggest === true && (p.disciplines || []).includes('Actor') && uid !== rec.owner)
+      .filter(([uid, p]) => p && p.suggest === true && !p.hidden_by_admin && (p.disciplines || []).includes('Actor') && uid !== rec.owner)
       .sort(([, a], [, b]) => Object.keys(b.credits || {}).length - Object.keys(a.credits || {}).length || (b.updated_at || 0) - (a.updated_at || 0))
       .slice(0, MAX_CANDIDATES);
 

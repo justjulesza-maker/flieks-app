@@ -186,7 +186,7 @@ exports.handler = async event => {
       const all = await ops.dbGet('flieks_talent') || {};
       const ours = [];
       for (const [uid, p] of Object.entries(all)) {
-        if (!p || p.suggest !== true || !p.name) continue;            // only people who opted in
+        if (!p || p.suggest !== true || !p.name || p.hidden_by_admin) continue;   // only people who opted in (and not hidden by the team)
         ours.push(card(uid, p, { films: Object.values(p.credits || {}).map(c => ({ title: c.film_title, role: c.role || '' })), clicks: 0, trailer: 0, sales: 0 }));
       }
       const theirs = await actorsSpaces.search(f);
@@ -203,7 +203,7 @@ exports.handler = async event => {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) return reply(404, { message: 'Profile not found.' });
       const p = await ops.dbGet(`flieks_talent/${id}`);
       const mine = id === me.uid;
-      if (!p || (!p.suggest && !mine && me.role !== 'admin')) return reply(404, { message: 'This profile is private or no longer exists.' });
+      if (!p || ((!p.suggest || p.hidden_by_admin) && !mine && me.role !== 'admin')) return reply(404, { message: 'This profile is private or no longer exists.' });
       const contacted = mine ? null : await ops.dbGet(`flieks_ops/talent_contacted/${me.uid}/${id}`).catch(() => null);
       return reply(200, { profile: card(id, p, await record(p)), mine, hidden: !p.suggest, contacted_at: contacted || null });
     }
@@ -213,7 +213,7 @@ exports.handler = async event => {
       if (id.startsWith('as:')) return reply(400, { message: 'Contact this person through their Actors Spaces profile.' });
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || id === me.uid) return reply(400, { message: 'Bad request.' });
       const t = await ops.dbGet(`flieks_talent/${id}`);
-      if (!t || t.suggest !== true || !t.email) return reply(410, { message: 'They are not taking messages through 4flieks.' });
+      if (!t || t.suggest !== true || t.hidden_by_admin || !t.email) return reply(410, { message: 'They are not taking messages through 4flieks.' });
       const message = String(b.message || '').trim().slice(0, 1200);
       if (message.length < 20) return reply(400, { message: 'Say a little about the project and what you are asking (a sentence or two).' });
       const last = await ops.dbGet(`flieks_ops/talent_contacted/${me.uid}/${id}`);

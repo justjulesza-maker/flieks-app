@@ -62,7 +62,7 @@ async function publicPage(uid) {
   const mine = await filmsOf(uid, films);
   if (!mine.length) return null;
   const m = await ensureMaker(uid, films);
-  if (!m) return null;
+  if (!m || m.hidden) return null;          // hidden by the 4flieks team
   return {
     uid, slug: m.slug, name: m.name, location: m.location || '', bio: m.bio || '',
     instagram: m.instagram || '', website: m.website || '',
