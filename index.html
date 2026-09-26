@@ -194,10 +194,12 @@ input,textarea{font-family:var(--fb)}
 .film-card .fprice.soon{color:var(--muted)}
 
 /* ===================== ROWS: COMING SOON, WATCHLIST ===================== */
-.hrow{display:flex;gap:12px;overflow-x:auto;padding:0 20px 4px;scrollbar-width:none;scroll-snap-type:x proximity}
+.hrow{display:flex;gap:10px;overflow-x:auto;padding:0 20px 4px;scroll-padding:0 20px;scrollbar-width:none;scroll-snap-type:x proximity}
 .hrow::-webkit-scrollbar{display:none}
-.hrow .film-card{flex:0 0 140px;scroll-snap-align:start}
-.hrow .film-thumb{height:200px}
+.hrow .film-card{flex:0 0 118px;scroll-snap-align:start}
+.hrow .film-thumb{height:168px}
+.hrow .film-thumb .f-title{font-size:15px}
+@media (min-width:700px){.hrow .film-card{flex-basis:140px}.hrow .film-thumb{height:200px}}
 .row-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 20px;margin:18px 0 10px}
 .row-head a{font-size:12px;color:var(--amber);text-decoration:none}
 .pod-card{flex:0 0 150px;scroll-snap-align:start;cursor:pointer}
@@ -396,7 +398,7 @@ input,textarea{font-family:var(--fb)}
   </button>
   <button class="bnav-btn" data-view="search" onclick="nav('search')">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <span>SEARCH</span>
+    <span>BROWSE</span>
   </button>
   <button class="bnav-btn" data-view="podcasts" onclick="openPodcasts()">
     <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -441,45 +443,13 @@ input,textarea{font-family:var(--fb)}
     <div class="loading-wrap"><div class="spinner"></div></div>
   </div>
 
-  <!-- Coming soon, and the viewer's own watchlist (filled by renderHome) -->
-  <div id="soon-wrap" style="display:none">
-    <div class="row-head"><p class="section-label" style="margin:0">COMING SOON</p></div>
-    <div class="hrow" id="soon-row"></div>
-  </div>
-  <div id="watch-wrap" style="display:none">
-    <div class="row-head"><p class="section-label" style="margin:0">YOUR WATCHLIST</p>
-      <a href="#" onclick="nav('library');return false;">See all</a></div>
-    <div class="hrow" id="watch-row"></div>
+  <!-- Quick ways in: each opens Browse with that filter -->
+  <div style="margin:16px 0 4px">
+    <div class="cats" id="cats"></div>
   </div>
 
-  <!-- Podcasts (filled by renderHomeRows) -->
-  <div id="pods-wrap"></div>
-
-  <!-- Curated lists, one row each (filled by renderHomeRows) -->
-  <div id="lists-wrap"></div>
-  <!-- The reviews people liked most -->
-  <div id="toprev-wrap"></div>
-
-  <!-- Categories -->
-  <div style="margin:16px 0 10px">
-    <div class="cats" id="cats">
-      <div class="cat on" onclick="filterCat(this,'all')">All</div>
-      <div class="cat" onclick="filterCat(this,'Drama')">Drama</div>
-      <div class="cat" onclick="filterCat(this,'Comedy')">Comedy</div>
-      <div class="cat" onclick="filterCat(this,'Thriller')">Thriller</div>
-      <div class="cat" onclick="filterCat(this,'Documentary')">Documentary</div>
-      <div class="cat" onclick="filterCat(this,'Romance')">Romance</div>
-      <div class="cat" onclick="filterCat(this,'Horror')">Horror</div>
-      <div class="cat" onclick="filterCat(this,'Action')">Action</div>
-    </div>
-  </div>
-
-  <div style="padding:0 20px;margin-bottom:12px">
-    <p class="section-label">LATEST FILMS</p>
-  </div>
-  <div class="film-grid" id="film-grid">
-    <div style="grid-column:span 2;text-align:center;padding:40px 0"><div class="spinner"></div></div>
-  </div>
+  <!-- Rows, chosen by what this viewer and the catalogue have (renderHomeRows) -->
+  <div id="home-rows"></div>
 </div>
 
 <!-- ================================================================
@@ -539,8 +509,17 @@ input,textarea{font-family:var(--fb)}
   <div class="topbar">
     <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
   </div>
-  <div style="padding:16px 20px">
-    <input class="input" id="search-input" placeholder="Search films, filmmakers…" oninput="doSearch(this.value)" autocomplete="off">
+  <div style="padding:16px 20px 8px">
+    <input class="input" id="search-input" placeholder="Search films, filmmakers, languages…" oninput="doSearch(this.value)" autocomplete="off">
+  </div>
+  <div class="cats" id="browse-genres" style="margin-bottom:10px"></div>
+  <div style="display:flex;gap:8px;padding:0 20px;margin-bottom:12px;flex-wrap:wrap">
+    <select class="input" id="browse-lang" onchange="doSearch()" style="flex:1;min-width:120px;padding:8px 10px;font-size:13px"></select>
+    <select class="input" id="browse-sort" onchange="doSearch()" style="flex:1;min-width:120px;padding:8px 10px;font-size:13px">
+      <option value="new">Newest first</option><option value="watched">Most watched</option>
+      <option value="rated">Top rated</option><option value="az">A to Z</option>
+    </select>
+    <label class="cat" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="browse-free" onchange="doSearch()" style="accent-color:var(--amber)"> Free</label>
   </div>
   <div style="padding:0 20px;margin-bottom:12px">
     <p class="section-label" id="search-label">BROWSE ALL</p>
@@ -1146,7 +1125,6 @@ let userPurchases = {};
 let userProgress = {};     // filmId -> { pos, dur, at, done } — where they got to
 let soonFilms = [];        // films marked "coming soon" by an admin
 let userWatch = {};        // filmId -> { at } — the viewer's watchlist
-let homeGenre = 'all';
 let userFollows = {};      // filmmaker uid -> { slug, name } — who this viewer follows
 const makerPages = {};     // cache: uid -> public page
 let topReviews = { reviews: [], thisWeek: false };
@@ -1216,7 +1194,7 @@ auth.onAuthStateChanged(async user => {
     loadFollows();
   } else {
     userWatch = {}; userFollows = {};
-    if (allFilms.length) renderHome(homeGenre);
+    if (allFilms.length) renderHome();
   }
   // Handle return from Yoco
   const urlParams = new URLSearchParams(window.location.search);
@@ -1361,67 +1339,133 @@ function getSampleFilms() {
 /* ============================================================
    RENDER HOME
    ============================================================ */
-function renderHome(genre = 'all') {
-  homeGenre = genre;
+/* The home page is rows, not one long grid, so it stays easy to scan at 50 or
+   500 films. Rows only appear when they have something in them; with a small
+   catalogue (under ROWS_FROM films) all films still show as one grid. */
+const ROWS_FROM = 8;
+const ROW_MAX = 12;
+
+function renderHome() {
   if (window.FlieksThemes) FlieksThemes.reset();
-  renderHomeRows(genre);
-  const filtered = genre === 'all' ? allFilms : allFilms.filter(f => f.genre && f.genre.includes(genre));
-  // Hero
   // A trailer premiere can hold the featured spot too.
   const featured = [...allFilms, ...soonFilms.filter(f => f.premiere)].find(f => f.featured) || allFilms[0];
-  const heroEl = document.getElementById('hero-section');
-  if (featured) {
-    heroEl.innerHTML = heroHTML(featured);
-  } else {
-    heroEl.innerHTML = '';
-  }
-  // Grid (exclude featured from grid when showing all)
-  const gridFilms = genre === 'all' ? filtered.filter(f => f.id !== (featured && featured.id)) : filtered;
-  document.getElementById('film-grid').innerHTML = gridFilms.length
-    ? gridFilms.map(filmCardHTML).join('')
-    : `<div style="grid-column:span 2" class="empty"><p>No films in this category yet.</p></div>`;
+  document.getElementById('hero-section').innerHTML = featured ? heroHTML(featured) : '';
+  renderCats();
+  renderHomeRows();
 }
 
-/* The coming-soon row, and the viewer's watchlist (saved films they don't own yet). */
-function renderHomeRows(genre = homeGenre) {
-  const soonWrap = document.getElementById('soon-wrap'), watchWrap = document.getElementById('watch-wrap');
-  if (!soonWrap || !watchWrap) return;
-  const show = genre === 'all';
-  const soonList = soonFilms.filter(f => !(f.premiere && f.featured));   // the featured premiere is already the hero
-  soonWrap.style.display = show && soonList.length ? 'block' : 'none';
-  if (show && soonList.length) document.getElementById('soon-row').innerHTML = soonList.map(filmCardHTML).join('');
+/* Genre shortcuts under the hero: only genres that have films. */
+function catalogueGenres() {
+  const n = {};
+  allFilms.forEach(f => (f.genre || []).forEach(g => { n[g] = (n[g] || 0) + 1; }));
+  return Object.entries(n).sort((a, b) => b[1] - a[1]).map(([g]) => g);
+}
+function renderCats() {
+  const el = document.getElementById('cats');
+  if (!el) return;
+  const gs = catalogueGenres();
+  el.innerHTML = `<div class="cat on" onclick="openBrowse({})">All films${allFilms.length ? ' · ' + allFilms.length : ''}</div>` +
+    gs.map(g => `<div class="cat" onclick="openBrowse({ genre: '${escHtml(g).replace(/'/g, '&#39;')}' })">${escHtml(g)}</div>`).join('') +
+    (allFilms.some(f => f.free) ? `<div class="cat" onclick="openBrowse({ free: true })">Free</div>` : '') +
+    (podCatalog.channels.length ? `<div class="cat" onclick="openPodcasts()">Podcasts</div>` : '');
+}
+
+function rowHTML(title, cards, seeAll, count) {
+  if (!cards.length) return '';
+  return `<div class="row-head"><p class="section-label" style="margin:0">${title}</p>
+      ${seeAll ? `<a href="#" onclick="${seeAll};return false;">See all${count && count > ROW_MAX ? ' ' + count : ''}</a>` : ''}</div>
+    <div class="hrow">${cards.slice(0, ROW_MAX).join('')}</div>`;
+}
+
+/* A card that resumes playback, with how far they got. */
+function continueCardHTML(f, p) {
+  const pct = Math.min(100, Math.round(p.pos / p.dur * 100));
+  return filmCardHTML(f)
+    .replace(`onclick="openFilm('${f.id}')"`, `onclick="playFilm('${f.id}')"`)
+    .replace('<p class="fmaker">', `<div class="lib-prog"><div style="width:${pct}%"></div></div><p class="fmaker">${Math.max(1, Math.round((p.dur - p.pos) / 60))} min left · `);
+}
+
+function renderHomeRows() {
+  const box = document.getElementById('home-rows');
+  if (!box) return;
+  const big = allFilms.length >= ROWS_FROM;
+  const heroCard = document.querySelector('#hero-section .hero-card');
+  const heroId = heroCard ? heroCard.dataset.id : null;
+  const byNew = [...allFilms].sort((a, b) => (b.published_at || 0) - (a.published_at || 0));
+  const out = [];
+
+  // 1. Pick up where you left off.
+  const progress = id => { const p = userProgress[id]; return p && !p.done && p.pos >= 10 && p.dur ? p : null; };
+  const cont = allFilms.filter(f => userPurchases[f.id] && progress(f.id)).sort((a, b) => progress(b.id).at - progress(a.id).at);
+  out.push(rowHTML('CONTINUE WATCHING', cont.map(f => continueCardHTML(f, progress(f.id))), "nav('library')", cont.length));
+
+  // 2. Saved for later.
   const saved = watchlistFilms().filter(f => !userPurchases[f.id]);
-  watchWrap.style.display = show && saved.length ? 'block' : 'none';
-  if (show && saved.length) document.getElementById('watch-row').innerHTML = saved.map(filmCardHTML).join('');
+  out.push(rowHTML('YOUR WATCHLIST', saved.map(filmCardHTML), "nav('library')", saved.length));
 
-  // Podcasts: a row of channels.
-  const podsWrap = document.getElementById('pods-wrap');
-  if (podsWrap) podsWrap.innerHTML = show && podCatalog.channels.length ? `
-    <div class="row-head"><p class="section-label" style="margin:0">PODCASTS &amp; MASTERCLASSES</p>
-      <a href="/podcasts" onclick="openPodcasts();return false;">See all</a></div>
-    <div class="hrow">${podCatalog.channels.slice(0, 12).map(podCardHTML).join('')}</div>` : '';
+  // 3. What's new, and what's coming.
+  if (big) out.push(rowHTML('NEW ON 4FLIEKS', byNew.filter(f => f.id !== heroId).map(filmCardHTML), "openBrowse({ sort: 'new' })", allFilms.length));
+  const soonList = soonFilms.filter(f => !(f.premiere && f.featured));
+  out.push(rowHTML('COMING SOON', soonList.map(filmCardHTML), null));
 
-  // What viewers are saying: the reviews people liked most.
-  const rvWrap = document.getElementById('toprev-wrap');
+  // 4. From filmmakers this viewer follows.
+  const followed = byNew.filter(f => f.filmmaker_uid && userFollows[f.filmmaker_uid] && !userPurchases[f.id]);
+  out.push(rowHTML('FROM FILMMAKERS YOU FOLLOW', followed.map(filmCardHTML), null));
+
+  // 5. Curated lists.
+  allLists.filter(l => l.on_home).forEach(l => {
+    const films = listFilms(l);
+    out.push(rowHTML(escHtml(l.title.toUpperCase()), films.map(filmCardHTML), `openList('${l.slug}')`, films.length));
+  });
+
+  if (!big) {
+    // A small catalogue: every film in one grid is still the clearest.
+    out.push(`<div class="row-head"><p class="section-label" style="margin:0">ALL FILMS</p></div>
+      <div class="film-grid">${byNew.filter(f => f.id !== heroId).map(filmCardHTML).join('') || '<div style="grid-column:span 2" class="empty"><p>Films are on their way.</p></div>'}</div>`);
+  } else {
+    // 6. What people rate and watch most.
+    const rated = allFilms.filter(f => f.rating_count > 0);
+    if (rated.length >= 4) out.push(rowHTML('TOP RATED', [...rated].sort((a, b) => (b.rating_avg || 0) - (a.rating_avg || 0) || (b.rating_count || 0) - (a.rating_count || 0)).map(filmCardHTML), "openBrowse({ sort: 'rated' })", rated.length));
+  }
+
+  // 7. What viewers are saying.
   const top = (topReviews.reviews || []).filter(r => findFilm(r.filmId));
-  if (rvWrap) rvWrap.innerHTML = show && top.length ? `
-    <div class="row-head"><p class="section-label" style="margin:0">${topReviews.thisWeek ? 'MOST LIKED THIS WEEK' : 'MOST LIKED REVIEWS'}</p></div>
+  out.push(top.length ? `<div class="row-head"><p class="section-label" style="margin:0">${topReviews.thisWeek ? 'MOST LIKED THIS WEEK' : 'MOST LIKED REVIEWS'}</p></div>
     <div class="hrow">${top.map(r => `<div class="rv-card" onclick="openFilm('${r.filmId}')">
       <span style="display:flex;gap:1px">${stars(r.rating, 12)}</span>
       <p class="q">${r.spoiler ? '<i style="color:var(--muted)">Contains spoilers. Tap to read on the film page.</i>' : '“' + escHtml(r.body) + '”'}</p>
       <p style="font-size:11px;color:var(--muted);margin-top:auto">${escHtml(r.name)} · <span style="color:var(--green)">✓ verified</span> · ♥ ${r.likes}</p>
       <p style="font-size:12px;font-weight:700;color:var(--amber)">${escHtml(r.title)}</p>
-    </div>`).join('')}</div>` : '';
+    </div>`).join('')}</div>` : '');
 
-  // Curated lists marked for the home page, one row each.
-  const listsWrap = document.getElementById('lists-wrap');
-  if (listsWrap) listsWrap.innerHTML = !show ? '' : allLists.filter(l => l.on_home).map(l => {
-    const films = listFilms(l);
-    if (!films.length) return '';
-    return `<div class="row-head"><p class="section-label" style="margin:0">${escHtml(l.title.toUpperCase())}</p>
-        <a href="/list/${encodeURIComponent(l.slug)}" onclick="openList('${l.slug}');return false;">See all${films.length > 12 ? ` ${films.length}` : ''}</a></div>
-      <div class="hrow">${films.slice(0, 12).map(filmCardHTML).join('')}</div>`;
-  }).join('');
+  if (big) {
+    out.push(rowHTML('MOST WATCHED', [...allFilms].sort((a, b) => (b.view_count || 0) - (a.view_count || 0)).map(filmCardHTML), "openBrowse({ sort: 'watched' })", allFilms.length));
+    // 8. A row for each genre with enough films (up to four).
+    catalogueGenres().forEach(g => {
+      const films = byNew.filter(f => (f.genre || []).includes(g));
+      if (films.length >= 3 && out.filter(x => x.includes('data-genre-row')).length < 4) {
+        out.push(rowHTML(escHtml(g.toUpperCase()), films.map(filmCardHTML), `openBrowse({ genre: '${escHtml(g).replace(/'/g, '&#39;')}' })`, films.length).replace('<div class="row-head">', '<div class="row-head" data-genre-row>'));
+      }
+    });
+    const free = byNew.filter(f => f.free);
+    if (free.length >= 2) out.push(rowHTML('FREE TO WATCH', free.map(filmCardHTML), 'openBrowse({ free: true })', free.length));
+  }
+
+  // 9. Podcasts.
+  out.push(podCatalog.channels.length ? `<div class="row-head"><p class="section-label" style="margin:0">PODCASTS &amp; MASTERCLASSES</p>
+      <a href="/podcasts" onclick="openPodcasts();return false;">See all</a></div>
+    <div class="hrow">${podCatalog.channels.slice(0, ROW_MAX).map(podCardHTML).join('')}</div>` : '');
+
+  if (big) out.push(`<div style="padding:22px 20px 10px"><button class="btn btn-outline" onclick="openBrowse({})">BROWSE ALL ${allFilms.length} FILMS</button></div>`);
+  box.innerHTML = out.join('');
+}
+
+/* ---- Browse: every film, with filters (the Browse tab) ---- */
+const browse = { genre: null, lang: '', sort: 'new', free: false };
+function openBrowse(opts = {}) {
+  browse.genre = opts.genre || null; browse.sort = opts.sort || 'new'; browse.free = !!opts.free; browse.lang = opts.lang || '';
+  const q = document.getElementById('search-input'); if (q) q.value = '';
+  nav('search');
 }
 
 const listFilms = l => (l.films || []).map(findFilm).filter(Boolean);
@@ -1729,7 +1773,7 @@ function premiereWhen(f) {
 
 function heroHTML(f) {
   const rating = f.rating_avg ? f.rating_avg.toFixed(1) : '—';
-  return `<div class="hero-card" onclick="openFilm('${f.id}')">
+  return `<div class="hero-card" data-id="${f.id}" onclick="openFilm('${f.id}')">
     <div class="hero-poster${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1C1A10'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:top center':''}">
       ${f.poster_url ? '' : '<div class="grain"></div>'}
       <div class="poster-scrim"></div>
@@ -1777,11 +1821,7 @@ function filmCardHTML(f) {
 /* ============================================================
    FILTER CATEGORIES
    ============================================================ */
-function filterCat(el, genre) {
-  document.querySelectorAll('.cat').forEach(c => c.classList.remove('on'));
-  el.classList.add('on');
-  renderHome(genre);
-}
+function filterCat(el, genre) { openBrowse(genre && genre !== 'all' ? { genre } : {}); }
 
 /* ============================================================
    OPEN FILM DETAIL
@@ -3331,24 +3371,45 @@ function rateFilm() {
    SEARCH
    ============================================================ */
 function initSearch() {
-  document.getElementById('search-label').textContent = 'BROWSE ALL';
-  document.getElementById('search-grid').innerHTML = allFilms.map(filmCardHTML).join('');
+  const langs = [...new Set(allFilms.map(f => f.language).filter(Boolean))].sort();
+  document.getElementById('browse-lang').innerHTML = `<option value="">All languages</option>` + langs.map(l => `<option ${browse.lang === l ? 'selected' : ''}>${escHtml(l)}</option>`).join('');
+  document.getElementById('browse-sort').value = browse.sort;
+  document.getElementById('browse-free').checked = browse.free;
+  doSearch();
 }
 
-function doSearch(q) {
+function setBrowseGenre(g) { browse.genre = g || null; doSearch(); }
+
+function doSearch() {
+  const q = document.getElementById('search-input').value;
   const term = q.toLowerCase().trim();
-  document.getElementById('search-label').textContent = term ? `RESULTS FOR "${q.toUpperCase()}"` : 'BROWSE ALL';
-  const pool = [...allFilms, ...soonFilms];
-  const results = !term ? pool : pool.filter(f =>
-    f.title.toLowerCase().includes(term) ||
-    f.filmmaker.toLowerCase().includes(term) ||
-    (f.genre||[]).some(g => g.toLowerCase().includes(term)) ||
-    (f.language||'').toLowerCase().includes(term) ||
-    (f.filmmaker_location||'').toLowerCase().includes(term)
-  );
-  document.getElementById('search-grid').innerHTML = results.length
-    ? results.map(filmCardHTML).join('')
-    : `<div style="grid-column:span 2" class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No films found for "${q}"</p></div>`;
+  browse.lang = document.getElementById('browse-lang').value;
+  browse.sort = document.getElementById('browse-sort').value;
+  browse.free = document.getElementById('browse-free').checked;
+  document.getElementById('browse-genres').innerHTML = [null, ...catalogueGenres()].map(g =>
+    `<div class="cat${browse.genre === g ? ' on' : ''}" onclick="setBrowseGenre(${g ? `'${escHtml(g).replace(/'/g, '&#39;')}'` : 'null'})">${g ? escHtml(g) : 'All'}</div>`).join('');
+  let pool = [...allFilms, ...(browse.free ? [] : soonFilms)];
+  if (term) pool = pool.filter(f =>
+    (f.title || '').toLowerCase().includes(term) || (f.filmmaker || '').toLowerCase().includes(term) ||
+    (f.genre || []).some(g => g.toLowerCase().includes(term)) || (f.language || '').toLowerCase().includes(term) ||
+    (f.filmmaker_location || '').toLowerCase().includes(term));
+  if (browse.genre) pool = pool.filter(f => (f.genre || []).includes(browse.genre));
+  if (browse.lang) pool = pool.filter(f => f.language === browse.lang);
+  if (browse.free) pool = pool.filter(f => f.free);
+  const live = f => f.status === 'live' ? 0 : 1;   // coming soon after what you can watch now
+  const sorters = {
+    new: (a, b) => live(a) - live(b) || (b.published_at || 0) - (a.published_at || 0),
+    watched: (a, b) => live(a) - live(b) || (b.view_count || 0) - (a.view_count || 0),
+    rated: (a, b) => live(a) - live(b) || (b.rating_avg || 0) - (a.rating_avg || 0) || (b.rating_count || 0) - (a.rating_count || 0),
+    az: (a, b) => (a.title || '').localeCompare(b.title || '')
+  };
+  pool.sort(sorters[browse.sort] || sorters.new);
+  const bits = [browse.genre, browse.lang, browse.free && 'free'].filter(Boolean).join(' · ');
+  document.getElementById('search-label').textContent = term ? `${pool.length} RESULT${pool.length === 1 ? '' : 'S'} FOR "${q.toUpperCase()}"`
+    : `${pool.length} FILM${pool.length === 1 ? '' : 'S'}${bits ? ' · ' + bits.toUpperCase() : ''}`;
+  document.getElementById('search-grid').innerHTML = pool.length
+    ? pool.map(filmCardHTML).join('')
+    : `<div style="grid-column:span 2" class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No films match. Try fewer filters.</p></div>`;
 }
 
 /* ============================================================
