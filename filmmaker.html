@@ -109,6 +109,11 @@ select.input option{background:#1A1A1A;color:var(--text)}
 .auth-tab.on{color:var(--amber);border-bottom-color:var(--amber)}
 .earnings-bar{height:6px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
 .earnings-bar-fill{height:100%;background:var(--amber);border-radius:3px}
+.mode-pick{display:grid;gap:8px}
+.mode-opt{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px;color:var(--text);line-height:1.4}
+.mode-opt input{margin-top:3px;accent-color:var(--amber);width:16px;height:16px;flex-shrink:0}
+.mode-opt:has(input:checked){border-color:var(--amber);background:rgba(245,166,35,.06)}
+.mode-sub{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -242,6 +247,10 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <label class="input-label">Synopsis *</label>
       <textarea class="input" id="up-synopsis" placeholder="What is your film about? (2-3 sentences)"></textarea>
     </div>
+    <div class="input-group">
+      <label class="input-label">About the film <span style="color:var(--dim);font-weight:400">(optional)</span></label>
+      <textarea class="input" id="up-about" rows="4" maxlength="1500" placeholder="Anything extra viewers should know: a director's note, behind the scenes, where you shot it, festival selections, awards."></textarea>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div class="input-group" style="margin:0">
         <label class="input-label">Duration (minutes) *</label>
@@ -293,8 +302,20 @@ select.input option{background:#1A1A1A;color:var(--text)}
       </div>
     </div>
     <div class="divider" style="margin:16px 0"></div>
-    <!-- Film file upload -->
-    <p class="section-label">FILM FILE</p>
+    <!-- Finished film, or trailer now and the film later -->
+    <p class="section-label">WHAT ARE YOU SUBMITTING?</p>
+    <div class="mode-pick">
+      <label class="mode-opt"><input type="radio" name="up-mode" value="film" checked onchange="syncUploadMode()">
+        <span><b>The finished film</b><br><span class="mode-sub">It goes on sale once we've reviewed it.</span></span></label>
+      <label class="mode-opt"><input type="radio" name="up-mode" value="trailer" onchange="syncUploadMode()">
+        <span><b>Trailer only, the film comes later</b><br><span class="mode-sub">Your film shows as <i>coming soon</i> with its trailer and release date. People tap "Tell me when it's live" and we email them all on the day.</span></span></label>
+    </div>
+    <div id="up-release-wrap" class="input-group" style="display:none;margin-top:12px">
+      <label class="input-label">Release date <span style="color:var(--dim);font-weight:400">(you can change it later)</span></label>
+      <input class="input" id="up-release" type="date">
+    </div>
+    <div id="up-film-wrap">
+    <p class="section-label" style="margin-top:16px">FILM FILE</p>
     <div class="upload-zone" id="film-drop" onclick="document.getElementById('film-file').click()"
          ondragover="event.preventDefault();this.classList.add('drag')"
          ondragleave="this.classList.remove('drag')"
@@ -305,9 +326,10 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <div class="progress-upload" id="film-upload-progress" style="display:none"><div class="progress-upload-fill" id="film-prog-fill"></div></div>
     </div>
     <input type="file" id="film-file" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="handleFileSelect(event,'film')">
+    </div>
     <div style="margin-top:12px"></div>
     <!-- Trailer upload -->
-    <p class="section-label" style="margin-top:16px">FREE TRAILER <span style="color:var(--dim);font-weight:400;letter-spacing:0;font-size:10px;text-transform:none">(optional — shown free to all viewers)</span></p>
+    <p class="section-label" style="margin-top:16px">FREE TRAILER <span id="trailer-hint" style="color:var(--dim);font-weight:400;letter-spacing:0;font-size:10px;text-transform:none">(optional — shown free to all viewers)</span></p>
     <div class="upload-zone" id="trailer-drop" onclick="document.getElementById('trailer-file').click()"
          ondragover="event.preventDefault();this.classList.add('drag')"
          ondragleave="this.classList.remove('drag')"
@@ -1273,11 +1295,10 @@ function openFilmDetail(filmId) {
     <p class="section-label">SYNOPSIS</p>
     <p style="color:#999;font-size:14px;line-height:1.65;margin-bottom:16px">${esc(f.synopsis||'')}</p>
     <div id="watch-count-box"></div>
-    ${f.status === 'soon' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Your film is on the home page as <b>coming soon</b>${f.release_date ? `, from ${esc(f.release_date)}` : ''}. Share its link now: people can watch the trailer and tap "Tell me when it's live". On release day we email every one of them.</p></div>
-      <div style="display:flex;gap:10px;margin-bottom:14px"><a href="/${encodeURIComponent(f.slug || f.id)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-align:center">View on 4flieks</a></div>` : ''}
-    ${f.status === 'review' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>This film is under review. We'll notify you by email once it goes live (1–2 business days).</p></div>` : ''}
+    ${f.status === 'soon' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Your film is on the home page as <b>coming soon</b>${f.release_date ? `, from ${esc(f.release_date)}` : ''}. Share its link now: people can watch the trailer and tap "Tell me when it's live". On release day we email every one of them.${f.awaiting_film ? ' <b>Upload your film below when it\'s ready.</b>' : ''}</p></div>` : ''}
+    ${f.status === 'review' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>${f.awaiting_film ? 'Your trailer is under review. Once it\'s approved your film shows as coming soon. Upload the film below whenever it\'s ready.' : 'This film is under review. We\'ll notify you by email once it goes live (1–2 business days).'}</p></div>` : ''}
     ${f.status === 'rejected' ? `<div class="info-box" style="background:rgba(232,70,42,.08);border:1px solid rgba(232,70,42,.3)"><svg viewBox="0 0 24 24" style="stroke:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p>This film was not approved. ${esc(f.rejection_reason || 'Please contact support for details.')}</p></div>` : ''}
-    ${f.status === 'live' ? `
+    ${f.status === 'live' || f.status === 'soon' ? `
       <div style="display:flex;gap:10px;margin-bottom:14px">
         <a href="/${encodeURIComponent(f.slug || f.id)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-align:center">View on 4flieks</a>
          <button class="btn btn-amber btn-sm" onclick="openEditFilm(currentFilmId)">Edit Details</button>
@@ -1410,19 +1431,21 @@ function openFilmDetail(filmId) {
     </div>
 
     <div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:4px">
-      <p class="section-label" style="margin-bottom:10px">REPLACE FILM FILE</p>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Uploaded the wrong file? Replace it here. ${f.status === 'live' ? 'The film will be taken offline for re-review.' : 'Your submission will be requeued for review.'}</p>
+      <p class="section-label" style="margin-bottom:10px">${f.awaiting_film ? 'UPLOAD YOUR FILM' : 'REPLACE FILM FILE'}</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">${f.awaiting_film
+        ? (f.status === 'soon' ? 'When the film is ready, upload it here. It stays on the home page as coming soon while we check it, then we put it live and email everyone waiting.' : 'When the film is ready, upload it here and we\'ll review it with your trailer.')
+        : `Uploaded the wrong file? Replace it here. ${f.status === 'live' ? 'The film will be taken offline for re-review.' : f.status === 'soon' ? 'It stays coming soon while we check the new file.' : 'Your submission will be requeued for review.'}`}</p>
       <div class="upload-zone" id="replace-drop-${f.id}" onclick="document.getElementById('replace-file-${f.id}').click()"
            ondragover="event.preventDefault();this.classList.add('drag')"
            ondragleave="this.classList.remove('drag')"
            ondrop="handleReplaceDrop(event,'${f.id}')">
         <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--dim);fill:none;stroke-width:1.5;margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p style="color:var(--muted);font-size:14px">Tap to select replacement film<br><span style="font-size:12px;color:var(--dim)">MP4 or MOV — max 2GB</span></p>
+        <p style="color:var(--muted);font-size:14px">Tap to select ${f.awaiting_film ? 'your film' : 'replacement film'}<br><span style="font-size:12px;color:var(--dim)">MP4 or MOV — max 2GB</span></p>
         <div id="replace-name-${f.id}" style="margin-top:8px;font-size:12px;color:var(--amber)"></div>
         <div class="progress-upload" id="replace-progress-${f.id}" style="display:none"><div class="progress-upload-fill" id="replace-fill-${f.id}"></div></div>
       </div>
       <input type="file" id="replace-file-${f.id}" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="handleReplaceSelect(event,'${f.id}')">
-      <button class="btn btn-amber" id="replace-btn-${f.id}" onclick="uploadReplacement('${f.id}')" style="margin-top:12px" disabled>UPLOAD REPLACEMENT</button>
+      <button class="btn btn-amber" id="replace-btn-${f.id}" onclick="uploadReplacement('${f.id}')" style="margin-top:12px" disabled>${f.awaiting_film ? 'UPLOAD FILM' : 'UPLOAD REPLACEMENT'}</button>
     </div>
   `;
   nav('film-detail');
@@ -2311,6 +2334,19 @@ function pickReplacement(file, filmId) {
   btn.disabled = false;
 }
 
+/* Finished film, or trailer now and the film later. */
+function uploadMode() {
+  const r = document.querySelector('input[name="up-mode"]:checked');
+  return r ? r.value : 'film';
+}
+function syncUploadMode() {
+  const t = uploadMode() === 'trailer';
+  document.getElementById('up-film-wrap').style.display = t ? 'none' : '';
+  document.getElementById('up-release-wrap').style.display = t ? 'block' : 'none';
+  document.getElementById('trailer-hint').textContent = t ? '(required: shown until the film is out)' : '(optional — shown free to all viewers)';
+  document.getElementById('submit-btn').textContent = t ? 'SUBMIT TRAILER FOR REVIEW' : 'SUBMIT FOR REVIEW';
+}
+
 function handleReplaceSelect(event, filmId) {
   pickReplacement(event.target.files[0], filmId);
   event.target.value = '';
@@ -2324,6 +2360,7 @@ function handleReplaceDrop(event, filmId) {
 
 async function uploadReplacement(filmId) {
   if (!replacementFile || !currentUser) return;
+  const firstFileRetry = !!(myFilms.find(f => f.id === filmId) || {}).awaiting_film;
   const btn = document.getElementById(`replace-btn-${filmId}`);
   btn.disabled = true;
   btn.textContent = 'UPLOADING…';
@@ -2342,32 +2379,38 @@ async function uploadReplacement(filmId) {
     // The film's URL goes to a private node. flieks_films is public so the
     // catalogue works signed out, and anything in there can be read by anyone.
     await db.ref(`${DB_PREFIX}private/${filmId}`).update({ video_url: newUrl });
+    const before = myFilms.find(f => f.id === filmId) || {};
+    const firstFile = !!before.awaiting_film;
+    // A coming-soon film stays on the home page while we check the new file;
+    // anything else goes back to review.
+    const keepSoon = before.status === 'soon';
     await db.ref(`${DB_PREFIX}films/${filmId}`).update({
       video_url: null,
-      status: 'review',
-      submitted_at: Date.now(),
-      published_at: null
+      awaiting_film: null,
+      ...(keepSoon ? { film_added_at: Date.now() } : { status: 'review', submitted_at: Date.now(), published_at: null })
     });
     // Re-add to admin queue
     await db.ref(`${DB_PREFIX}admin_queue`).push({
       film_id: filmId,
-      title: myFilms.find(f => f.id === filmId)?.title || filmId,
+      title: before.title || filmId,
       filmmaker: currentUser.displayName,
       filmmaker_uid: currentUser.uid,
       submitted_at: Date.now(),
       status: 'pending_review',
-      note: 'Filmmaker uploaded replacement file'
+      note: keepSoon ? 'Film added to a coming-soon film: approve to put it live (everyone waiting gets an email)'
+          : firstFile ? 'Film added to a trailer-only submission' : 'Filmmaker uploaded replacement file'
     });
     replacementFile = null;
-    showSnack('Replacement uploaded! Back in review queue.');
+    showSnack(keepSoon ? 'Film uploaded! We\'ll check it and put it live; everyone waiting gets an email.'
+      : firstFile ? 'Film uploaded! It\'s with our team for review.' : 'Replacement uploaded! Back in review queue.');
     btn.textContent = 'UPLOADED ✓';
     // Refresh myFilms
-    myFilms = myFilms.map(f => f.id === filmId ? { ...f, status: 'review', video_url: newUrl } : f);
+    myFilms = myFilms.map(f => f.id === filmId ? { ...f, awaiting_film: null, ...(keepSoon ? {} : { status: 'review' }) } : f);
   } catch(e) {
     console.error(e);
     showSnack('Upload failed. Please try again.');
     btn.disabled = false;
-    btn.textContent = 'UPLOAD REPLACEMENT';
+    btn.textContent = firstFileRetry ? 'UPLOAD FILM' : 'UPLOAD REPLACEMENT';
   }
 }
 
@@ -2601,14 +2644,21 @@ async function submitFilm() {
   const priceRent = parseFloat(document.getElementById('up-rent').value) || 0;
   const priceOwn = parseFloat(document.getElementById('up-own').value) || 0;
   const isFree = document.getElementById('up-free').checked;
+  const about = document.getElementById('up-about').value.trim().slice(0, 1500);
+  const trailerOnly = uploadMode() === 'trailer';
+  const releaseDate = trailerOnly ? (document.getElementById('up-release').value || null) : null;
 
   if (!title || !synopsis || !duration || !language || !genre) {
     return showSnack('Please fill in all required fields');
   }
-  if (!filmFile) return showSnack('Please select your film file');
+  if (trailerOnly) {
+    if (!trailerFile) return showSnack('Add your trailer: it\'s what people will see until the film is out.');
+    if (!posterFile) return showSnack('Add a poster: coming-soon films need one to show on the home page.');
+    if (releaseDate && releaseDate < new Date().toISOString().slice(0, 10)) return showSnack('The release date is in the past.');
+  } else if (!filmFile) return showSnack('Please select your film file');
 
   // Re-check in case the files were picked before these checks existed.
-  for (const [type, f] of [['film', filmFile], ['trailer', trailerFile], ['poster', posterFile]]) {
+  for (const [type, f] of [['film', trailerOnly ? null : filmFile], ['trailer', trailerFile], ['poster', posterFile]]) {
     const problem = f && checkUploadFile(type, f);
     if (problem) return showSnack(problem);
   }
@@ -2625,7 +2675,7 @@ async function submitFilm() {
     // Generate film ID
     const filmId = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
 
-    const videoUrl = await uploadWithProgress(
+    const videoUrl = trailerOnly ? null : await uploadWithProgress(
       storage.ref(`flieks_films/${filmId}/${freshName('film', /\.mov$/i.test(filmFile.name) ? 'mov' : 'mp4')}`), filmFile,
       'film-upload-progress', 'film-prog-fill', btn, 'UPLOADING FILM', ownedMeta(filmFile, videoType(filmFile)));
     const posterUrl = posterFile ? await uploadWithProgress(
@@ -2663,9 +2713,12 @@ async function submitFilm() {
       own_count: 0,
       rent_count: 0,
       submitted_at: Date.now(),
-      published_at: null
+      published_at: null,
+      about: about || null,
+      awaiting_film: trailerOnly || null,     // trailer only: the film file comes later
+      release_date: releaseDate
     });
-    await db.ref(`${DB_PREFIX}private/${filmId}`).set({ video_url: videoUrl });
+    if (videoUrl) await db.ref(`${DB_PREFIX}private/${filmId}`).set({ video_url: videoUrl });
 
     // Notify admin
     await db.ref(`${DB_PREFIX}admin_queue`).push({
@@ -2674,21 +2727,24 @@ async function submitFilm() {
       filmmaker: currentUser.displayName,
       filmmaker_uid: currentUser.uid,
       submitted_at: Date.now(),
-      status: 'pending_review'
+      status: 'pending_review',
+      ...(trailerOnly ? { note: 'Trailer only: approve as coming soon' } : {})
     });
 
     window.removeEventListener('beforeunload', warnBeforeLeaving);
-    showSnack('Film submitted! You\'ll hear from us in 1–2 days.');
+    showSnack(trailerOnly ? 'Trailer submitted! Once we approve it, your film shows as coming soon. Upload the film from your portal when it\'s ready.'
+                          : 'Film submitted! You\'ll hear from us in 1–2 days.');
     btn.textContent = 'SUBMITTED ✓';
     // Reset form
     setTimeout(() => {
       filmFile = null; posterFile = null; trailerFile = null;
-      ['up-title','up-synopsis','up-duration','up-language','up-genre','up-subs','up-rent','up-own'].forEach(id => {
+      ['up-title','up-synopsis','up-about','up-release','up-duration','up-language','up-genre','up-subs','up-rent','up-own'].forEach(id => {
         const el = document.getElementById(id);
         if (el.tagName === 'SELECT') el.value = ''; else el.value = '';
       });
       document.getElementById('up-rent').value = '25';
       document.getElementById('up-own').value = '49';
+      document.querySelector('input[name="up-mode"][value="film"]').checked = true; syncUploadMode();
       document.getElementById('film-file-name').textContent = '';
       document.getElementById('trailer-file-name').textContent = '';
       document.getElementById('poster-file-name').textContent = '';
@@ -2886,10 +2942,18 @@ document.addEventListener('DOMContentLoaded', () => {
       <label class="input-label">Synopsis *</label>
       <textarea class="input" id="edit-synopsis" rows="4"></textarea>
     </div>
+    <div class="input-group">
+      <label class="input-label">About the film <span style="color:var(--dim);font-weight:400">(optional)</span></label>
+      <textarea class="input" id="edit-about" rows="4" maxlength="1500" placeholder="A director's note, behind the scenes, festival selections, awards."></textarea>
+    </div>
+    <div class="input-group" id="edit-release-wrap" style="display:none">
+      <label class="input-label">Release date</label>
+      <input class="input" id="edit-release" type="date">
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div class="input-group" style="margin:0">
         <label class="input-label">Duration (minutes) *</label>
-        <input class="input" id="edit-duration" type="number" min="1" max="20">
+        <input class="input" id="edit-duration" type="number" min="1" max="240">
       </div>
       <div class="input-group" style="margin:0">
         <label class="input-label">Language *</label>
@@ -2970,6 +3034,7 @@ function syncEditFree() {
   document.getElementById('edit-prices').style.display = free ? 'none' : 'grid';
 }
 
+let editFilmStatus = null;
 async function openEditFilm(filmId) {
   if (!filmId) { showSnack('No film selected'); return; }
   currentFilmId = filmId;
@@ -2981,6 +3046,11 @@ async function openEditFilm(filmId) {
 
   document.getElementById('edit-film-title').textContent = f.title;
   document.getElementById('edit-synopsis').value = f.synopsis || '';
+  document.getElementById('edit-about').value = f.about || '';
+  // Release date: only while the film is coming soon.
+  document.getElementById('edit-release-wrap').style.display = f.status === 'soon' ? 'block' : 'none';
+  document.getElementById('edit-release').value = f.release_date || '';
+  editFilmStatus = f.status;
   document.getElementById('edit-duration').value = f.duration_mins || '';
   fillEditSelect('edit-language', 'up-language', f.language, 'English');
   fillEditSelect('edit-genre', 'up-genre', f.genre && f.genre[0], 'Drama');
@@ -3033,7 +3103,7 @@ async function saveFilmEdit() {
   const own = parseFloat(document.getElementById('edit-own').value);
 
   if (!synopsis) { msg.textContent = 'Add a synopsis — it’s what sells the film.'; return; }
-  if (!(duration >= 1 && duration <= 20)) { msg.textContent = 'Duration should be between 1 and 20 minutes.'; return; }
+  if (!(duration >= 1 && duration <= 240)) { msg.textContent = 'Duration should be between 1 and 240 minutes.'; return; }
   if (!free && !(rent > 0 && own > 0)) { msg.textContent = 'Set a rent and an own price, or tick "Free to watch".'; return; }
   if (!free && own < rent) { msg.textContent = 'The own price should be at least the rent price.'; return; }
 
@@ -3049,8 +3119,10 @@ async function saveFilmEdit() {
       genre: [document.getElementById('edit-genre').value],
       free,
       price_rent: free ? 0 : rent,
-      price_own: free ? 0 : own
+      price_own: free ? 0 : own,
+      about: document.getElementById('edit-about').value.trim().slice(0, 1500) || null
     };
+    if (editFilmStatus === 'soon') updates.release_date = document.getElementById('edit-release').value || null;
 
     if (editPosterFile) {
       document.getElementById('edit-progress').style.display = 'block';

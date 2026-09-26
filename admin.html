@@ -268,7 +268,13 @@ async function loadQueue() {
     const token = await currentAdmin.getIdToken(true); // force refresh
     const resp = await fetch(`https://flieks-app-default-rtdb.firebaseio.com/flieks_films.json?auth=${token}&orderBy=%22status%22&equalTo=%22review%22`);
     const data = await resp.json();
-    const items = data ? Object.entries(data).map(([id, v]) => ({ id, film_id: id, ...v })) : [];
+    // Coming-soon films whose filmmaker has now uploaded the film: ready to go live.
+    const soonResp = await fetch(`https://flieks-app-default-rtdb.firebaseio.com/flieks_films.json?auth=${token}&orderBy=%22status%22&equalTo=%22soon%22`);
+    const soon = await soonResp.json().catch(() => null);
+    const items = [
+      ...(data ? Object.entries(data).map(([id, v]) => ({ id, film_id: id, ...v })) : []),
+      ...(soon ? Object.entries(soon).filter(([, v]) => v && v.film_added_at && !v.awaiting_film).map(([id, v]) => ({ id, film_id: id, ...v, submitted_at: v.film_added_at })) : [])
+    ];
     items.sort((a, b) => (b.submitted_at || 0) - (a.submitted_at || 0));
     if (!items.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films awaiting review.</p>`; return; }
     el.innerHTML = items.map(q => `
@@ -278,9 +284,9 @@ async function loadQueue() {
             <p style="font-size:14px;font-weight:700;color:var(--text)">${q.title}</p>
             <p style="font-size:12px;color:var(--muted)">${q.filmmaker}${q.submitted_at ? ' · ' + new Date(q.submitted_at).toLocaleDateString('en-ZA') : ''}</p>
           </div>
-          <span class="tag tag-a">PENDING</span>
+          <span class="tag tag-a">${q.status === 'soon' ? 'FILM ADDED · READY TO GO LIVE' : q.awaiting_film ? 'TRAILER ONLY' : 'PENDING'}</span>
         </div>
-        <button class="btn btn-a" onclick="openReview('${q.film_id}','')">REVIEW FILM</button>
+        <button class="btn btn-a" onclick="openReview('${q.film_id}','')">${q.awaiting_film ? 'REVIEW TRAILER' : 'REVIEW FILM'}</button>
       </div>
     `).join('');
   } catch (e) {
@@ -328,11 +334,17 @@ async function openReview(filmId, queueId) {
       <p style="font-size:24px;font-weight:700;color:var(--amber)">${f.title}</p>
       <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.filmmaker_email} · ${f.duration_mins} min · ${f.language}</p>
     </div>
+    ${f.awaiting_film ? `<div class="card" style="border-color:var(--amber)"><p style="font-size:14px;color:var(--amber);font-weight:700">Trailer only: the film comes later</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px">Approve it as coming soon below${f.release_date ? ` (the filmmaker's release date is ${escA(f.release_date)})` : ''}. It can't go live until the filmmaker uploads the film; that brings it back to this queue.</p></div>` : ''}
+    ${f.status === 'soon' && f.film_added_at ? `<div class="card" style="border-color:var(--green)"><p style="font-size:14px;color:var(--green);font-weight:700">The film has been added to this coming-soon title</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px">Check it plays, then APPROVE to put it live. Everyone who asked to hear gets an email.</p></div>` : ''}
     <div id="review-video"><p style="color:var(--muted);font-size:14px;margin-bottom:8px">Loading the film…</p></div>
+    ${f.trailer_url ? `<p class="sl" style="margin-top:12px">TRAILER</p><video controls playsinline preload="metadata" class="video-preview" src="${escA(f.trailer_url)}"></video>` : ''}
     <div class="card" style="margin-top:12px">
       <p class="sl">SYNOPSIS</p>
       <p style="font-size:14px;color:#999;line-height:1.6">${f.synopsis||'—'}</p>
     </div>
+    ${f.about ? `<div class="card"><p class="sl">ABOUT THE FILM</p><p style="font-size:14px;color:#999;line-height:1.6;white-space:pre-line">${escA(f.about)}</p></div>` : ''}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
       <div class="stat"><p style="font-size:12px;color:var(--muted)">Genre</p><p style="font-size:14px;margin-top:2px">${(f.genre||[]).join(', ')}</p></div>
       <div class="stat"><p style="font-size:12px;color:var(--muted)">Subtitles</p><p style="font-size:14px;margin-top:2px">${f.subtitles||'None'}</p></div>
@@ -351,14 +363,15 @@ async function openReview(filmId, queueId) {
       <textarea class="input" id="rej-reason" placeholder="Optional — explain why the film was not approved…" style="resize:vertical;min-height:60px;font-size:14px"></textarea>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <button class="btn btn-g" onclick="approveFilm('${filmId}','${queueId}')">✓ APPROVE</button>
+      ${f.awaiting_film ? `<button class="btn btn-g" disabled title="No film file yet" style="opacity:.4">✓ APPROVE (needs the film)</button>`
+        : `<button class="btn btn-g" onclick="approveFilm('${filmId}','${queueId}')">✓ ${f.status === 'soon' ? 'APPROVE AND GO LIVE' : 'APPROVE'}</button>`}
       <button class="btn btn-r" onclick="rejectFilm('${filmId}','${queueId}')">✗ REJECT</button>
     </div>
     <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:12px">
       <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Or approve it as <b>coming soon</b>: it shows on the home page with its trailer and a
-        "Tell me when it's live" button. Press Go Live in Films on the day; everyone who asked gets an email.</p>
+        "Tell me when it's live" button. ${f.awaiting_film ? 'When the filmmaker uploads the film it comes back to this queue; approve it then and everyone who asked gets an email.' : "Press Go Live in Films on the day; everyone who asked gets an email."}</p>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="date" class="input" id="soon-date-review" style="max-width:180px;font-size:14px">
+        <input type="date" class="input" id="soon-date-review" value="${escA(f.release_date || '')}" style="max-width:180px;font-size:14px">
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber)"
           onclick="approveSoon('${filmId}','${queueId}')">Approve as coming soon</button>
       </div>
@@ -375,7 +388,7 @@ async function approveFilm(filmId, queueId) {
     const existing = await db.ref(DB+'films').orderByChild('featured').equalTo(true).once('value');
     existing.forEach(c => db.ref(DB+'films/'+c.key+'/featured').set(false));
   }
-  await db.ref(DB+'films/'+filmId).update({ status: 'live', featured, published_at: Date.now() });
+  await db.ref(DB+'films/'+filmId).update({ status: 'live', featured, published_at: Date.now(), film_added_at: null });
   if (queueId) await db.ref(DB+'admin_queue/'+queueId).update({ status: 'approved' });
   snack('Film approved and live! Emailing the filmmaker…');
   nav('queue');
@@ -723,6 +736,7 @@ function renderFilmsList(films) {
           <p style="font-size:14px;font-weight:700">${f.title}</p>
           <span class="tag ${statusTag[f.status]||'tag-m'}">${statusName[f.status] || (f.status||'').toUpperCase()}${f.status === 'soon' && f.release_date ? ' · ' + f.release_date : ''}</span>
           <span class="tag tag-m" id="wait-${f.id}" style="display:none"></span>
+          ${f.awaiting_film ? `<span class="tag tag-r">NO FILM YET</span>` : ''}
           ${f.featured && f.status === 'live' ? `<span class="tag tag-a">★ ON HOME</span>` : ''}
         </div>
         <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
@@ -733,7 +747,8 @@ function renderFilmsList(films) {
         </div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-left:10px">
-        <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="toggleFilmStatus('${f.id}','${f.status}')">
+        <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)${f.awaiting_film && f.status !== 'live' ? ';opacity:.4' : ''}"
+          ${f.awaiting_film && f.status !== 'live' ? 'disabled title="Trailer only: the filmmaker has not uploaded the film yet"' : ''} onclick="toggleFilmStatus('${f.id}','${f.status}')">
           ${f.status === 'live' ? 'Take Down' : 'Go Live'}
         </button>
         <button class="btn btn-sm" id="prep-${f.id}" style="display:none;background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="prepareStream('${f.id}')">
@@ -779,7 +794,9 @@ async function featureFilm(id, btn) {
 
 async function toggleFilmStatus(id, status) {
   const newStatus = status === 'live' ? 'draft' : 'live';
-  await db.ref(DB+'films/'+id).update({ status: newStatus, ...(newStatus === 'live' ? { published_at: Date.now() } : {}) });
+  const film = allFilmsCache.find(f => f.id === id);
+  if (newStatus === 'live' && film && film.awaiting_film) { snack('No film file yet: the filmmaker uploads it from their portal.'); return; }
+  await db.ref(DB+'films/'+id).update({ status: newStatus, ...(newStatus === 'live' ? { published_at: Date.now(), film_added_at: null } : {}) });
   snack(`Film ${newStatus === 'live' ? 'published' : 'taken down'}.`);
   loadAllFilms();
   // Only the first time a film goes live; putting it back up later sends nothing.

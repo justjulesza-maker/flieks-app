@@ -1358,6 +1358,10 @@ function renderFilmDetail() {
       <p class="section-label">SYNOPSIS</p>
       <p style="color:#999;font-size:14px;line-height:1.7">${escHtml(f.synopsis||'')}</p>
     </div>
+    ${f.about ? `<div style="padding:0 20px 14px">
+      <p class="section-label">ABOUT THE FILM</p>
+      <p style="color:#999;font-size:14px;line-height:1.7;white-space:pre-line">${escHtml(f.about)}</p>
+    </div>` : ''}
     <div id="film-cast-wall"></div>
     <div id="film-reviews"></div>
     ${f.status === 'soon' ? soonBlockHTML(f) : purchased ? `
