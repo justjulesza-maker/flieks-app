@@ -354,6 +354,15 @@ async function openReview(filmId, queueId) {
       <button class="btn btn-g" onclick="approveFilm('${filmId}','${queueId}')">✓ APPROVE</button>
       <button class="btn btn-r" onclick="rejectFilm('${filmId}','${queueId}')">✗ REJECT</button>
     </div>
+    <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:12px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Or approve it as <b>coming soon</b>: it shows on the home page with its trailer and a
+        "Tell me when it's live" button. Press Go Live in Films on the day; everyone who asked gets an email.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="date" class="input" id="soon-date-review" style="max-width:180px;font-size:14px">
+        <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber)"
+          onclick="approveSoon('${filmId}','${queueId}')">Approve as coming soon</button>
+      </div>
+    </div>
   `;
   loadReviewVideo(filmId);
   nav('review');
@@ -382,12 +391,29 @@ async function emailFilmLive(filmId, force = false) {
       body: JSON.stringify({ token: await auth.currentUser.getIdToken(), filmId, force })
     });
     const d = await r.json().catch(() => ({}));
-    if (d.ok && d.already) snack(`Go-live email already sent to ${d.to}.`);
-    else if (d.ok) snack(`Go-live email sent to ${d.to}.`);
-    else snack(`Go-live email not sent: ${d.reason || d.message || r.status}`);
+    const w = d.watchers ? ` Emailing ${d.watchers} ${d.watchers === 1 ? 'person' : 'people'} who asked to hear when it's live.` : '';
+    if (d.ok && d.already) snack(`Go-live email already sent to ${d.to}.${w}`);
+    else if (d.ok) snack(`Go-live email sent to ${d.to}.${w}`);
+    else snack(`Go-live email not sent: ${d.reason || d.message || r.status}.${w}`);
   } catch (e) {
     snack('Go-live email not sent: ' + e.message);
   }
+}
+
+/* Coming soon: on the home page with its trailer, not for sale yet. */
+async function approveSoon(filmId, queueId) {
+  const date = (document.getElementById('soon-date-review') || {}).value || null;
+  await db.ref(DB+'films/'+filmId).update({ status: 'soon', release_date: date, featured: false });
+  if (queueId) await db.ref(DB+'admin_queue/'+queueId).update({ status: 'approved' });
+  snack(date ? `Coming soon, from ${date}. Press Go Live in Films on the day.` : 'Marked coming soon. Press Go Live in Films on the day.');
+  nav('queue');
+}
+
+async function setSoon(id) {
+  const date = (document.getElementById('soon-date-' + id) || {}).value || null;
+  await db.ref(DB+'films/'+id).update({ status: 'soon', release_date: date, featured: false });
+  snack(date ? `Coming soon, from ${date}.` : 'Marked coming soon.');
+  loadAllFilms();
 }
 
 async function rejectFilm(filmId, queueId) {
@@ -520,6 +546,25 @@ async function loadAllFilms() {
   console.log(`[admin] ${allFilmsCache.length} films loaded`);
   renderFilmsList(allFilmsCache);
   loadStreamingStates();
+  loadWatchCounts();
+}
+
+/* How many people saved each film or asked to hear when it's live. */
+async function loadWatchCounts() {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-watchlist', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action: 'counts' })
+    });
+    const { counts = {} } = await r.json();
+    Object.entries(counts).forEach(([id, c]) => {
+      const el = document.getElementById('wait-' + id);
+      if (!el || !c.total) return;
+      el.textContent = `🔖 ${c.total} saved`;
+      el.title = `${c.accounts} on watchlists, ${c.emails} email sign-ups`;
+      el.style.display = '';
+    });
+  } catch (e) { console.warn('[admin] watch counts', e); }
 }
 
 /* Which films have been prepared for adaptive streaming. */
@@ -669,17 +714,23 @@ async function prepareStream(id) {
 function renderFilmsList(films) {
   const el = document.getElementById('all-films-list');
   if (!films.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No films.</p>`; return; }
-  const statusTag = { live:'tag-g', review:'tag-a', draft:'tag-m', rejected:'tag-r' };
+  const statusTag = { live:'tag-g', review:'tag-a', draft:'tag-m', rejected:'tag-r', soon:'tag-a' };
+  const statusName = { soon: 'COMING SOON' };
   el.innerHTML = films.map(f => `
     <div class="card row">
       <div style="flex:1">
         <div class="row" style="margin-bottom:4px">
           <p style="font-size:14px;font-weight:700">${f.title}</p>
-          <span class="tag ${statusTag[f.status]||'tag-m'}">${(f.status||'').toUpperCase()}</span>
+          <span class="tag ${statusTag[f.status]||'tag-m'}">${statusName[f.status] || (f.status||'').toUpperCase()}${f.status === 'soon' && f.release_date ? ' · ' + f.release_date : ''}</span>
+          <span class="tag tag-m" id="wait-${f.id}" style="display:none"></span>
           ${f.featured && f.status === 'live' ? `<span class="tag tag-a">★ ON HOME</span>` : ''}
         </div>
         <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
         <p style="font-size:11px;margin-top:3px" id="stream-${f.id}">checking…</p>
+        ${f.status !== 'live' ? `<div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <input type="date" class="input" id="soon-date-${f.id}" value="${f.release_date || ''}" style="max-width:160px;font-size:12px;padding:6px 8px">
+          <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="setSoon('${f.id}')">${f.status === 'soon' ? 'Change date' : 'Coming soon'}</button>
+        </div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-left:10px">
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="toggleFilmStatus('${f.id}','${f.status}')">

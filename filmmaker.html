@@ -1206,8 +1206,8 @@ async function loadMyFilms() {
 
 function filmRowHTML(f) {
   const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : (f.view_count || 0);
-  const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red' }[f.status] || 'tag-gray';
-  const statusLabel = { live: 'LIVE', review: 'REVIEW', draft: 'DRAFT', rejected: 'REJECTED' }[f.status] || f.status;
+  const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red', soon: 'tag-amber' }[f.status] || 'tag-gray';
+  const statusLabel = { live: 'LIVE', review: 'REVIEW', draft: 'DRAFT', rejected: 'REJECTED', soon: 'COMING SOON' }[f.status] || f.status;
   const earned = (earningsByFilm[f.id] || 0).toFixed(2);
   return `<div class="film-row" onclick="openFilmDetail('${f.id}')">
     <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'}"><span>${esc(f.title)}</span></div>
@@ -1225,6 +1225,23 @@ function filmRowHTML(f) {
   </div>`;
 }
 
+/* How many viewers saved this film, or asked to hear when it's live. */
+async function loadWatchCount(f) {
+  const box = document.getElementById('watch-count-box');
+  if (!box || !auth.currentUser) return;
+  try {
+    const r = await fetch('/.netlify/functions/flieks-watchlist', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action: 'counts', filmIds: [f.id] })
+    });
+    const c = ((await r.json()).counts || {})[f.id];
+    if (!c || !c.total || currentFilmId !== f.id) return;
+    box.innerHTML = `<div class="stat-card" style="margin-bottom:14px"><p class="section-label" style="margin-bottom:4px">${f.status === 'soon' ? 'Waiting for release' : 'On watchlists'}</p>
+      <p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--amber)">${c.total}</p>
+      <p style="font-size:10px;color:var(--muted)">${f.status === 'soon' ? "People who asked to hear when it's live. They all get an email on the day." : 'Viewers who saved it for later'}</p></div>`;
+  } catch {}
+}
+
 function openFilmDetail(filmId) {
   currentFilmId = filmId;
   const f = myFilms.find(x => x.id === filmId);
@@ -1234,14 +1251,15 @@ function openFilmDetail(filmId) {
   const rentCount = f.rent_count || 0;
   const totalEarned = (earningsByFilm[f.id] || 0).toFixed(2);
   const earnPct = Math.min(100, Math.round((parseFloat(totalEarned) / 1000) * 100));
-  const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red' }[f.status] || 'tag-gray';
+  const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red', soon: 'tag-amber' }[f.status] || 'tag-gray';
+  const statusText = f.status === 'soon' ? 'COMING SOON' : f.status?.toUpperCase();
   document.getElementById('film-detail-fm').innerHTML = `
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px">
       <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'};width:60px;height:76px;border-radius:10px"><span>${esc(f.title)}</span></div>
       <div>
         <p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${esc(f.title)}</p>
         <p style="font-size:12px;color:var(--muted)">${esc([`${f.duration_mins} min`, f.language, (f.genre||[]).join(', ')].filter(Boolean).join(' · '))}</p>
-        <span class="tag ${statusTag}" style="margin-top:6px;display:inline-block">${f.status?.toUpperCase()}</span>
+        <span class="tag ${statusTag}" style="margin-top:6px;display:inline-block">${statusText}</span>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
@@ -1254,6 +1272,9 @@ function openFilmDetail(filmId) {
     </div>
     <p class="section-label">SYNOPSIS</p>
     <p style="color:#999;font-size:14px;line-height:1.65;margin-bottom:16px">${esc(f.synopsis||'')}</p>
+    <div id="watch-count-box"></div>
+    ${f.status === 'soon' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Your film is on the home page as <b>coming soon</b>${f.release_date ? `, from ${esc(f.release_date)}` : ''}. Share its link now: people can watch the trailer and tap "Tell me when it's live". On release day we email every one of them.</p></div>
+      <div style="display:flex;gap:10px;margin-bottom:14px"><a href="/${encodeURIComponent(f.slug || f.id)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="text-align:center">View on 4flieks</a></div>` : ''}
     ${f.status === 'review' ? `<div class="info-box amber" style="font-size:14px;font-weight:400;line-height:1.55"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>This film is under review. We'll notify you by email once it goes live (1–2 business days).</p></div>` : ''}
     ${f.status === 'rejected' ? `<div class="info-box" style="background:rgba(232,70,42,.08);border:1px solid rgba(232,70,42,.3)"><svg viewBox="0 0 24 24" style="stroke:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><p>This film was not approved. ${esc(f.rejection_reason || 'Please contact support for details.')}</p></div>` : ''}
     ${f.status === 'live' ? `
@@ -1412,6 +1433,7 @@ function openFilmDetail(filmId) {
   mountShareOptions(f);
   mountThemePicker(f);
   checkStreaming(f.id);
+  loadWatchCount(f);
 }
 
 /* ---- cast, links and QR ------------------------------------------------- */

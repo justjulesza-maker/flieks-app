@@ -19,6 +19,9 @@
 [functions."funding-background"]
   timeout = 900
 
+[functions."watch-notify-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 

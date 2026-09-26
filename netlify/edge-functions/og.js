@@ -58,7 +58,9 @@ export default async (request, context) => {
     return response;               // never break the page over a preview
   }
 
-  if (!film || film.status !== 'live') return response;
+  // Coming-soon films get a preview too: their links are shared before release.
+  if (!film || (film.status !== 'live' && film.status !== 'soon')) return response;
+  const soon = film.status === 'soon';
 
   const title = film.title || 'A film on 4flieks';
 
@@ -85,7 +87,7 @@ export default async (request, context) => {
     // WhatsApp to fetch. The portal's Link Preview Image fixes both.
     console.log(`[og] ${path}: no og_image, falling back to the poster`);
   }
-  const maker = film.filmmaker ? ` — a film by ${film.filmmaker}` : '';
+  const maker = (film.filmmaker ? ` — a film by ${film.filmmaker}` : '') + (soon ? ' · Coming soon to 4flieks' : '');
 
   /* ---------- structured data ----------
      Google renders ratings, runtime and price directly in results for a film
@@ -131,12 +133,12 @@ export default async (request, context) => {
     ld.offers = [];
     if (film.price_rent) ld.offers.push({
       '@type': 'Offer', price: String(film.price_rent), priceCurrency: 'ZAR',
-      availability: 'https://schema.org/InStock',
+      availability: soon ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock',
       category: 'rental', url: `${url.origin}/${path}`
     });
     if (film.price_own) ld.offers.push({
       '@type': 'Offer', price: String(film.price_own), priceCurrency: 'ZAR',
-      availability: 'https://schema.org/InStock',
+      availability: soon ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock',
       category: 'purchase', url: `${url.origin}/${path}`
     });
   }

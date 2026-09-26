@@ -191,6 +191,22 @@ input,textarea{font-family:var(--fb)}
 .film-card .fmaker{font-size:10px;color:var(--muted);margin:6px 0 2px}
 .film-card .fprice{font-size:12px;font-weight:700;color:var(--amber)}
 .film-card .fprice.free{color:var(--green)}
+.film-card .fprice.soon{color:var(--muted)}
+
+/* ===================== ROWS: COMING SOON, WATCHLIST ===================== */
+.hrow{display:flex;gap:12px;overflow-x:auto;padding:0 20px 4px;scrollbar-width:none;scroll-snap-type:x proximity}
+.hrow::-webkit-scrollbar{display:none}
+.hrow .film-card{flex:0 0 140px;scroll-snap-align:start}
+.hrow .film-thumb{height:200px}
+.row-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 20px;margin:18px 0 10px}
+.row-head a{font-size:12px;color:var(--amber);text-decoration:none}
+.wl-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:12px;border-radius:10px;
+  border:1px solid var(--border);background:var(--card);color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.wl-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+.wl-btn.on{border-color:var(--amber);color:var(--amber)}
+.soon-box{border:1px solid rgba(245,166,35,.35);background:rgba(245,166,35,.06);border-radius:12px;padding:16px;margin-bottom:14px}
+.soon-box input{width:100%;font:inherit;font-size:16px;padding:11px;border-radius:8px;background:var(--surface);
+  border:1px solid var(--border);color:var(--text);margin:10px 0}
 
 /* ===================== CATEGORIES ===================== */
 .cats{display:flex;gap:7px;overflow-x:auto;padding:0 20px 4px;scrollbar-width:none}
@@ -389,6 +405,17 @@ input,textarea{font-family:var(--fb)}
     <div class="loading-wrap"><div class="spinner"></div></div>
   </div>
 
+  <!-- Coming soon, and the viewer's own watchlist (filled by renderHome) -->
+  <div id="soon-wrap" style="display:none">
+    <div class="row-head"><p class="section-label" style="margin:0">COMING SOON</p></div>
+    <div class="hrow" id="soon-row"></div>
+  </div>
+  <div id="watch-wrap" style="display:none">
+    <div class="row-head"><p class="section-label" style="margin:0">YOUR WATCHLIST</p>
+      <a href="#" onclick="nav('library');return false;">See all</a></div>
+    <div class="hrow" id="watch-row"></div>
+  </div>
+
   <!-- Categories -->
   <div style="margin:16px 0 10px">
     <div class="cats" id="cats">
@@ -436,7 +463,7 @@ input,textarea{font-family:var(--fb)}
       <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
       Back
     </button>
-    <div id="film-fav-btn" style="cursor:pointer">
+    <div id="film-fav-btn" style="cursor:pointer" role="button" aria-label="Add to watchlist" onclick="currentFilm && toggleWatch(currentFilm.id)">
       <svg id="film-fav-icon" viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
     </div>
   </div>
@@ -554,6 +581,10 @@ input,textarea{font-family:var(--fb)}
   <div class="topbar">
     <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
     <span style="font-size:14px;color:var(--muted)">My Library</span>
+  </div>
+  <div id="lib-watch-wrap" style="padding:16px 20px 0;display:none">
+    <p class="section-label">WATCHLIST</p>
+    <div id="lib-watch"></div>
   </div>
   <div id="continue-wrap" style="padding:16px 20px 0;display:none">
     <p class="section-label">CONTINUE WATCHING</p>
@@ -1015,6 +1046,10 @@ let checkoutType = null;
 let allFilms = [];
 let userPurchases = {};
 let userProgress = {};     // filmId -> { pos, dur, at, done } — where they got to
+let soonFilms = [];        // films marked "coming soon" by an admin
+let userWatch = {};        // filmId -> { at } — the viewer's watchlist
+let homeGenre = 'all';
+const findFilm = id => allFilms.find(f => f.id === id) || soonFilms.find(f => f.id === id);
 let playing = null;        // { id, trailer, lastSaved } — what the player has loaded
 let navHistory = ['home'];
 
@@ -1070,6 +1105,10 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     await loadUserPurchases();
     maybeOfferInstall();
+    loadWatchlist();
+  } else {
+    userWatch = {};
+    if (allFilms.length) renderHome(homeGenre);
   }
   // Handle return from Yoco
   const urlParams = new URLSearchParams(window.location.search);
@@ -1149,6 +1188,13 @@ async function loadFilms() {
       allFilms.push({ id: child.key, ...child.val() });
     });
     allFilms.sort((a, b) => (b.published_at || 0) - (a.published_at || 0));
+    try {
+      const soon = await db.ref(DB_PREFIX + 'films').orderByChild('status').equalTo('soon').once('value');
+      soonFilms = [];
+      soon.forEach(child => { soonFilms.push({ id: child.key, ...child.val() }); });
+      // Soonest date first; films without a date after them.
+      soonFilms.sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
+    } catch (e) { soonFilms = []; }
     renderHome();
   } catch (e) {
     console.error(e);
@@ -1173,7 +1219,9 @@ function getSampleFilms() {
    RENDER HOME
    ============================================================ */
 function renderHome(genre = 'all') {
+  homeGenre = genre;
   if (window.FlieksThemes) FlieksThemes.reset();
+  renderHomeRows(genre);
   const filtered = genre === 'all' ? allFilms : allFilms.filter(f => f.genre && f.genre.includes(genre));
   // Hero
   const featured = allFilms.find(f => f.featured) || allFilms[0];
@@ -1188,6 +1236,23 @@ function renderHome(genre = 'all') {
   document.getElementById('film-grid').innerHTML = gridFilms.length
     ? gridFilms.map(filmCardHTML).join('')
     : `<div style="grid-column:span 2" class="empty"><p>No films in this category yet.</p></div>`;
+}
+
+/* The coming-soon row, and the viewer's watchlist (saved films they don't own yet). */
+function renderHomeRows(genre = homeGenre) {
+  const soonWrap = document.getElementById('soon-wrap'), watchWrap = document.getElementById('watch-wrap');
+  if (!soonWrap || !watchWrap) return;
+  const show = genre === 'all';
+  soonWrap.style.display = show && soonFilms.length ? 'block' : 'none';
+  if (show && soonFilms.length) document.getElementById('soon-row').innerHTML = soonFilms.map(filmCardHTML).join('');
+  const saved = watchlistFilms().filter(f => !userPurchases[f.id]);
+  watchWrap.style.display = show && saved.length ? 'block' : 'none';
+  if (show && saved.length) document.getElementById('watch-row').innerHTML = saved.map(filmCardHTML).join('');
+}
+
+function soonDate(f) {
+  if (!f.release_date || !/^\d{4}-\d{2}-\d{2}$/.test(f.release_date)) return '';
+  return new Date(f.release_date + 'T12:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
 }
 
 function heroHTML(f) {
@@ -1220,12 +1285,15 @@ function filmCardHTML(f) {
   return `<div class="film-card" onclick="openFilm('${f.id}')">
     <div class="film-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:center':''}">
       <div class="f-overlay"></div>
-      ${f.is_new ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-red">NEW</div>` : ''}
-      <span class="dur">${f.duration_mins}m</span>
+      ${f.status === 'soon' ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-amber poster-badge">SOON</div>`
+        : f.is_new ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-red">NEW</div>` : ''}
+      ${f.duration_mins ? `<span class="dur">${f.duration_mins}m</span>` : ''}
       <span class="f-title">${escHtml(f.title)}</span>
     </div>
     <p class="fmaker">${escHtml(f.filmmaker)}</p>
-    <p class="fprice ${f.free?'free':''}">${owned ? '✓ Owned' : f.free ? 'FREE' : `R${f.price_rent} watch`}</p>
+    <p class="fprice ${f.status === 'soon' ? 'soon' : f.free ? 'free' : ''}">${f.status === 'soon'
+      ? (soonDate(f) ? `Coming ${soonDate(f)}` : 'Coming soon') + (userWatch[f.id] ? ' · ✓' : '')
+      : owned ? '✓ Owned' : f.free ? 'FREE' : `R${f.price_rent} watch`}</p>
   </div>`;
 }
 
@@ -1242,7 +1310,7 @@ function filterCat(el, genre) {
    OPEN FILM DETAIL
    ============================================================ */
 function openFilm(filmId) {
-  currentFilm = allFilms.find(f => f.id === filmId);
+  currentFilm = findFilm(filmId);
   if (!currentFilm) return;
   renderFilmDetail();
   nav('film');
@@ -1259,7 +1327,7 @@ function renderFilmDetail() {
       f.poster_url ? `;background-image:url('${f.poster_url}');background-size:cover;background-position:center` : ''}">
       ${!f.poster_url ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0,transparent 1px,transparent 4px);opacity:.5"></div>` : ''}
       <div class="poster-scrim"></div>
-      ${!purchased ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+      ${!purchased && (f.status !== 'soon' || f.trailer_url) ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
         <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(245,166,35,.5);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="watchTrailer('${f.id}')">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--amber);stroke:none;margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
         </div>
@@ -1279,7 +1347,7 @@ function renderFilmDetail() {
           <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker_location||'')}</p>
         </div>
       </div>
-      <div class="stats-row">
+      <div class="stats-row"${f.status === 'soon' ? ' style="display:none"' : ''}>
         <div class="stat"><p style="color:var(--text)">${views}</p><p>Views</p></div>
         <div class="stat"><p style="color:var(--amber)">${rating}★</p><p>Rating</p></div>
         <div class="stat"><p style="color:var(--text)">${f.duration_mins}</p><p>min</p></div>
@@ -1292,7 +1360,7 @@ function renderFilmDetail() {
     </div>
     <div id="film-cast-wall"></div>
     <div id="film-reviews"></div>
-    ${purchased ? `
+    ${f.status === 'soon' ? soonBlockHTML(f) : purchased ? `
       <div style="padding:0 20px 14px">
         <div class="info-box green">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1355,6 +1423,7 @@ function renderFilmDetail() {
         ${f.trailer_url ? `
           <button class="btn btn-outline" onclick="watchTrailer('${f.id}')">WATCH FREE TRAILER</button>
         ` : ''}
+        <div id="wl-slot">${watchButtonHTML(f)}</div>
         ${f.script_public ? `
         <a href="/script/${f.slug || f.id}" style="display:flex;align-items:center;gap:12px;
              margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:12px;
@@ -1382,8 +1451,10 @@ function renderFilmDetail() {
   document.getElementById('film-detail-content').innerHTML = html;
 
   if (window.FlieksThemes) FlieksThemes.apply(f.theme);
+  paintWatchSlot(f);
   renderCastWall(f);
-  renderReviews(f);
+  if (f.status === 'soon') document.getElementById('film-reviews').innerHTML = '';
+  else renderReviews(f);
   if (window.FlieksSocial) FlieksSocial.bumpView(f.id);
 }
 
@@ -2381,7 +2452,7 @@ function launchPlayer(film, isOwned, opts) {
 
 function watchTrailer(filmId) {
   if (window.FlieksSocial) FlieksSocial.trailerPlayed(filmId);
-  const f = allFilms.find(x => x.id === filmId) || currentFilm;
+  const f = findFilm(filmId) || currentFilm;
   if (!f || !f.trailer_url) { showSnack('Trailer not yet available'); return; }
   launchPlayer({ ...f, video_url: f.trailer_url }, false, { trailer: true });
 }
@@ -2622,7 +2693,8 @@ function initSearch() {
 function doSearch(q) {
   const term = q.toLowerCase().trim();
   document.getElementById('search-label').textContent = term ? `RESULTS FOR "${q.toUpperCase()}"` : 'BROWSE ALL';
-  const results = !term ? allFilms : allFilms.filter(f =>
+  const pool = [...allFilms, ...soonFilms];
+  const results = !term ? pool : pool.filter(f =>
     f.title.toLowerCase().includes(term) ||
     f.filmmaker.toLowerCase().includes(term) ||
     (f.genre||[]).some(g => g.toLowerCase().includes(term)) ||
@@ -2632,6 +2704,125 @@ function doSearch(q) {
   document.getElementById('search-grid').innerHTML = results.length
     ? results.map(filmCardHTML).join('')
     : `<div style="grid-column:span 2" class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No films found for "${q}"</p></div>`;
+}
+
+/* ============================================================
+   WATCHLIST — save films for later; "tell me when it's live"
+   Kept on the server (flieks-watchlist), so it follows the viewer
+   across devices, and so we can email them when a film goes live.
+   ============================================================ */
+async function watchApi(action, extra = {}) {
+  const user = auth.currentUser;
+  const body = { action, ...extra };
+  if (user) body.token = await user.getIdToken();
+  const r = await fetch('/.netlify/functions/flieks-watchlist', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong. Try again.');
+  return d;
+}
+
+async function loadWatchlist() {
+  if (!auth.currentUser) { userWatch = {}; return; }
+  try { userWatch = (await watchApi('list')).items || {}; } catch (e) { console.warn('watchlist unavailable:', e); }
+  if (allFilms.length) renderHomeRows();
+  if (currentFilm && document.getElementById('view-film').classList.contains('active')) paintWatchSlot(currentFilm);
+  const open = document.querySelector('.view.active');
+  if (open && open.id === 'view-library') loadLibrary();
+}
+
+/* Saved films we can show: live or coming soon, newest save first. */
+function watchlistFilms() {
+  return Object.entries(userWatch)
+    .map(([id, w]) => ({ f: findFilm(id), at: (w && w.at) || 0 }))
+    .filter(x => x.f)
+    .sort((a, b) => b.at - a.at)
+    .map(x => x.f);
+}
+
+const BOOKMARK = '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const BELL = '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+
+function watchButtonHTML(f) {
+  const on = !!userWatch[f.id];
+  return `<button class="wl-btn${on ? ' on' : ''}" onclick="toggleWatch('${f.id}', this)">${BOOKMARK}${on ? 'On your watchlist' : 'Add to watchlist'}</button>`;
+}
+
+/* The coming-soon panel on a film page: the date, the trailer, and "tell me". */
+function soonBlockHTML(f) {
+  const when = soonDate(f);
+  return `<div style="padding:0 20px 14px">
+    <div class="soon-box">
+      <p class="section-label" style="margin-bottom:4px">COMING SOON</p>
+      <p style="font-size:18px;font-weight:700;color:var(--text)">${when ? `On 4flieks from ${escHtml(when)}` : 'On 4flieks soon'}</p>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px">${f.free ? 'Free to watch.' : `Rent R${f.price_rent ?? 25} for 48 hours, or own it for R${f.price_own ?? 49}.`}</p>
+      <div id="wl-slot">${soonNotifyHTML(f)}</div>
+    </div>
+    ${f.trailer_url ? `<button class="btn btn-outline" onclick="watchTrailer('${f.id}')">WATCH THE TRAILER</button>` : ''}
+  </div>`;
+}
+
+function soonNotifyHTML(f) {
+  if (userWatch[f.id]) {
+    return `<button class="wl-btn on" onclick="toggleWatch('${f.id}', this)">${BELL}We'll tell you when it's live</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">It's on your watchlist. Tap to remove it.</p>`;
+  }
+  if (auth.currentUser) {
+    return `<button class="btn btn-amber" style="margin-top:12px" onclick="toggleWatch('${f.id}', this)">TELL ME WHEN IT'S LIVE</button>`;
+  }
+  return `<input id="soon-email" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">
+    <button class="btn btn-amber" onclick="notifyByEmail('${f.id}', this)">TELL ME WHEN IT'S LIVE</button>
+    <p id="soon-msg" style="font-size:12px;color:var(--muted);margin-top:8px">One email, the day it's live. Or <a href="#" onclick="nav('auth');return false;" style="color:var(--amber)">sign in</a> to keep it on your watchlist.</p>`;
+}
+
+function paintWatchSlot(f) {
+  // The heart at the top of the film page is the watchlist too.
+  const heart = document.getElementById('film-fav-icon');
+  if (heart) {
+    const on = !!userWatch[f.id];
+    heart.style.fill = on ? 'var(--amber)' : 'none';
+    heart.style.stroke = on ? 'var(--amber)' : 'var(--muted)';
+    document.getElementById('film-fav-btn').setAttribute('aria-label', on ? 'Remove from watchlist' : 'Add to watchlist');
+  }
+  const slot = document.getElementById('wl-slot');
+  if (!slot) return;
+  slot.innerHTML = f.status === 'soon' ? soonNotifyHTML(f) : (userPurchases[f.id] ? '' : watchButtonHTML(f));
+}
+
+async function toggleWatch(filmId, btn) {
+  const user = await requireUser();
+  if (!user) { showSnack('Sign in to keep a watchlist.'); nav('auth'); return; }
+  const f = findFilm(filmId);
+  const was = !!userWatch[filmId];
+  if (btn) btn.disabled = true;
+  try {
+    if (was) { await watchApi('remove', { filmId }); delete userWatch[filmId]; }
+    else { const d = await watchApi('add', { filmId }); userWatch[filmId] = { at: d.at || Date.now() }; }
+    showSnack(was ? 'Removed from your watchlist.'
+      : f && f.status === 'soon' ? "Saved. We'll email you the day it's live." : 'Added to your watchlist.');
+  } catch (e) {
+    showSnack(e.message);
+  }
+  if (f) paintWatchSlot(f);
+  renderHomeRows();
+}
+
+async function notifyByEmail(filmId, btn) {
+  const input = document.getElementById('soon-email');
+  const msg = document.getElementById('soon-msg');
+  const email = (input && input.value || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) { msg.textContent = 'Type your email address first.'; msg.style.color = 'var(--red)'; return; }
+  btn.disabled = true; btn.textContent = 'SAVING…';
+  try {
+    const d = await watchApi('notify-email', { filmId, email });
+    document.getElementById('wl-slot').innerHTML = d.live
+      ? `<p style="font-size:14px;color:var(--text);margin-top:10px">Good news: it's live now. Reload the page to watch.</p>`
+      : `<p style="font-size:15px;font-weight:600;color:var(--text);margin-top:12px">Done. We'll email ${escHtml(email)} the day it's live.</p>`;
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "TELL ME WHEN IT'S LIVE";
+    msg.textContent = e.message; msg.style.color = 'var(--red)';
+  }
 }
 
 /* ============================================================
@@ -2709,6 +2900,23 @@ async function loadLibrary() {
       </div>`;
     }).join('');
   };
+  // Watchlist: saved films not bought yet. Tap opens the film page.
+  const saved = watchlistFilms().filter(f => !userPurchases[f.id]);
+  document.getElementById('lib-watch-wrap').style.display = saved.length ? 'block' : 'none';
+  document.getElementById('lib-watch').innerHTML = saved.map(f => `
+    <div class="lib-card" onclick="openFilm('${f.id}')">
+      <div class="lib-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'}${f.poster_url ? `;background-image:url('${f.poster_url}')` : ''}">${f.poster_url ? '' : `<span>${escHtml(f.title)}</span>`}</div>
+      <div class="info">
+        <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${escHtml(f.title)}</p>
+        <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker || '')}${f.duration_mins ? ` · ${f.duration_mins} min` : ''}</p>
+        ${f.status === 'soon'
+          ? `<span class="tag tag-amber" style="margin-top:4px;display:inline-block">${soonDate(f) ? 'COMING ' + escHtml(soonDate(f).toUpperCase()) : 'COMING SOON'}</span>`
+          : `<p style="font-size:11px;color:var(--amber);margin-top:3px">${f.free ? 'Free to watch' : `R${f.price_rent} to watch`}</p>`}
+      </div>
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--dim);fill:none;stroke-width:2;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`).join('');
+  if (typeof trackPosters === 'function') trackPosters(document.getElementById('lib-watch'));
+
   document.getElementById('continue-wrap').style.display = inProgress.length ? 'block' : 'none';
   if (inProgress.length) renderLib(inProgress, 'continue-films');
   renderLib(owned, 'owned-films');
@@ -3045,7 +3253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.FlieksSocial) {
     try {
       const { filmId } = await FlieksSocial.readLink();
-      if (filmId && allFilms.some(f => f.id === filmId)) openFilm(filmId);
+      if (filmId && findFilm(filmId)) openFilm(filmId);
 
       // Home-screen shortcuts land here
       const want = new URLSearchParams(location.search).get('view');
