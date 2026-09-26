@@ -134,6 +134,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
       <a class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto;text-decoration:none" href="/studio" target="_blank" rel="noopener">🎙 Podcasts</a>
       <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto" onclick="nav('everything')">🔍 Everything</button>
       <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto" onclick="nav('messages')">✉ Messages <span id="msg-badge"></span></button>
+      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);width:auto" onclick="nav('backups')">💾 Backups</button>
       <input class="input" id="film-search" placeholder="Search…" style="width:140px;padding:7px 10px" oninput="searchFilms(this.value)">
     </div>
   </div>
@@ -148,6 +149,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
   <p class="sl">MESSAGES WITH FILMMAKERS</p>
   <p style="font-size:12px;color:var(--muted);margin:-4px 0 12px">Start one from any film (Message) or any filmmaker in Users. They get an email and it waits in their portal; their replies come back here and to your email.</p>
   <div id="threads-list"><div class="spinner"></div></div>
+</div>
+
+<!-- BACKUPS: nightly copies of the whole database -->
+<div id="view-backups" class="view">
+  <div class="row" style="margin-bottom:14px">
+    <button onclick="nav('films')" style="color:var(--muted);font-size:12px;background:none;border:none;cursor:pointer">← Films</button>
+    <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber);width:auto" onclick="runBackup(this)">💾 Back up now</button>
+  </div>
+  <p class="sl">DATABASE BACKUPS</p>
+  <p style="font-size:12px;color:var(--muted);margin:-4px 0 12px">A full copy of the database is taken every night at 02:30 and kept for 35 days. Download gives you one JSON file of everything: films, accounts, purchases, reviews, Lab reports, podcasts. Keep a copy somewhere safe, away from Firebase. Film and poster files themselves live in Firebase Storage and Bunny, not in this file.</p>
+  <div id="backup-status"></div>
+  <div id="backups-list"><div class="spinner"></div></div>
 </div>
 
 <!-- EVERYTHING: every page and profile on 4flieks, for checking content -->
@@ -270,6 +283,7 @@ auth.onAuthStateChanged(async user => {
     // Links from emails: /admin#messages, /admin#everything
     if (location.hash === '#messages') nav('messages');
     if (location.hash === '#everything') nav('everything');
+    if (location.hash === '#backups') nav('backups');
   } else if (user) {
     auth.signOut();
     snack('Access denied. Admin only.');
@@ -296,6 +310,7 @@ function nav(v) {
   if (v === 'lists') loadAdminLists();
   if (v === 'messages') loadThreads();
   if (v === 'everything') loadEverything();
+  if (v === 'backups') loadBackups();
   if (v === 'cast') loadAllCast();
   if (v === 'users') loadUsers();
   if (v === 'payouts') loadPayouts();
@@ -863,6 +878,52 @@ async function adminApi(fn, action, extra = {}) {
   return d;
 }
 const whenA = t => t ? new Date(t).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+/* ---- BACKUPS ---- */
+const sizeA = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+async function loadBackups() {
+  const el = document.getElementById('backups-list'), st = document.getElementById('backup-status');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const d = await adminApi('flieks-backup', 'list');
+    const last = d.last;
+    st.innerHTML = !last ? '' : last.ok
+      ? `<p style="font-size:12px;color:var(--green);margin:0 0 10px">✓ Last backup ${whenA(last.at)}: ${last.nodes} sections, ${sizeA(last.raw)}.</p>`
+      : `<p style="font-size:12px;color:var(--red,#c0392b);margin:0 0 10px">⚠ The backup on ${whenA(last.at)} failed: ${escA(last.error || 'unknown error')}. Press Back up now to try again.</p>`;
+    if (!d.backups.length) { el.innerHTML = '<p style="font-size:13px;color:var(--muted)">No backups yet. The first one runs tonight, or press Back up now.</p>'; return; }
+    el.innerHTML = d.backups.map((b, i) => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;margin-bottom:8px">
+      <div><p style="font-size:14px;font-weight:700;margin:0">${whenA(b.at)}${i === 0 ? ' · latest' : ''}</p>
+      <p style="font-size:12px;color:var(--muted);margin:2px 0 0">${b.kind === 'manual' ? 'Manual' + (b.by ? ' by ' + escA(b.by) : '') : 'Nightly'} · ${b.nodes} sections · ${sizeA(b.raw)}</p></div>
+      <button class="btn btn-sm" style="width:auto" onclick="downloadBackup('${b.stamp}', ${JSON.stringify(b.parts).replace(/"/g, '&quot;')}, this)">Download</button></div>`).join('');
+  } catch (e) { el.innerHTML = `<p style="font-size:13px;color:var(--muted)">${escA(e.message)}</p>`; }
+}
+async function runBackup(btn) {
+  btn.disabled = true;
+  try { await adminApi('flieks-backup', 'run'); snack('Backup started. It takes a minute or two; this list refreshes itself.'); setTimeout(loadBackups, 60000); setTimeout(loadBackups, 150000); }
+  catch (e) { snack(e.message); }
+  finally { setTimeout(() => { btn.disabled = false; }, 5000); }
+}
+async function downloadBackup(stamp, parts, btn) {
+  const label = btn.textContent; btn.disabled = true;
+  try {
+    const db = {};
+    for (let i = 0; i < parts.length; i++) {
+      btn.textContent = `${i + 1} / ${parts.length}…`;
+      const { data } = await adminApi('flieks-backup', 'part', { stamp, name: parts[i] });
+      const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+      const text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      const p = JSON.parse(text);
+      if (p.partial) db[p.key] = Object.assign(db[p.key] || {}, p.data); else db[p.key] = p.data;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(db)], { type: 'application/json' }));
+    a.download = `4flieks-database-${stamp.slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    snack('Downloaded. Keep it somewhere safe: it holds every account and purchase.');
+  } catch (e) { snack('Download failed: ' + e.message); }
+  finally { btn.textContent = label; btn.disabled = false; }
+}
 
 async function refreshMsgBadge() {
   try {

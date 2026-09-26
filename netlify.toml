@@ -22,6 +22,9 @@
 [functions."watch-notify-background"]
   timeout = 900
 
+[functions."backup-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 
@@ -31,3 +34,7 @@
 
 [functions."flieks-ops-watch"]
   schedule = "*/15 * * * *"
+
+# Full database backup every night. 00:30 UTC is 02:30 in Johannesburg.
+[functions."flieks-backup-nightly"]
+  schedule = "30 0 * * *"
