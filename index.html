@@ -1296,7 +1296,8 @@ async function loadLists() {
     const r = await fetch('/.netlify/functions/flieks-lists', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'public' })
     });
-    allLists = r.ok ? ((await r.json()).lists || []) : [];
+    const d = r.ok ? await r.json() : {};
+    allLists = Array.isArray(d.lists) ? d.lists : [];
   } catch (e) { allLists = []; }
 }
 
@@ -1305,7 +1306,8 @@ async function loadPodCatalog() {
     const r = await fetch('/.netlify/functions/flieks-podcasts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'catalog' })
     });
-    if (r.ok) podCatalog = await r.json();
+    const d = r.ok ? await r.json() : {};
+    podCatalog = { channels: Array.isArray(d.channels) ? d.channels : [], latest: Array.isArray(d.latest) ? d.latest : [] };
   } catch {}
 }
 
@@ -1314,7 +1316,8 @@ async function loadTopReviews() {
     const r = await fetch('/.netlify/functions/flieks-review', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'top' })
     });
-    if (r.ok) topReviews = await r.json();
+    const d = r.ok ? await r.json() : {};
+    topReviews = { reviews: Array.isArray(d.reviews) ? d.reviews : [], thisWeek: !!d.thisWeek };
   } catch {}
 }
 
@@ -1716,6 +1719,8 @@ function soonDate(f) {
 }
 
 /* Trailer premieres: a big film's exclusive trailer, not sold on 4flieks. */
+/* Is there a trailer to play right now? (A premiere's is hidden until its time.) */
+const hasTrailer = f => f.premiere ? premiereOpen(f) : !!f.trailer_url;
 const premiereOpen = f => !!f.premiere && (!f.premiere_at || Date.now() >= f.premiere_at);
 function premiereWhen(f) {
   if (!f.premiere_at) return '';
@@ -1801,8 +1806,8 @@ function renderFilmDetail() {
       f.poster_url ? `;background-image:url('${f.poster_url}');background-size:cover;background-position:center` : ''}">
       ${!f.poster_url ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0,transparent 1px,transparent 4px);opacity:.5"></div>` : ''}
       <div class="poster-scrim"></div>
-      ${!purchased && (f.premiere ? premiereOpen(f) : (f.status !== 'soon' || f.trailer_url)) ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
-        <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(245,166,35,.5);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="watchTrailer('${f.id}')">
+      ${purchased || hasTrailer(f) ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer" onclick="${purchased ? `playFilm('${f.id}')` : `watchTrailer('${f.id}')`}" role="button" aria-label="${purchased ? 'Watch the film' : 'Watch the trailer'}">
+        <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(245,166,35,.8);background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--amber);stroke:none;margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
         </div>
       </div>` : ''}
@@ -1827,22 +1832,7 @@ function renderFilmDetail() {
         <div class="stat"><p style="color:var(--text)">${f.duration_mins}</p><p>min</p></div>
       </div>
     </div>
-    ${f.premiere ? premiereBlockHTML(f) : ''}
-    <div class="divider"></div>
-    <div style="padding:14px 20px">
-      <p class="section-label">SYNOPSIS</p>
-      <p style="color:#999;font-size:14px;line-height:1.7">${escHtml(f.synopsis||'')}</p>
-    </div>
-    ${f.about ? `<div style="padding:0 20px 14px">
-      <p class="section-label">ABOUT THE FILM</p>
-      <p style="color:#999;font-size:14px;line-height:1.7;white-space:pre-line">${escHtml(f.about)}</p>
-    </div>` : ''}
-    ${(() => { const ls = allLists.filter(l => (l.films || []).includes(f.id)); return ls.length ? `<div style="padding:0 20px 14px">
-      <p class="section-label">IN THESE LISTS</p>
-      <div class="list-chips">${ls.map(l => `<a class="list-chip" href="/list/${encodeURIComponent(l.slug)}" onclick="openList('${l.slug}');return false;">${LIST_ICON}${escHtml(l.title)}</a>`).join('')}</div>
-    </div>` : ''; })()}
-    <div id="film-cast-wall"></div>
-    <div id="film-reviews"></div>
+    <!-- The main action sits right under the poster: watch now, watch free, or rent / own. -->
     ${f.premiere ? '' : f.status === 'soon' ? soonBlockHTML(f) : purchased ? `
       <div style="padding:0 20px 14px">
         <div class="info-box green">
@@ -1879,21 +1869,14 @@ function renderFilmDetail() {
         ${f.free ? `
           <button class="btn btn-amber" onclick="playFilmFree('${f.id}')">WATCH FREE</button>
         ` : `
-          <p class="section-label" style="margin-bottom:10px">GET ACCESS</p>
-          <div class="buy-grid" style="margin-bottom:14px">
-            <div class="buy-card" onclick="startCheckout('${f.id}','rent')">
-              <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <p class="bbn" style="font-size:32px;color:var(--text)">R${f.price_rent}</p>
-              <p style="font-size:12px;color:var(--muted)">48-hour rental</p>
-              <p style="font-size:10px;color:var(--dim);margin-top:3px">48 hours from first play</p>
-            </div>
-            <div class="buy-card featured" onclick="startCheckout('${f.id}','own')">
-              <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.8;display:block;margin:0 auto 8px"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              <p class="bbn" style="font-size:32px;color:var(--amber)">R${f.price_own}</p>
-              <p style="font-size:12px;color:var(--text)">Own forever</p>
-              <p style="font-size:10px;color:var(--muted);margin-top:3px">Watch any time, no expiry</p>
-            </div>
-          </div>
+          <button class="btn btn-amber" onclick="startCheckout('${f.id}','rent')" style="display:flex;align-items:center;justify-content:center;gap:8px">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor;stroke:none"><polygon points="5,3 19,12 5,21"/></svg>WATCH NOW · R${f.price_rent}</button>
+          <p style="font-size:11px;color:var(--muted);text-align:center;margin:6px 0 10px">48-hour rental. The 48 hours start when you press play.</p>
+          <button class="btn btn-outline" onclick="startCheckout('${f.id}','own')" style="margin-bottom:12px">OWN IT FOREVER · R${f.price_own}</button>
+        `}
+        ${hasTrailer(f) ? `<button class="btn btn-outline" onclick="watchTrailer('${f.id}')" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;stroke:none"><polygon points="5,3 19,12 5,21"/></svg>WATCH THE FREE TRAILER</button>` : ''}
+        ${!f.free ? `
           <div class="buy-card" onclick="openGift('${f.id}')" style="margin-bottom:14px;display:flex;
                align-items:center;gap:12px;text-align:left;padding:14px">
             <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
@@ -1901,11 +1884,8 @@ function renderFilmDetail() {
               <p style="font-size:14px;font-weight:600;color:var(--text)">Gift it to someone — R${f.price_own}</p>
               <p style="font-size:11px;color:var(--muted);margin-top:2px">They get a code for permanent access</p>
             </div>
-          </div>
-        `}
-        ${f.trailer_url ? `
-          <button class="btn btn-outline" onclick="watchTrailer('${f.id}')">WATCH FREE TRAILER</button>
-        ` : ''}
+          </div>` : ''}
+
         <div id="wl-slot">${watchButtonHTML(f)}</div>
         ${f.script_public ? `
         <a href="/script/${f.slug || f.id}" style="display:flex;align-items:center;gap:12px;
@@ -1918,6 +1898,30 @@ function renderFilmDetail() {
           </div>
         </a>` : ''}
 
+
+      </div>
+    `}
+    ${f.status === 'soon' && !f.premiere && hasTrailer(f) ? `<div style="padding:0 20px 14px">
+      <button class="btn btn-outline" onclick="watchTrailer('${f.id}')" style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;stroke:none"><polygon points="5,3 19,12 5,21"/></svg>WATCH THE TRAILER</button>
+    </div>` : ''}
+    ${f.premiere ? premiereBlockHTML(f) : ''}
+    <div class="divider"></div>
+    <div style="padding:14px 20px">
+      <p class="section-label">SYNOPSIS</p>
+      <p style="color:#999;font-size:14px;line-height:1.7">${escHtml(f.synopsis||'')}</p>
+    </div>
+    ${f.about ? `<div style="padding:0 20px 14px">
+      <p class="section-label">ABOUT THE FILM</p>
+      <p style="color:#999;font-size:14px;line-height:1.7;white-space:pre-line">${escHtml(f.about)}</p>
+    </div>` : ''}
+    ${(() => { const ls = allLists.filter(l => (l.films || []).includes(f.id)); return ls.length ? `<div style="padding:0 20px 14px">
+      <p class="section-label">IN THESE LISTS</p>
+      <div class="list-chips">${ls.map(l => `<a class="list-chip" href="/list/${encodeURIComponent(l.slug)}" onclick="openList('${l.slug}');return false;">${LIST_ICON}${escHtml(l.title)}</a>`).join('')}</div>
+    </div>` : ''; })()}
+    <div id="film-cast-wall"></div>
+    <div id="film-reviews"></div>
+    ${!purchased && !f.free && !f.premiere && f.status !== 'soon' ? `<div style="padding:0 20px 14px">
         <div style="margin-top:18px;border:1px solid var(--border);border-radius:12px;padding:14px">
           <p class="section-label" style="margin-bottom:4px">GOT A GIFT CODE?</p>
           <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Someone bought this for you. Type it in.</p>
@@ -1928,8 +1932,7 @@ function renderFilmDetail() {
           <button class="btn btn-outline" onclick="redeemGift()">UNLOCK THE FILM</button>
           <p id="redeem-msg" style="font-size:12px;margin-top:8px;min-height:1.2em;color:var(--muted)"></p>
         </div>
-      </div>
-    `}
+    </div>` : ''}
   `;
   document.getElementById('film-detail-content').innerHTML = html;
 
@@ -3401,7 +3404,7 @@ function soonBlockHTML(f) {
       <p style="font-size:13px;color:var(--muted);margin-top:4px">${f.free ? 'Free to watch.' : `Rent R${f.price_rent ?? 25} for 48 hours, or own it for R${f.price_own ?? 49}.`}</p>
       <div id="wl-slot">${soonNotifyHTML(f)}</div>
     </div>
-    ${f.trailer_url ? `<button class="btn btn-outline" onclick="watchTrailer('${f.id}')">WATCH THE TRAILER</button>` : ''}
+
   </div>`;
 }
 
