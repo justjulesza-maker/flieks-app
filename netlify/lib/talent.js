@@ -29,7 +29,7 @@ const countryOf = p => (p && COUNTRIES.includes(p.country)) ? p.country : (p && 
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const int = (v, lo, hi) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : null; };
-const url = v => { const s = str(v, 300); return /^https:\/\/\S+$/i.test(s) ? s : ''; };
+const url = v => { const s = str(v, 300); return /^https:\/\/[^\s"'<>()\\]+$/i.test(s) ? s : ''; };   // no quotes or brackets that could break out of a link
 
 /* IMDb: only a person's IMDb page (https://www.imdb.com/name/nm…), tidied to its plain address. */
 const imdbOf = v => { const m = /^https?:\/\/(?:www\.|m\.)?imdb\.com\/name\/(nm\d{5,10})/i.exec(str(v, 300)); return m ? `https://www.imdb.com/name/${m[1]}/` : ''; };
@@ -61,7 +61,7 @@ function cleanProfile(p) {
     imdb: imdbOf(p.imdb),
     work: cleanWork(p.work),
     // Headshots are uploaded to our own bucket; nothing else is accepted.
-    photo_url: photo.startsWith('https://firebasestorage.googleapis.com/v0/b/flieks-app.firebasestorage.app/o/') ? photo : '',
+    photo_url: photo.startsWith('https://firebasestorage.googleapis.com/v0/b/flieks-app.firebasestorage.app/o/') && !/[\s"'<>()\\]/.test(photo) ? photo : '',
     suggest: p.suggest === true
   };
 }

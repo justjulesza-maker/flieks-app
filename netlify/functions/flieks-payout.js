@@ -17,6 +17,7 @@
  *   settle    { uid, payoutId, reference }  admin: mark one as paid
  */
 const https = require('https');
+const ops = require('../lib/ops-core');
 
 const DB      = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET  = process.env.FIREBASE_DB_SECRET;
@@ -187,35 +188,44 @@ exports.handler = async event => {
 
     /* ---- ask to be paid ---- */
     if (action === 'request') {
-      const bank = await dbGet(`flieks_bank/${uid}`);
-      if (!bank || !bank.account_number) {
-        return reply(400, { message: 'Add your bank details first.' });
-      }
+      // One request at a time per filmmaker: two taps at the same moment must
+      // not each claim the same sales.
+      try {
+        return await ops.withLock(`payout_${uid}`, async () => {
+          const bank = await dbGet(`flieks_bank/${uid}`);
+          if (!bank || !bank.account_number) {
+            return reply(400, { message: 'Add your bank details first.' });
+          }
 
-      const s = await statement(uid);
-      if (!s.canRequest) {
-        return reply(400, {
-          message: `You need at least R${MINIMUM} before requesting a payout. ` +
-                   `You have R${s.available.toFixed(2)}.`
+          const s = await statement(uid);
+          if (!s.canRequest) {
+            return reply(400, {
+              message: `You need at least R${MINIMUM} before requesting a payout. ` +
+                       `You have R${s.available.toFixed(2)}.`
+            });
+          }
+
+          const payoutId = `po-${Date.now().toString(36)}`;
+          await dbPut(`flieks_payouts/${uid}/${payoutId}`, {
+            uid,
+            filmmaker_name: profile.name || user.displayName || '',
+            filmmaker_email: profile.email || user.email || '',
+            amount: s.available,
+            // Recording exactly which sales this covers is what stops a sale being
+            // paid twice — the next statement excludes them.
+            transaction_ids: s.availableIds,
+            sales: s.availableIds.length,
+            status: 'pending',
+            requested_at: Date.now()
+          });
+
+          console.log(`Payout requested: ${uid} R${s.available} across ${s.availableIds.length} sales`);
+          return reply(200, { ok: true, amount: s.available, payoutId });
         });
+      } catch (e) {
+        if (e.busy) return reply(429, { message: 'A payout request is already going through. Refresh in a moment.' });
+        throw e;
       }
-
-      const payoutId = `po-${Date.now().toString(36)}`;
-      await dbPut(`flieks_payouts/${uid}/${payoutId}`, {
-        uid,
-        filmmaker_name: profile.name || user.displayName || '',
-        filmmaker_email: profile.email || user.email || '',
-        amount: s.available,
-        // Recording exactly which sales this covers is what stops a sale being
-        // paid twice — the next statement excludes them.
-        transaction_ids: s.availableIds,
-        sales: s.availableIds.length,
-        status: 'pending',
-        requested_at: Date.now()
-      });
-
-      console.log(`Payout requested: ${uid} R${s.available} across ${s.availableIds.length} sales`);
-      return reply(200, { ok: true, amount: s.available, payoutId });
     }
 
     /* ---- admin: everything outstanding ---- */
@@ -251,9 +261,16 @@ exports.handler = async event => {
       const { uid: ownerUid, payoutId } = p;
       if (!ownerUid || !payoutId) return reply(400, { message: 'Which payout?' });
 
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(String(ownerUid)) || !/^[A-Za-z0-9_-]{1,64}$/.test(String(payoutId))) return reply(404, { message: 'No such payout.' });
       const record = await dbGet(`flieks_payouts/${ownerUid}/${payoutId}`);
       if (!record) return reply(404, { message: 'No such payout.' });
       if (record.status === 'paid') return reply(409, { message: 'Already marked as paid.' });
+      // Never pay a sale twice: refuse if any sale in it was already settled.
+      for (const txId of (record.transaction_ids || [])) {
+        if (!/^[A-Za-z0-9_-]{1,120}$/.test(String(txId))) return reply(400, { message: 'That payout lists a sale that can\'t be checked.' });
+        const t = await dbGet(`flieks_transactions/${txId}`);
+        if (t && t.paid_out_at) return reply(409, { message: `A sale in this payout was already paid in ${t.paid_out_ref || 'another payout'}. Check it before paying.` });
+      }
 
       const now = Date.now();
       await dbPatch(`flieks_payouts/${ownerUid}/${payoutId}`, {

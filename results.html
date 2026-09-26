@@ -110,7 +110,7 @@ footer a{color:var(--ochre)}
 <div class="sheet" id="sheet"><div class="state">Loading…</div></div>
 
 <script>
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 
 /* Spelling the figure out makes it read as a statement rather than a metric.
    "Three hundred and twelve people paid" is a claim; "312" is a number on a

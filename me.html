@@ -101,7 +101,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fn);
 <div id="app"><div class="state">Loading…</div></div>
 
 <script>
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 
 /* The link a cast member was given carries both slugs: /me/<film>/<person> */
 function readPath() {

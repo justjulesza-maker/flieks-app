@@ -20,6 +20,10 @@
  * POST { message, history?, token? } -> { reply, escalate }
  */
 const https = require('https');
+const ops = require('../lib/ops-core');
+
+// Each question is a paid AI call: signed-in filmmakers only, and a daily cap per person.
+const PER_DAY = parseInt(process.env.FILMMAKER_CHAT_PER_DAY || '40', 10);
 
 const DB      = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET  = process.env.FIREBASE_DB_SECRET;
@@ -106,7 +110,8 @@ const reply = (code, obj) => ({
   statusCode: code,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': process.env.URL || 'https://4flieks.com',
+    'Vary': 'Origin',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS'
   },
@@ -127,9 +132,15 @@ exports.handler = async event => {
 
     let systemPrompt = KNOWLEDGE;
 
-    // Fold in this filmmaker's own films, when signed in, so a question like
-    // "why is my film not live yet" can be answered specifically.
     const user = await whoIs(token);
+    if (!user) return reply(401, { reply: 'Sign in to your filmmaker account to ask the assistant, or use the form below.', escalate: true });
+    const day = new Date().toISOString().slice(0, 10);
+    if (!(await ops.takeSlot(`flieks_ops/chat_used/${user.localId}/${day}`, PER_DAY))) {
+      return reply(429, { reply: `That's ${PER_DAY} questions today. Use the form below and the team will get back to you.`, escalate: true });
+    }
+
+    // Fold in this filmmaker's own films so a question like
+    // "why is my film not live yet" can be answered specifically.
     if (user) {
       try {
         const films = await dbGet('flieks_films');

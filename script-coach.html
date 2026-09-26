@@ -179,10 +179,8 @@ function scoreColor(s) {
   return "var(--red)";
 }
 
-function esc(str) {
-  const d = document.createElement("div");
-  d.textContent = str;
-  return d.innerHTML;
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // ── Fetch dynamic index from Firebase and merge with static ──
@@ -246,9 +244,7 @@ function renderPicker() {
       <p>Choose a script to start learning your lines</p>
       <div class="picker">
         ${fullIndex.map((s, i) => `
-          <div class="picker-card" onclick="${s.dynamic
-            ? `loadFirebaseScript('${s.film}','${s.character_slug}')`
-            : `loadScript('${s.file}')`}">
+          <div class="picker-card" onclick="pickScript(${i})">
             <div class="picker-title">${esc(s.title)}</div>
             <div class="picker-sub">${esc(s.character)}${s.lineCount ? ` · ${s.lineCount} lines` : ''}</div>
           </div>`).join("")}
@@ -423,11 +419,20 @@ function setFilter(f) {
 
 function renderFilters(scenes) {
   const allScenes = ["All", ...(scenes || [])];
+  window.__scenes = allScenes;
   const el = document.getElementById("filters");
   if (!el) return;
-  el.innerHTML = allScenes.map(s =>
-    `<button class="filter-btn ${sceneFilter===s?'active':''}" onclick="setFilter('${s}')">${s}</button>`
+  // Scene names come from the AI's reading of an uploaded script, so they are
+  // treated as untrusted: escaped for display, and passed by position, not in the handler.
+  el.innerHTML = allScenes.map((s, i) =>
+    `<button class="filter-btn ${sceneFilter===s?'active':''}" onclick="setFilter(window.__scenes[${i}])">${esc(s)}</button>`
   ).join('');
+}
+
+function pickScript(i) {
+  const s = fullIndex[i];
+  if (!s) return;
+  if (s.dynamic) loadFirebaseScript(s.film, s.character_slug); else loadScript(s.file);
 }
 
 function renderMain() {

@@ -88,6 +88,7 @@ exports.handler = async event => {
 
     const { token, filmId, action } = JSON.parse(event.body || '{}');
     if (!token || !filmId) return reply(400, { message: 'Missing details.' });
+    if (!/^[A-Za-z0-9_-]{1,120}$/.test(String(filmId))) return reply(404, { message: 'No such film.' });
 
     const user = await verifyToken(token);
     const [profile, film] = await Promise.all([
@@ -132,6 +133,9 @@ exports.handler = async event => {
 
     /* ---- point a film at a video already in the Bunny library ---- */
     if (action === 'link') {
+      // Pointing a film at a video already in the library is an admin job:
+      // the library holds every film, so a filmmaker must never pick from it.
+      if (!isAdmin) return reply(403, { message: 'Only 4flieks admins can link an existing video.' });
       const { bunnyId } = JSON.parse(event.body || '{}');
       if (!bunnyId || !/^[0-9a-f-]{30,40}$/i.test(bunnyId)) {
         return reply(400, { message: 'That does not look like a Bunny video id.' });
@@ -167,6 +171,7 @@ exports.handler = async event => {
 
     /* ---- list what is in the Bunny library, to make linking easier ---- */
     if (action === 'library') {
+      if (!isAdmin) return reply(403, { message: 'Only 4flieks admins can see the video library.' });
       const r = await bunny('/videos?itemsPerPage=100&orderBy=date', 'GET');
       let d = {};
       try { d = JSON.parse(r.body || '{}'); } catch {}
@@ -181,9 +186,12 @@ exports.handler = async event => {
 
     /* ---- remove a failed or unwanted Bunny copy ---- */
     if (action === 'reset') {
-      if (priv.bunny_id) await bunny(`/videos/${priv.bunny_id}`, 'DELETE');
+      // Only delete a video from Bunny if this film's own upload created it.
+      // A linked video may belong to another film; unlinking must never delete it.
+      const ours = priv.bunny_owned === true || (isAdmin && !priv.bunny_linked_manually);
+      if (priv.bunny_id && ours) await bunny(`/videos/${priv.bunny_id}`, 'DELETE');
       await dbPatch(`flieks_private/${filmId}`, {
-        bunny_id: null, bunny_ready: null, bunny_started_at: null
+        bunny_id: null, bunny_ready: null, bunny_started_at: null, bunny_owned: null, bunny_linked_manually: null
       });
       return reply(200, { ok: true, message: 'Cleared. You can prepare it again.' });
     }
@@ -213,13 +221,16 @@ exports.handler = async event => {
     // observable: if it fails, we see the reason here rather than waiting.
     // Hand the transfer to a background function: this one is killed at 26
     // seconds, and a film takes longer. Background functions get 15 minutes.
-    const origin = `https://${event.headers.host || '4flieks.com'}`;
-    const jobBody = JSON.stringify({ filmId, videoId: created.guid, source, secret: SECRET });
+    // Our own site address (never the request's Host header), and a job key
+    // derived from the secret rather than the secret itself.
+    const origin = (process.env.URL || 'https://4flieks.com').replace(/\/$/, '');
+    const jobBody = JSON.stringify({ filmId, videoId: created.guid, source });
+    const jobKey = require('crypto').createHash('sha256').update(String(SECRET) + ':bunny-upload').digest('hex');
 
     await new Promise(done => {
       const r = https.request(`${origin}/.netlify/functions/flieks-bunny-upload-background`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(jobBody) }
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(jobBody), 'x-job-secret': jobKey }
       }, res => { res.resume(); res.on('end', done); });
       r.on('error', e => { console.error('could not start upload:', e.message); done(); });
       r.write(jobBody); r.end();
@@ -228,7 +239,8 @@ exports.handler = async event => {
     await dbPatch(`flieks_private/${filmId}`, {
       bunny_id: created.guid,
       bunny_ready: false,
-      bunny_started_at: Date.now()
+      bunny_started_at: Date.now(),
+      bunny_owned: true             // made by this film's upload, so this film may delete it
     });
 
     console.log(`Bunny ingest started: ${filmId} -> ${created.guid}`);

@@ -16,7 +16,7 @@
 (function (global) {
 'use strict';
 
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 const rands = n => 'R' + (Math.round(n) === Number(n) ? n : Number(n).toFixed(2));
 
 function styles() {

@@ -719,10 +719,8 @@ firebase.auth().onAuthStateChanged(user => {
     });
   }
 
-  function esc(str) {
-    const d = document.createElement("div");
-    d.textContent = str;
-    return d.innerHTML;
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
   // ── Upload another ──

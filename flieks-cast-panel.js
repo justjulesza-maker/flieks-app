@@ -22,7 +22,7 @@
 
 const db = () => firebase.database();
 const store = () => firebase.storage();
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 const slugify = s => (global.FlieksSocial ? FlieksSocial.slugify(s)
   : String(s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60));
 

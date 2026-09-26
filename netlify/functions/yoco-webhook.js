@@ -150,12 +150,17 @@ exports.handler = async event => {
     const filmId = tx.film_id || meta.filmId;
     const type   = tx.type    || meta.type;      // rent | own | gift
     const uid    = tx.uid     || meta.uid;
-    const ref    = tx.ref     || meta.ref || null;
+    // The cast member's link name ends up in a database path: letters, digits
+    // and dashes only, or it is ignored (the sale still counts).
+    const rawRef = tx.ref || meta.ref || null;
+    const ref    = rawRef && /^[A-Za-z0-9-]{1,60}$/.test(String(rawRef)) ? String(rawRef) : null;
     const gross  = (Number(payload.amount) || 0) / 100;   // cents back to rand
     // Stamped on every record so test and live are distinguishable at a glance,
     // rather than having to work it out from timestamps later.
     const mode   = payload.mode || payload.processingMode || 'live';
 
+    if (filmId && !/^[A-Za-z0-9_-]{1,130}$/.test(String(filmId))) return { statusCode: 400, body: 'Bad film id' };
+    if (uid && !/^[A-Za-z0-9_-]{1,128}$/.test(String(uid))) return { statusCode: 400, body: 'Bad user id' };
     if (!filmId || !type || !uid) {
       console.error('missing details', { filmId, type, uid, txId, meta });
       return { statusCode: 400, body: 'Missing details' };

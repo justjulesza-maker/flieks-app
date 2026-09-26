@@ -69,6 +69,10 @@ exports.handler = async event => {
       return reply(413, { message: 'That file is too big for Script Coach (about 4MB at most).' });
     }
 
+    // An upload id is used once: reusing one would overwrite someone else's
+    // job, or re-run an upload without counting it against the limit.
+    if (await ops.dbGet(`script_coach/jobs/${jobId}/status`)) return reply(409, { message: 'That upload has already started. Refresh the page to upload again.' });
+
     // Check and take the slot as one step, one upload at a time per person,
     // so uploads at the same moment can't pass the limit.
     const nowTs = Date.now();
@@ -78,6 +82,7 @@ exports.handler = async event => {
       try {
         allowed = await ops.withLock(`coach_${u.localId}`, async () => {
           const used = await ops.dbGet(`flieks_script_coach_usage/${u.localId}`) || {};
+          if (used[jobId]) return false;
           if (Object.values(used).filter(t => t >= nowTs - 30 * DAY).length >= LIMIT) return false;
           await ops.dbWrite(`flieks_script_coach_usage/${u.localId}/${jobId}`, nowTs);
           return true;

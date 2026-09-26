@@ -7,9 +7,10 @@
  *
  * Invoked by flieks-bunny; not called directly from the browser.
  *
- * POST { filmId, videoId, source, secret }
+ * POST { filmId, videoId, source }, header x-job-secret
  */
 const https = require('https');
+const crypto = require('crypto');
 
 const DB     = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET = process.env.FIREBASE_DB_SECRET;
@@ -97,11 +98,27 @@ function pipeToBunny(videoId, sourceUrl) {
 exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
-  const { filmId, videoId, source, secret } = JSON.parse(event.body || '{}');
+  const { filmId, videoId, source } = JSON.parse(event.body || '{}');
 
-  // Only our own function may call this.
-  if (!secret || secret !== SECRET) return { statusCode: 403, body: 'Forbidden' };
+  // Only our own functions may call this: a key derived from the database
+  // secret, compared in constant time (the secret itself is never sent).
+  const want = crypto.createHash('sha256').update(String(SECRET) + ':bunny-upload').digest('hex');
+  const got = String((event.headers || {})['x-job-secret'] || '');
+  if (!SECRET || got.length !== want.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want))) {
+    return { statusCode: 403, body: 'Forbidden' };
+  }
   if (!filmId || !videoId || !source) return { statusCode: 400, body: 'Missing details' };
+  if (!/^[A-Za-z0-9_-]{1,130}$/.test(String(filmId)) || !/^[0-9a-f-]{20,40}$/i.test(String(videoId))) return { statusCode: 400, body: 'Bad details' };
+
+  // Only fetch files from our own storage, in the folder that belongs to this
+  // film or podcast episode. Anything else would let this function be used to
+  // fetch arbitrary addresses from our servers.
+  const BUCKET = 'https://firebasestorage.googleapis.com/v0/b/flieks-app.firebasestorage.app/o/';
+  const folder = String(filmId).startsWith('pod_') ? 'flieks_podcasts%2F' : `flieks_films%2F${filmId}%2F`;
+  if (!String(source).startsWith(BUCKET + folder) || /[\s"'<>]/.test(String(source))) {
+    console.error('upload refused: source outside our storage', filmId);
+    return { statusCode: 400, body: 'Source not allowed' };
+  }
 
   console.log(`upload starting: ${filmId} -> ${videoId}`);
   const result = await pipeToBunny(videoId, source);

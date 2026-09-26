@@ -209,6 +209,9 @@ exports.handler = async event => {
 
     const reviewId = p.reviewId;
     if (!reviewId) return reply(400, { message: 'Which review?' });
+    // A review id is the reviewer's user id: safe characters only, so it can't
+    // reach a review on another film through the database path.
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(String(reviewId))) return reply(404, { message: 'No such review.' });
     const target = await dbGet(`flieks_reviews/${filmId}/${reviewId}`);
     if (!target) return reply(404, { message: 'No such review.' });
 

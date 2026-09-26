@@ -72,6 +72,18 @@ const fail = (code, message) => ({
 
 /* ── handler ──────────────────────────────────────────────────────────────── */
 
+const crypto = require('crypto');
+
+/* Where Yoco may send the buyer back to: our own site only (no open redirect). */
+const RETURN_ORIGINS = () => ['https://4flieks.com', 'https://www.4flieks.com', process.env.URL, process.env.DEPLOY_PRIME_URL, process.env.DEPLOY_URL].filter(Boolean).map(u => u.replace(/\/$/, ''));
+function safeReturn(returnUrl) {
+  try {
+    const u = new URL(String(returnUrl || ''));
+    if (RETURN_ORIGINS().includes(u.origin)) return (u.origin + u.pathname).replace(/\/$/, '');
+  } catch {}
+  return 'https://4flieks.com';
+}
+
 exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
@@ -79,7 +91,10 @@ exports.handler = async event => {
     if (!YOCO) return fail(500, 'Payments are not configured yet.');
 
     const body = JSON.parse(event.body || '{}');
-    const { token, giftTo, giftMsg, ref, returnUrl } = body;
+    const { token, giftTo, giftMsg, returnUrl } = body;
+    // A cast member's link name: letters, digits and dashes only. It becomes
+    // part of a database path later, so anything else is dropped.
+    const ref = body.ref && /^[A-Za-z0-9-]{1,60}$/.test(String(body.ref)) ? String(body.ref) : null;
     let { filmId, type } = body;
 
     /* A paid podcast episode (a masterclass): bought once, kept. Sold like a
@@ -96,7 +111,7 @@ exports.handler = async event => {
       type = 'own';
     }
 
-    if (!token || !filmId || !['rent', 'own', 'gift'].includes(type)) {
+    if (!token || !filmId || !/^[A-Za-z0-9_-]{1,130}$/.test(String(filmId)) || !['rent', 'own', 'gift'].includes(type)) {
       return fail(400, 'Missing or invalid request.');
     }
 
@@ -131,8 +146,9 @@ exports.handler = async event => {
       }
     }
 
-    const txId = `fl-${type}-${user.localId.slice(0, 6)}-${Date.now().toString(36)}`;
-    const origin = (returnUrl || 'https://4flieks.com').split('?')[0].replace(/\/$/, '');
+    // Random, so nobody can guess another buyer's order (it can reveal a gift code).
+    const txId = `fl-${type}-${crypto.randomBytes(12).toString('hex')}`;
+    const origin = safeReturn(returnUrl);
     const label = type === 'own' ? 'Own' : type === 'gift' ? 'Gift' : '48-hour rental';
 
     /* Park the intent before sending them off to pay. */

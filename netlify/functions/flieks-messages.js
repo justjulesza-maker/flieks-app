@@ -105,6 +105,10 @@ exports.handler = async event => {
       }
       const body = str(b.body, 3000);
       if (body.length < 2) return reply(400, { message: 'Write your reply first.' });
+      const day = new Date().toISOString().slice(0, 10);
+      if (!(await ops.takeSlot(`flieks_ops/reply_rate/${me.uid}/${day}`, 30).catch(() => true))) {
+        return reply(429, { message: 'That is a lot of messages today. The team will get back to you; try again tomorrow.' });
+      }
       const id = Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
       const msg = { from: 'maker', by: me.name || me.email, body, film_id: null, film_title: null, at: Date.now() };
       await ops.dbWrite(`flieks_threads/${me.uid}/${id}`, msg);

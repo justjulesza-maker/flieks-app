@@ -1,0 +1,13 @@
+# Security headers (security audit, H3).
+#
+# The Content-Security-Policy starts as Report-Only: the browser reports
+# anything it would block (in the console) but blocks nothing. After a week with
+# nothing unexpected reported, rename the header to Content-Security-Policy.
+# It allows inline scripts for now because the pages use them heavily.
+
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.b-cdn.net https://*.mediadelivery.net; frame-src https://firebasestorage.googleapis.com https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com https://w.soundcloud.com https://embed.podcasts.apple.com https://iframe.mediadelivery.net; object-src 'none'; base-uri 'self'; frame-ancestors 'self'

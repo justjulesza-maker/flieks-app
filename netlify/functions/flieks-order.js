@@ -36,12 +36,13 @@ exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
 
   try {
-    const { txId } = JSON.parse(event.body || '{}');
+    const { txId, token } = JSON.parse(event.body || '{}');
 
-    // Only ids we minted, and long enough not to be guessable by hand.
-    if (!txId || !/^fl-(rent|own|gift)-[A-Za-z0-9]{4,10}-[a-z0-9]{6,}$/.test(txId)) {
-      return reply(400, { message: 'Unknown order.' });
-    }
+    // Only ids we minted. New ids are random (24 hex characters); older ones
+    // were built from the buyer and the time, so they could be guessed.
+    const fresh = /^fl-(rent|own|gift)-[a-f0-9]{24}$/.test(String(txId || ''));
+    const legacy = /^fl-(rent|own|gift)-[A-Za-z0-9]{4,10}-[a-z0-9]{6,}$/.test(String(txId || ''));
+    if (!fresh && !legacy) return reply(400, { message: 'Unknown order.' });
 
     const tx = await dbGet(`flieks_transactions/${txId}`);
     if (!tx) return reply(404, { status: 'unknown' });
@@ -67,8 +68,20 @@ exports.handler = async event => {
       if (!out.filmTitle) out.filmTitle = (film && film.title) || '';
     }
 
-    if (tx.type === 'gift') {
-      // Find the code minted for this transaction. Only the buyer has the txId.
+    // A gift code is only shown for an unguessable order id, or to the signed-in buyer.
+    let mayShowCode = fresh;
+    if (!mayShowCode && token && process.env.FIREBASE_API_KEY) {
+      try {
+        const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token })
+        });
+        const u = ((await r.json().catch(() => ({}))).users || [])[0];
+        mayShowCode = !!u && u.localId === tx.uid;
+      } catch {}
+    }
+
+    if (tx.type === 'gift' && mayShowCode) {
+      // Find the code minted for this transaction.
       const gifts = await dbGet('flieks_gifts');
       if (gifts) {
         // Match on the transaction id the ITN stamped onto the gift. Older

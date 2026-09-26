@@ -155,7 +155,10 @@ exports.handler = async event => {
       const items = Object.entries(mine).map(([id, r]) => ({ id, ...r }))
         .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
       const since = Date.now() - 30 * DAY;
-      const used = items.filter(r => (r.created_at || 0) >= since).length;
+      const ledger = await ops.dbGet(`flieks_lab_usage/${me.uid}/reports`) || {};
+      const ids = new Set(items.filter(r => (r.created_at || 0) >= since).map(r => r.id));
+      for (const [k, t] of Object.entries(ledger)) if ((Number(t) || 0) >= since) ids.add(k);
+      const used = ids.size;
       return reply(200, { items, limit: me.unlimited ? null : LIMIT, used, role: me.role, verified: me.verified || me.unlimited, unlimited: me.unlimited });
     }
 
@@ -203,9 +206,18 @@ exports.handler = async event => {
         let allowed;
         try {
           allowed = await ops.withLock(`report_${me.uid}`, async () => {
-            const mine = await ops.dbGet(`flieks_script_reports_by_user/${me.uid}`) || {};
-            const used = Object.values(mine).filter(r => (r.created_at || 0) >= now - 30 * DAY).length;
-            if (used >= LIMIT) return false;
+            // Usage is kept in its own ledger, which deleting a report does not
+            // touch, so delete-and-rerun can't reset the monthly limit. Reports
+            // from before the ledger existed still count.
+            const [mine, ledger] = await Promise.all([
+              ops.dbGet(`flieks_script_reports_by_user/${me.uid}`).then(v => v || {}),
+              ops.dbGet(`flieks_lab_usage/${me.uid}/reports`).then(v => v || {})
+            ]);
+            const since = now - 30 * DAY, ids = new Set();
+            for (const [k, r] of Object.entries(mine)) if ((r && r.created_at || 0) >= since) ids.add(k);
+            for (const [k, t] of Object.entries(ledger)) if ((Number(t) || 0) >= since) ids.add(k);
+            if (ids.size >= LIMIT) return false;
+            await ops.dbWrite(`flieks_lab_usage/${me.uid}/reports/${id}`, now);
             await ops.dbWrite(`flieks_script_reports_by_user/${me.uid}/${id}`, slot);
             return true;
           });

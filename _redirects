@@ -1,3 +1,19 @@
+# Source files that are in the repo but must never be served (security audit, H2).
+/netlify/*             /404.html  404!
+/node_modules/*        /404.html  404!
+/README.md             /404.html  404!
+/BACKUP.md             /404.html  404!
+/database.rules.json   /404.html  404!
+/storage-rules.txt     /404.html  404!
+/package.json          /404.html  404!
+/package-lock.json     /404.html  404!
+/netlify.toml          /404.html  404!
+/_redirects            /404.html  404!
+/_headers              /404.html  404!
+/tests/*               /404.html  404!
+/firebase.json         /404.html  404!
+/.gitignore            /404.html  404!
+
 /index.html      /index.html        200
 /admin           /admin.html        200
 /pulse           /pulse.html        200

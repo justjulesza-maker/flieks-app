@@ -4,6 +4,7 @@
       ".read": true,
       ".indexOn": ["filmmaker_uid", "status"],
       "$filmId": {
+        ".validate": "$filmId.matches(/^[A-Za-z0-9_-]{1,120}$/)",
         ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (root.child('flieks_users').child(auth.uid).child('role').val() === 'filmmaker' && (data.exists() ? data.child('filmmaker_uid').val() === auth.uid : newData.child('filmmaker_uid').val() === auth.uid) && (!newData.exists() || newData.child('filmmaker_uid').val() === auth.uid)))",
         "status":     { ".validate": "newData.val() === data.val() || newData.val() === 'review' || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
         "featured":   { ".validate": "newData.val() === data.val() || newData.val() === false || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
@@ -13,6 +14,18 @@
         },
         "rent_count": { ".validate": "newData.val() === data.val() || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
         "own_count":  { ".validate": "newData.val() === data.val() || (!data.exists() && newData.val() === 0) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" },
+        "title":         { ".validate": "newData.isString() && newData.val().length <= 160" },
+        "filmmaker":     { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "synopsis":      { ".validate": "newData.isString() && newData.val().length <= 3000" },
+        "about":         { ".validate": "newData.isString() && newData.val().length <= 4000" },
+        "language":      { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "subtitles":     { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "duration_mins": { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.isNumber() && newData.val() > 0 && newData.val() <= 600)" },
+        "poster_bg":     { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.isString() && newData.val().matches(/^#[0-9A-Fa-f]{3,8}$/))" },
+        "poster_url":    { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://firebasestorage.googleapis.com/') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' '))))" },
+        "trailer_url":   { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://firebasestorage.googleapis.com/') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' '))))" },
+        "og_image":      { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://firebasestorage.googleapis.com/') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' '))))" },
+        "price_request": { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.child('rent').isNumber() && newData.child('own').isNumber())" },
         "price_rent": { ".validate": "newData.isNumber() && (newData.val() === data.val() || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || !root.child('flieks_settings').child('price_cap').child('rent').exists() || newData.val() <= root.child('flieks_settings').child('price_cap').child('rent').val())" },
         "price_own": { ".validate": "newData.isNumber() && (newData.val() === data.val() || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || !root.child('flieks_settings').child('price_cap').child('own').exists() || newData.val() <= root.child('flieks_settings').child('price_cap').child('own').val())" }
       }
@@ -83,14 +96,26 @@
     "flieks_cast": {
       ".read": true,
       "$filmId": {
-        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child($filmId).child('filmmaker_uid').val() === auth.uid)"
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child($filmId).child('filmmaker_uid').val() === auth.uid)",
+        "$slug": {
+          ".validate": "$slug.matches(/^[A-Za-z0-9_-]{1,80}$/)",
+          "name":      { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "role":      { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "photoUrl":  { ".validate": "newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://firebasestorage.googleapis.com/') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' ')))" },
+          "instagram": { ".validate": "newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' ')) || newData.val().matches(/^@?[A-Za-z0-9_.]{1,60}$/))" },
+          "tiktok":    { ".validate": "newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' ')) || newData.val().matches(/^@?[A-Za-z0-9_.]{1,60}$/))" },
+          "x":         { ".validate": "newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' ')) || newData.val().matches(/^@?[A-Za-z0-9_.]{1,60}$/))" },
+          "youtube":   { ".validate": "newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' ')) || newData.val().matches(/^@?[A-Za-z0-9_.]{1,60}$/))" },
+          "facebook":  { ".validate": "newData.isString() && (newData.val() === '' || (newData.val().beginsWith('https://') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' ')) || newData.val().matches(/^@?[A-Za-z0-9_.]{1,60}$/))" },
+          "reach":     { ".validate": "newData.isString() && newData.val().length <= 40" }
+        }
       }
     },
 
     "flieks_result_keys": {
       ".read": false,
       "$key": {
-        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child(newData.val()).child('filmmaker_uid').val() === auth.uid || (!newData.exists() && data.exists()))",
+        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child(newData.val()).child('filmmaker_uid').val() === auth.uid || (!newData.exists() && data.exists() && root.child('flieks_films').child(data.val()).child('filmmaker_uid').val() === auth.uid))",
         ".validate": "!newData.exists() || newData.isString()"
       }
     },
@@ -119,7 +144,10 @@
     "flieks_private": {
       ".read": false,
       "$filmId": {
-        ".write": "auth != null && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child($filmId).child('filmmaker_uid').val() === auth.uid || !root.child('flieks_films').child($filmId).exists())"
+        ".write": "auth != null && !$filmId.beginsWith('pod_') && (root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || root.child('flieks_films').child($filmId).child('filmmaker_uid').val() === auth.uid)",
+        "video_url":  { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.isString() && newData.val().beginsWith('https://firebasestorage.googleapis.com/v0/b/flieks-app.firebasestorage.app/o/flieks_films%2F' + $filmId + '%2F') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' '))" },
+        "script_url": { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin' || (newData.isString() && newData.val().beginsWith('https://firebasestorage.googleapis.com/v0/b/flieks-app.firebasestorage.app/o/flieks_scripts%2F' + $filmId + '%2F') && !newData.val().contains('\"') && !newData.val().contains(\"'\") && !newData.val().contains('<') && !newData.val().contains('>') && !newData.val().contains(' '))" },
+        "$other":     { ".validate": "root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" }
       }
     },
 

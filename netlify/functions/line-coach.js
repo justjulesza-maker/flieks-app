@@ -20,8 +20,8 @@ async function withinLimits(event) {
   const hour = now.toISOString().slice(0, 13).replace(/[-:T]/g, "");
   // Counted with the database's own increment, so bursts of requests can't slip past.
   const minePath = `flieks_ops/line_coach/${day}/by/${who}/${hour}`;
-  if (!(await ops.takeSlot(minePath, PER_HOUR).catch(() => true))) return "You've checked a lot of lines this hour. Take a breather and try again soon.";
-  if (!(await ops.takeSlot(`flieks_ops/line_coach/${day}/total`, PER_DAY).catch(() => true))) {
+  if (!(await ops.takeSlot(minePath, PER_HOUR).catch(() => false))) return "You've checked a lot of lines this hour. Take a breather and try again soon.";
+  if (!(await ops.takeSlot(`flieks_ops/line_coach/${day}/total`, PER_DAY).catch(() => false))) {
     await ops.dbIncrement(minePath, -1).catch(() => {});
     return "Line checking is busy today. Try again tomorrow.";
   }

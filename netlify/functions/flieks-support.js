@@ -14,6 +14,7 @@
  */
 const https = require('https');
 const crypto = require('crypto');
+const ops = require('../lib/ops-core');
 
 const DB      = (process.env.FIREBASE_DB_URL || 'https://flieks-app-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET  = process.env.FIREBASE_DB_SECRET;
@@ -104,6 +105,15 @@ exports.handler = async event => {
 
     if (!/^\S+@\S+\.\S+$/.test(email)) return reply(400, { message: 'That email does not look right.' });
     if (body.length < 10) return reply(400, { message: 'Tell us a little more.' });
+
+    // Open to anyone, so limited per visitor: 6 messages an hour is plenty for a real person.
+    const h = event.headers || {};
+    const ip = String(h['x-nf-client-connection-ip'] || (h['x-forwarded-for'] || '').split(',')[0] || 'unknown').trim();
+    const who = crypto.createHash('sha256').update(ip + ':' + String(SECRET)).digest('hex').slice(0, 20);
+    const hour = new Date().toISOString().slice(0, 13).replace(/[-:T]/g, '');
+    if (!(await ops.takeSlot(`flieks_ops/support_rate/${hour}/${who}`, 6).catch(() => true))) {
+      return reply(429, { message: 'You have sent a few messages already. We will reply to those first; try again in an hour if it is urgent.' });
+    }
 
     const user = await whoIs(p.token);
 

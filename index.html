@@ -743,7 +743,7 @@ input,textarea{font-family:var(--fb)}
   document.documentElement.setAttribute('data-mode', mode);
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<script src="/vendor/hls-1.5.17.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -992,7 +992,7 @@ global.FlieksThemes = { apply, reset, get, list, previewStyle, DEFAULT, THEMES }
 (function (global) {
 'use strict';
 const REF_TTL_DAYS = 30, LS = 'flieks_ref_v1';
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 const slugify = s => String(s||'').toLowerCase().trim()
   .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
 
@@ -1056,9 +1056,28 @@ async function loadCast(filmId){
   try {
     const s = await firebase.database().ref('flieks_cast/' + filmId).once('value');
     const v = s.val() || {};
-    return Object.entries(v).map(([slug,c]) => ({ slug, ...c }))
-                 .sort((a,b) => (a.order??99)-(b.order??99));
+    return Object.entries(v)
+      .filter(([slug, c]) => /^[A-Za-z0-9_-]{1,80}$/.test(slug) && c && typeof c === 'object')
+      .map(([slug,c]) => cleanPerson({ slug, ...c }))
+      .sort((a,b) => (a.order??99)-(b.order??99));
   } catch { return []; }
+}
+
+/* Photos must be https images; social links must be https, or a plain handle
+   that becomes the network's profile link. Anything else is dropped. */
+const PROFILE = { instagram: h => 'https://instagram.com/' + h, tiktok: h => 'https://tiktok.com/@' + h,
+  x: h => 'https://x.com/' + h, youtube: h => 'https://youtube.com/@' + h, facebook: h => 'https://facebook.com/' + h };
+const httpsOk = u => /^https:\/\/[^\s"'<>()\\]+$/i.test(String(u || ''));
+function cleanPerson(c) {
+  if (c.photoUrl && !httpsOk(c.photoUrl)) c.photoUrl = null;
+  for (const k of Object.keys(PROFILE)) {
+    if (!c[k]) continue;
+    const v = String(c[k]).trim();
+    if (httpsOk(v)) c[k] = v;
+    else if (/^@?[A-Za-z0-9_.]{1,60}$/.test(v)) c[k] = PROFILE[k](v.replace(/^@/, ''));
+    else c[k] = null;
+  }
+  return c;
 }
 
 function trailerPlayed(filmId){
@@ -1305,13 +1324,13 @@ async function loadFilms() {
     const snap = await db.ref(DB_PREFIX + 'films').orderByChild('status').equalTo('live').once('value');
     allFilms = [];
     snap.forEach(child => {
-      allFilms.push({ id: child.key, ...child.val() });
+      allFilms.push(cleanFilm({ id: child.key, ...child.val() }));
     });
     allFilms.sort((a, b) => (b.published_at || 0) - (a.published_at || 0));
     try {
       const soon = await db.ref(DB_PREFIX + 'films').orderByChild('status').equalTo('soon').once('value');
       soonFilms = [];
-      soon.forEach(child => { soonFilms.push({ id: child.key, ...child.val() }); });
+      soon.forEach(child => { soonFilms.push(cleanFilm({ id: child.key, ...child.val() })); });
       // Soonest date first; films without a date after them.
       soonFilms.sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
     } catch (e) { soonFilms = []; }
@@ -1365,7 +1384,7 @@ function renderCats() {
   if (!el) return;
   const gs = catalogueGenres();
   el.innerHTML = `<div class="cat on" onclick="openBrowse({})">All films${allFilms.length ? ' · ' + allFilms.length : ''}</div>` +
-    gs.map(g => `<div class="cat" onclick="openBrowse({ genre: '${escHtml(g).replace(/'/g, '&#39;')}' })">${escHtml(g)}</div>`).join('') +
+    gs.map(g => `<div class="cat" onclick="openBrowse({ genre: '${jsQ(g)}' })">${escHtml(g)}</div>`).join('') +
     (allFilms.some(f => f.free) ? `<div class="cat" onclick="openBrowse({ free: true })">Free</div>` : '') +
     (podCatalog.channels.length ? `<div class="cat" onclick="openPodcasts()">Podcasts</div>` : '');
 }
@@ -1381,7 +1400,7 @@ function rowHTML(title, cards, seeAll, count) {
 function continueCardHTML(f, p) {
   const pct = Math.min(100, Math.round(p.pos / p.dur * 100));
   return filmCardHTML(f)
-    .replace(`onclick="openFilm('${f.id}')"`, `onclick="playFilm('${f.id}')"`)
+    .replace(`onclick="openFilm('${idA(f.id)}')"`, `onclick="playFilm('${idA(f.id)}')"`)
     .replace('<p class="fmaker">', `<div class="lib-prog"><div style="width:${pct}%"></div></div><p class="fmaker">${Math.max(1, Math.round((p.dur - p.pos) / 60))} min left · `);
 }
 
@@ -1415,7 +1434,7 @@ function renderHomeRows() {
   // 5. Curated lists.
   allLists.filter(l => l.on_home).forEach(l => {
     const films = listFilms(l);
-    out.push(rowHTML(escHtml(l.title.toUpperCase()), films.map(filmCardHTML), `openList('${l.slug}')`, films.length));
+    out.push(rowHTML(escHtml(l.title.toUpperCase()), films.map(filmCardHTML), `openList('${idA(l.slug)}')`, films.length));
   });
 
   if (!big) {
@@ -1431,7 +1450,7 @@ function renderHomeRows() {
   // 7. What viewers are saying.
   const top = (topReviews.reviews || []).filter(r => findFilm(r.filmId));
   out.push(top.length ? `<div class="row-head"><p class="section-label" style="margin:0">${topReviews.thisWeek ? 'MOST LIKED THIS WEEK' : 'MOST LIKED REVIEWS'}</p></div>
-    <div class="hrow">${top.map(r => `<div class="rv-card" onclick="openFilm('${r.filmId}')">
+    <div class="hrow">${top.map(r => `<div class="rv-card" onclick="openFilm('${idA(r.filmId)}')">
       <span style="display:flex;gap:1px">${stars(r.rating, 12)}</span>
       <p class="q">${r.spoiler ? '<i style="color:var(--muted)">Contains spoilers. Tap to read on the film page.</i>' : '“' + escHtml(r.body) + '”'}</p>
       <p style="font-size:11px;color:var(--muted);margin-top:auto">${escHtml(r.name)} · <span style="color:var(--green)">✓ verified</span> · ♥ ${r.likes}</p>
@@ -1444,7 +1463,7 @@ function renderHomeRows() {
     catalogueGenres().forEach(g => {
       const films = byNew.filter(f => (f.genre || []).includes(g));
       if (films.length >= 3 && out.filter(x => x.includes('data-genre-row')).length < 4) {
-        out.push(rowHTML(escHtml(g.toUpperCase()), films.map(filmCardHTML), `openBrowse({ genre: '${escHtml(g).replace(/'/g, '&#39;')}' })`, films.length).replace('<div class="row-head">', '<div class="row-head" data-genre-row>'));
+        out.push(rowHTML(escHtml(g.toUpperCase()), films.map(filmCardHTML), `openBrowse({ genre: '${jsQ(g)}' })`, films.length).replace('<div class="row-head">', '<div class="row-head" data-genre-row>'));
       }
     });
     const free = byNew.filter(f => f.free);
@@ -1475,7 +1494,7 @@ const LIST_ICON = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/>
    Anyone can browse; watching or listening needs a free account (that's the
    point: podcasts bring people in). Masterclass episodes can carry a price. */
 function podCardHTML(c) {
-  return `<div class="pod-card" onclick="openPodChannel('${c.slug}')">
+  return `<div class="pod-card" onclick="openPodChannel('${idA(c.slug)}')">
     <div class="pod-cover${c.cover_url ? ' has-img' : ''}" style="${c.cover_url ? `background-image:url('${escHtml(c.cover_url)}')` : ''}">${c.cover_url ? '' : `<span class="ph">${escHtml(c.title)}</span>`}</div>
     <p style="font-size:13px;font-weight:600;color:var(--text);margin-top:6px;line-height:1.25">${escHtml(c.title)}</p>
     <p style="font-size:11px;color:var(--muted)">${escHtml(c.host || '')}${c.host ? ' · ' : ''}${c.episodes} ep${c.episodes === 1 ? '' : 's'}</p>
@@ -1499,7 +1518,7 @@ async function openPodcasts() {
 }
 
 function podEpRow(e, slug, channelTitle) {
-  return `<div class="pod-ep${podPlaying === e.id ? ' on' : ''}" onclick="openPodChannel('${slug}', '${e.id}')">
+  return `<div class="pod-ep${podPlaying === e.id ? ' on' : ''}" onclick="openPodChannel('${idA(slug)}', '${idA(e.id)}')">
     <div class="th" style="${e.thumbnail_url ? `background-image:url('${escHtml(e.thumbnail_url)}')` : ''}"></div>
     <div style="flex:1;min-width:0">
       <p style="font-size:14px;font-weight:600;color:var(--text);line-height:1.3">${e.number ? `<span style="color:var(--muted)">${e.number}.</span> ` : ''}${escHtml(e.title)}</p>
@@ -1584,7 +1603,7 @@ async function playPodEpisode(ep) {
       stage.innerHTML = head + `<div class="pod-gate">
         <p style="font-size:16px;font-weight:700;color:var(--text)">Masterclass · R${ep.price}</p>
         <p style="font-size:13px;color:var(--muted);margin:6px 0 14px">Buy it once and keep it. Most of the price goes to the people who made it.</p>
-        <button class="btn btn-amber" onclick="buyPodEpisode('${ep.id}', this)">BUY FOR R${ep.price}</button>
+        <button class="btn btn-amber" onclick="buyPodEpisode('${idA(ep.id)}', this)">BUY FOR R${ep.price}</button>
       </div>` + foot;
       return;
     }
@@ -1650,7 +1669,7 @@ async function openPreview(filmId) {
   } catch (e) { console.warn('preview:', e); }
   if (!film) { showSnack('That film could not be found.'); return; }
   if (role !== 'admin' && film.filmmaker_uid !== user.uid) { showSnack('Only 4flieks admins and the filmmaker can preview this.'); return; }
-  currentFilm = { id: filmId, ...film };
+  currentFilm = cleanFilm({ id: filmId, ...film });
   renderFilmDetail();
   nav('film');
   const box = document.getElementById('film-detail-content');
@@ -1709,8 +1728,8 @@ function renderMaker(page) {
       </div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${mine ? `<a class="follow-btn on" href="/filmmaker" style="text-decoration:none">Edit your page</a>`
-          : `<button class="follow-btn${on ? ' on' : ''}" id="mk-follow" onclick="toggleFollow('${page.uid}', this)">${on ? 'Following' : 'Follow'}</button>`}
-        <button class="follow-btn on" style="border-color:var(--border);color:var(--text)" onclick="shareMaker('${page.uid}')">Share</button>
+          : `<button class="follow-btn${on ? ' on' : ''}" id="mk-follow" onclick="toggleFollow('${idA(page.uid)}', this)">${on ? 'Following' : 'Follow'}</button>`}
+        <button class="follow-btn on" style="border-color:var(--border);color:var(--text)" onclick="shareMaker('${idA(page.uid)}')">Share</button>
       </div>
       ${!mine && !on ? `<p style="font-size:12px;color:var(--muted);margin-top:8px">Follow to get an email when ${escHtml(page.name.split(' ')[0])} has a new film.</p>` : ''}
       ${page.bio ? `<p style="color:var(--muted);font-size:14px;line-height:1.65;margin-top:14px;white-space:pre-line">${escHtml(page.bio)}</p>` : ''}
@@ -1760,7 +1779,7 @@ function openList(slug) {
       <p class="section-label" style="margin-bottom:6px">${l.curated ? 'A 4FLIEKS LIST' : 'LIST'} · ${films.length} FILM${films.length === 1 ? '' : 'S'}</p>
       <p class="bbn" style="font-size:36px;line-height:1.05;color:var(--text)">${escHtml(l.title)}</p>
       ${l.description ? `<p style="color:var(--muted);font-size:14px;line-height:1.6;margin-top:8px">${escHtml(l.description)}</p>` : ''}
-      <button class="wl-btn" style="margin:14px 0 6px" onclick="shareList('${l.slug}')"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share this list</button>
+      <button class="wl-btn" style="margin:14px 0 6px" onclick="shareList('${idA(l.slug)}')"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share this list</button>
     </div>
     <div class="film-grid" style="margin-top:10px">${films.map(filmCardHTML).join('') || '<div style="grid-column:span 2" class="empty"><p>No films in this list yet.</p></div>'}</div>`;
   nav('list');
@@ -1792,14 +1811,14 @@ function premiereWhen(f) {
 
 function heroHTML(f) {
   const rating = f.rating_avg ? f.rating_avg.toFixed(1) : '—';
-  return `<div class="hero-card" data-id="${f.id}" onclick="openFilm('${f.id}')">
-    <div class="hero-poster${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1C1A10'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:top center':''}">
+  return `<div class="hero-card" data-id="${f.id}" onclick="openFilm('${idA(f.id)}')">
+    <div class="hero-poster${f.poster_url ? ' poster-loading' : ''}"${posterData(safeImg(f.poster_url))} style="background:${cssColor(f.poster_bg,'#1C1A10')};${f.poster_url?'background-image:url('+String.fromCharCode(39)+safeImg(f.poster_url)+String.fromCharCode(39)+');background-size:cover;background-position:top center':''}">
       ${f.poster_url ? '' : '<div class="grain"></div>'}
       <div class="poster-scrim"></div>
       <div style="position:absolute;top:12px;left:12px;z-index:1" class="tag tag-amber poster-badge">${f.premiere ? 'EXCLUSIVE TRAILER' : 'FEATURED'}</div>
       <div style="position:absolute;top:12px;right:12px;z-index:1;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:4px;display:${f.premiere ? 'none' : 'flex'};align-items:center;gap:4px">
         <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:#ccc;fill:none;stroke-width:2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span style="font-size:10px;color:#ddd">${f.duration_mins} min</span>
+        <span style="font-size:10px;color:#ddd">${escHtml(f.duration_mins)} min</span>
       </div>
       <div style="position:relative;z-index:1">
         <p class="bbn poster-title" style="font-size:32px;line-height:1">${escHtml(f.title)}</p>
@@ -1819,13 +1838,13 @@ function heroHTML(f) {
 
 function filmCardHTML(f) {
   const owned = userPurchases[f.id];
-  return `<div class="film-card" onclick="openFilm('${f.id}')">
-    <div class="film-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'};${f.poster_url?'background-image:url('+String.fromCharCode(39)+f.poster_url+String.fromCharCode(39)+');background-size:cover;background-position:center':''}">
+  return `<div class="film-card" onclick="openFilm('${idA(f.id)}')">
+    <div class="film-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(safeImg(f.poster_url))} style="background:${cssColor(f.poster_bg,'#1A1A1A')};${f.poster_url?'background-image:url('+String.fromCharCode(39)+safeImg(f.poster_url)+String.fromCharCode(39)+');background-size:cover;background-position:center':''}">
       <div class="f-overlay"></div>
       ${f.premiere ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-amber poster-badge">EXCLUSIVE</div>`
         : f.status === 'soon' ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-amber poster-badge">SOON</div>`
         : f.is_new ? `<div style="position:absolute;top:8px;left:8px" class="tag tag-red">NEW</div>` : ''}
-      ${f.duration_mins && !f.premiere ? `<span class="dur">${f.duration_mins}m</span>` : ''}
+      ${f.duration_mins && !f.premiere ? `<span class="dur">${escHtml(f.duration_mins)}m</span>` : ''}
       <span class="f-title">${escHtml(f.title)}</span>
     </div>
     <p class="fmaker">${escHtml(f.filmmaker)}</p>
@@ -1861,11 +1880,11 @@ function renderFilmDetail() {
   const rating = f.rating_avg ? f.rating_avg.toFixed(1) : '—';
   const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : f.view_count || 0;
   const html = `
-    <div class="film-poster-lg${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1C1A10'}${
-      f.poster_url ? `;background-image:url('${f.poster_url}');background-size:cover;background-position:center` : ''}">
+    <div class="film-poster-lg${f.poster_url ? ' poster-loading' : ''}"${posterData(safeImg(f.poster_url))} style="background:${cssColor(f.poster_bg,'#1C1A10')}${
+      f.poster_url ? `;background-image:url('${safeImg(f.poster_url)}');background-size:cover;background-position:center` : ''}">
       ${!f.poster_url ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.1) 0,transparent 1px,transparent 4px);opacity:.5"></div>` : ''}
       <div class="poster-scrim"></div>
-      ${purchased || hasTrailer(f) ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer" onclick="${purchased ? `playFilm('${f.id}')` : `watchTrailer('${f.id}')`}" role="button" aria-label="${purchased ? 'Watch the film' : 'Watch the trailer'}">
+      ${purchased || hasTrailer(f) ? `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer" onclick="${purchased ? `playFilm('${idA(f.id)}')` : `watchTrailer('${idA(f.id)}')`}" role="button" aria-label="${purchased ? 'Watch the film' : 'Watch the trailer'}">
         <div style="width:64px;height:64px;border-radius:50%;border:2px solid rgba(245,166,35,.8);background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:var(--amber);stroke:none;margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
         </div>
@@ -1878,7 +1897,7 @@ function renderFilmDetail() {
       </div>
     </div>
     <div style="padding:0 20px 14px;display:flex;justify-content:space-between;align-items:center">
-      <div class="filmmaker-row"${f.filmmaker_uid ? ` style="cursor:pointer" onclick="openMaker({ uid: '${f.filmmaker_uid}' })" title="See all their films"` : ''}>
+      <div class="filmmaker-row"${f.filmmaker_uid ? ` style="cursor:pointer" onclick="openMaker({ uid: '${idA(f.filmmaker_uid)}' })" title="See all their films"` : ''}>
         <div class="filmmaker-avatar" style="background:var(--red);color:#fff">${escHtml((f.filmmaker||'?').charAt(0))}</div>
         <div>
           <p style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(f.filmmaker)}${f.filmmaker_uid ? ' <span style="color:var(--amber)">›</span>' : ''}</p>
@@ -1888,7 +1907,7 @@ function renderFilmDetail() {
       <div class="stats-row"${f.status === 'soon' ? ' style="display:none"' : ''}>
         <div class="stat"><p style="color:var(--text)">${views}</p><p>Views</p></div>
         <div class="stat"><p style="color:var(--amber)">${rating}★</p><p>Rating</p></div>
-        <div class="stat"><p style="color:var(--text)">${f.duration_mins || '—'}</p><p>min</p></div>
+        <div class="stat"><p style="color:var(--text)">${escHtml(f.duration_mins) || '—'}</p><p>min</p></div>
       </div>
     </div>
     <!-- The main action sits right under the poster: watch now, watch free, or rent / own. -->
@@ -1897,14 +1916,14 @@ function renderFilmDetail() {
         <div class="info-box green">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           <p>${purchased.type === 'own' ? 'You own this film. ' : 'You have rental access. '}
-          <a href="#" onclick="event.preventDefault();playFilm('${f.id}')" style="color:var(--amber)">Watch now →</a></p>
+          <a href="#" onclick="event.preventDefault();playFilm('${idA(f.id)}')" style="color:var(--amber)">Watch now →</a></p>
         </div>
-        <button class="btn btn-amber" onclick="playFilm('${f.id}')">WATCH NOW</button>
-        ${f.script_public ? `<a href="/script/${f.slug || f.id}" class="btn btn-outline"
+        <button class="btn btn-amber" onclick="playFilm('${idA(f.id)}')">WATCH NOW</button>
+        ${f.script_public ? `<a href="/script/${idA(f.slug || f.id)}" class="btn btn-outline"
           style="margin-top:8px;display:block;text-decoration:none;text-align:center">READ THE SCRIPT</a>` : ''}
 
         ${!f.free ? `
-        <div class="buy-card" onclick="openGift('${f.id}')" style="margin-top:12px;display:flex;
+        <div class="buy-card" onclick="openGift('${idA(f.id)}')" style="margin-top:12px;display:flex;
              align-items:center;gap:12px;text-align:left;padding:14px">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--amber);fill:none;stroke-width:1.6;flex-shrink:0"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
           <div>
@@ -1914,7 +1933,7 @@ function renderFilmDetail() {
         </div>` : ''}
 
         ${purchased.type === 'rent' ? `
-        <div class="buy-card" onclick="startCheckout('${f.id}','own')" style="margin-top:10px;display:flex;
+        <div class="buy-card" onclick="startCheckout('${idA(f.id)}','own')" style="margin-top:10px;display:flex;
              align-items:center;gap:12px;text-align:left;padding:14px">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           <div>
@@ -1926,17 +1945,17 @@ function renderFilmDetail() {
     ` : `
       <div style="padding:0 20px 14px">
         ${f.free ? `
-          <button class="btn btn-amber" onclick="playFilmFree('${f.id}')">WATCH FREE</button>
+          <button class="btn btn-amber" onclick="playFilmFree('${idA(f.id)}')">WATCH FREE</button>
         ` : `
-          <button class="btn btn-amber" onclick="startCheckout('${f.id}','rent')" style="display:flex;align-items:center;justify-content:center;gap:8px">
+          <button class="btn btn-amber" onclick="startCheckout('${idA(f.id)}','rent')" style="display:flex;align-items:center;justify-content:center;gap:8px">
             <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor;stroke:none"><polygon points="5,3 19,12 5,21"/></svg>WATCH NOW · R${f.price_rent}</button>
           <p style="font-size:11px;color:var(--muted);text-align:center;margin:6px 0 10px">48-hour rental. The 48 hours start when you press play.</p>
-          <button class="btn btn-outline" onclick="startCheckout('${f.id}','own')" style="margin-bottom:12px">OWN IT FOREVER · R${f.price_own}</button>
+          <button class="btn btn-outline" onclick="startCheckout('${idA(f.id)}','own')" style="margin-bottom:12px">OWN IT FOREVER · R${f.price_own}</button>
         `}
-        ${hasTrailer(f) ? `<button class="btn btn-outline" onclick="watchTrailer('${f.id}')" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+        ${hasTrailer(f) ? `<button class="btn btn-outline" onclick="watchTrailer('${idA(f.id)}')" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
           <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;stroke:none"><polygon points="5,3 19,12 5,21"/></svg>WATCH THE FREE TRAILER</button>` : ''}
         ${!f.free ? `
-          <div class="buy-card" onclick="openGift('${f.id}')" style="margin-bottom:14px;display:flex;
+          <div class="buy-card" onclick="openGift('${idA(f.id)}')" style="margin-bottom:14px;display:flex;
                align-items:center;gap:12px;text-align:left;padding:14px">
             <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
             <div>
@@ -1947,7 +1966,7 @@ function renderFilmDetail() {
 
         <div id="wl-slot">${watchButtonHTML(f)}</div>
         ${f.script_public ? `
-        <a href="/script/${f.slug || f.id}" style="display:flex;align-items:center;gap:12px;
+        <a href="/script/${idA(f.slug || f.id)}" style="display:flex;align-items:center;gap:12px;
              margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:12px;
              text-decoration:none">
           <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -1961,7 +1980,7 @@ function renderFilmDetail() {
       </div>
     `}
     ${f.status === 'soon' && !f.premiere && hasTrailer(f) ? `<div style="padding:0 20px 14px">
-      <button class="btn btn-outline" onclick="watchTrailer('${f.id}')" style="display:flex;align-items:center;justify-content:center;gap:8px">
+      <button class="btn btn-outline" onclick="watchTrailer('${idA(f.id)}')" style="display:flex;align-items:center;justify-content:center;gap:8px">
         <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;stroke:none"><polygon points="5,3 19,12 5,21"/></svg>WATCH THE TRAILER</button>
     </div>` : ''}
     ${f.premiere ? premiereBlockHTML(f) : ''}
@@ -1976,7 +1995,7 @@ function renderFilmDetail() {
     </div>` : ''}
     ${(() => { const ls = allLists.filter(l => (l.films || []).includes(f.id)); return ls.length ? `<div style="padding:0 20px 14px">
       <p class="section-label">IN THESE LISTS</p>
-      <div class="list-chips">${ls.map(l => `<a class="list-chip" href="/list/${encodeURIComponent(l.slug)}" onclick="openList('${l.slug}');return false;">${LIST_ICON}${escHtml(l.title)}</a>`).join('')}</div>
+      <div class="list-chips">${ls.map(l => `<a class="list-chip" href="/list/${encodeURIComponent(l.slug)}" onclick="openList('${idA(l.slug)}');return false;">${LIST_ICON}${escHtml(l.title)}</a>`).join('')}</div>
     </div>` : ''; })()}
     <div id="film-cast-wall"></div>
     <div id="film-reviews"></div>
@@ -2082,10 +2101,11 @@ async function handlePaymentReturn(txId) {
   let order = null;
   for (let i = 0; i < 6; i++) {
     try {
+      const token = auth.currentUser ? await auth.currentUser.getIdToken().catch(() => null) : null;
       const r = await fetch('/.netlify/functions/flieks-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ txId })
+        body: JSON.stringify({ txId, token })
       });
       if (r.ok) {
         const d = await r.json();
@@ -2158,7 +2178,7 @@ async function openGift(filmId) {
                 padding:22px 20px calc(22px + env(safe-area-inset-bottom));max-height:88dvh;overflow:auto">
       <div style="width:38px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px"></div>
       <p class="section-label">GIFT THIS FILM</p>
-      <p class="bbn" style="font-size:26px;color:var(--text);line-height:1.1;margin:4px 0 4px">${giftFilm.title}</p>
+      <p class="bbn" style="font-size:26px;color:var(--text);line-height:1.1;margin:4px 0 4px">${escHtml(giftFilm.title)}</p>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5">
         R${giftFilm.price_own} — you'll get a code to send them. They get permanent access to stream it.</p>
       <label style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Who's it for</label>
@@ -2283,7 +2303,7 @@ function showGiftCode(gift) {
     'display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
   wrap.innerHTML = `
     <div style="background:var(--surface);border-radius:16px;padding:24px 20px;max-width:420px;width:100%">
-      <p class="section-label">GIFT READY FOR ${who.toUpperCase()}</p>
+      <p class="section-label">GIFT READY FOR ${escHtml(who.toUpperCase())}</p>
       <p style="font-size:13px;color:var(--muted);margin:6px 0 14px;line-height:1.5">
         Send this message. It has the film, your note and the code in it.</p>
 
@@ -2291,9 +2311,9 @@ function showGiftCode(gift) {
                   padding:14px;font-size:13px;line-height:1.55;color:var(--text);
                   white-space:pre-wrap;margin-bottom:14px">${preview.replace(/</g,'&lt;')}</div>
 
-      <button class="btn btn-amber" onclick='shareGiftMessage(${JSON.stringify(preview)})'>SEND IT</button>
+      <button class="btn btn-amber" data-msg="${escHtml(preview)}" onclick="shareGiftMessage(this.dataset.msg)">SEND IT</button>
       <button class="btn btn-outline" style="margin-top:8px"
-        onclick='copyGiftMessage(${JSON.stringify(preview)}, this)'>COPY MESSAGE</button>
+        data-msg="${escHtml(preview)}" onclick="copyGiftMessage(this.dataset.msg, this)">COPY MESSAGE</button>
       <button class="btn btn-outline" style="margin-top:8px;border:0;color:var(--muted)"
         onclick="this.closest('div').parentElement.remove()">DONE</button>
 
@@ -2582,13 +2602,13 @@ function reviewRow(r, isMaker) {
       </div>` : ''}
 
     <div style="display:flex;gap:14px;margin-top:9px;align-items:center">
-      ${!hidden ? `<button class="rv-act${reviewLikes.has(r.id) ? ' on' : ''}" style="color:var(--muted)" onclick="likeReview('${r.id}', this)" aria-label="Like this review">${HEART}<span>${r.likes || ''}</span></button>` : ''}
-      ${!hidden && r.body ? `<button class="rv-act" style="color:var(--muted)" onclick="shareReviewCard('${r.id}')">Share</button>` : ''}
-      ${isMaker && !r.reply ? `<button onclick="replyToReview('${r.id}')"
+      ${!hidden ? `<button class="rv-act${reviewLikes.has(r.id) ? ' on' : ''}" style="color:var(--muted)" onclick="likeReview('${idA(r.id)}', this)" aria-label="Like this review">${HEART}<span>${r.likes || ''}</span></button>` : ''}
+      ${!hidden && r.body ? `<button class="rv-act" style="color:var(--muted)" onclick="shareReviewCard('${idA(r.id)}')">Share</button>` : ''}
+      ${isMaker && !r.reply ? `<button onclick="replyToReview('${idA(r.id)}')"
         style="font-size:11px;color:var(--amber);background:none;border:0;padding:0">Reply</button>` : ''}
-      ${isMaker && !hidden ? `<button onclick="hideReview('${r.id}')"
+      ${isMaker && !hidden ? `<button onclick="hideReview('${idA(r.id)}')"
         style="font-size:11px;color:var(--muted);background:none;border:0;padding:0">Hide comment</button>` : ''}
-      ${!isMaker && !hidden ? `<button onclick="reportReview('${r.id}')"
+      ${!isMaker && !hidden ? `<button onclick="reportReview('${idA(r.id)}')"
         style="font-size:11px;color:var(--dim);background:none;border:0;padding:0">Report</button>` : ''}
     </div>
   </div>`;
@@ -2917,12 +2937,12 @@ function renderCheckout() {
       <p class="bbn" style="font-size:32px;color:var(--text)">${type === 'own' ? 'OWN THIS FILM' : 'RENT THIS FILM'}</p>
     </div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;margin-bottom:14px">
-      <div style="width:48px;height:58px;border-radius:8px;background:${f.poster_bg||'#1A1A1A'};display:flex;align-items:flex-end;padding:5px;flex-shrink:0">
+      <div style="width:48px;height:58px;border-radius:8px;background:${cssColor(f.poster_bg,'#1A1A1A')};display:flex;align-items:flex-end;padding:5px;flex-shrink:0">
         <span style="font-family:var(--fn);font-size:12px;color:var(--text);line-height:1.1">${escHtml(f.title)}</span>
       </div>
       <div>
         <p style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(f.title)}</p>
-        <p style="font-size:12px;color:var(--muted);margin-top:2px">${escHtml(f.filmmaker)} · ${f.duration_mins} min</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:2px">${escHtml(f.filmmaker)} · ${escHtml(f.duration_mins)} min</p>
         <span class="tag ${type==='own'?'tag-amber':'tag-gray'}" style="margin-top:4px;display:inline-block">${label}</span>
       </div>
     </div>
@@ -3406,7 +3426,7 @@ function doSearch() {
   browse.sort = document.getElementById('browse-sort').value;
   browse.free = document.getElementById('browse-free').checked;
   document.getElementById('browse-genres').innerHTML = [null, ...catalogueGenres()].map(g =>
-    `<div class="cat${browse.genre === g ? ' on' : ''}" onclick="setBrowseGenre(${g ? `'${escHtml(g).replace(/'/g, '&#39;')}'` : 'null'})">${g ? escHtml(g) : 'All'}</div>`).join('');
+    `<div class="cat${browse.genre === g ? ' on' : ''}" onclick="setBrowseGenre(${g ? `'${jsQ(g)}'` : 'null'})">${g ? escHtml(g) : 'All'}</div>`).join('');
   let pool = [...allFilms, ...(browse.free ? [] : soonFilms)];
   if (term) pool = pool.filter(f =>
     (f.title || '').toLowerCase().includes(term) || (f.filmmaker || '').toLowerCase().includes(term) ||
@@ -3471,7 +3491,7 @@ const BELL = '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h
 
 function watchButtonHTML(f) {
   const on = !!userWatch[f.id];
-  return `<button class="wl-btn${on ? ' on' : ''}" onclick="toggleWatch('${f.id}', this)">${BOOKMARK}${on ? 'On your watchlist' : 'Add to watchlist'}</button>`;
+  return `<button class="wl-btn${on ? ' on' : ''}" onclick="toggleWatch('${idA(f.id)}', this)">${BOOKMARK}${on ? 'On your watchlist' : 'Add to watchlist'}</button>`;
 }
 
 /* The coming-soon panel on a film page: the date, the trailer, and "tell me". */
@@ -3491,14 +3511,14 @@ function soonBlockHTML(f) {
 function soonNotifyHTML(f) {
   if (f.premiere) return premiereNotifyHTML(f);
   if (userWatch[f.id]) {
-    return `<button class="wl-btn on" onclick="toggleWatch('${f.id}', this)">${BELL}We'll tell you when it's live</button>
+    return `<button class="wl-btn on" onclick="toggleWatch('${idA(f.id)}', this)">${BELL}We'll tell you when it's live</button>
       <p style="font-size:12px;color:var(--muted);margin-top:8px">It's on your watchlist. Tap to remove it.</p>`;
   }
   if (auth.currentUser) {
-    return `<button class="btn btn-amber" style="margin-top:12px" onclick="toggleWatch('${f.id}', this)">TELL ME WHEN IT'S LIVE</button>`;
+    return `<button class="btn btn-amber" style="margin-top:12px" onclick="toggleWatch('${idA(f.id)}', this)">TELL ME WHEN IT'S LIVE</button>`;
   }
   return `<input id="soon-email" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">
-    <button class="btn btn-amber" onclick="notifyByEmail('${f.id}', this)">TELL ME WHEN IT'S LIVE</button>
+    <button class="btn btn-amber" onclick="notifyByEmail('${idA(f.id)}', this)">TELL ME WHEN IT'S LIVE</button>
     <p id="soon-msg" style="font-size:12px;color:var(--muted);margin-top:8px">One email, the day it's live. Or <a href="#" onclick="nav('auth');return false;" style="color:var(--amber)">sign in</a> to keep it on your watchlist.</p>`;
 }
 
@@ -3509,29 +3529,29 @@ function premiereBlockHTML(f) {
     <div class="soon-box">
       <span class="pm-badge">EXCLUSIVE TRAILER · ONLY ON 4FLIEKS</span>
       ${f.release_line ? `<p style="font-size:18px;font-weight:700;color:var(--text);margin-top:12px">${escHtml(f.release_line)}</p>` : ''}
-      ${open ? `<button class="btn btn-amber" style="margin-top:14px" onclick="watchTrailer('${f.id}')">WATCH THE TRAILER</button>`
+      ${open ? `<button class="btn btn-amber" style="margin-top:14px" onclick="watchTrailer('${idA(f.id)}')">WATCH THE TRAILER</button>`
         : `<p style="font-size:13px;color:var(--muted);margin-top:12px">${premiereWhen(f) ? `The trailer premieres here on ${escHtml(premiereWhen(f))}.` : 'The trailer premieres here soon.'}</p>
            ${f.premiere_at ? `<div class="pm-count" id="pm-count"></div>` : ''}`}
       <div id="wl-slot">${premiereNotifyHTML(f)}</div>
     </div>
-    <button class="wl-btn" onclick="sharePremiere('${f.id}')"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
+    <button class="wl-btn" onclick="sharePremiere('${idA(f.id)}')"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
   </div>`;
 }
 
 function premiereNotifyHTML(f) {
   const open = premiereOpen(f);
   if (userWatch[f.id]) {
-    return `<button class="wl-btn on" onclick="toggleWatch('${f.id}', this)">${BELL}${open ? "You'll get news about this film" : "We'll remind you when it drops"}</button>
+    return `<button class="wl-btn on" onclick="toggleWatch('${idA(f.id)}', this)">${BELL}${open ? "You'll get news about this film" : "We'll remind you when it drops"}</button>
       <p style="font-size:12px;color:var(--muted);margin-top:8px">Tap to stop.</p>`;
   }
   const label = open ? 'SEND ME NEWS ABOUT THIS FILM' : 'REMIND ME WHEN THE TRAILER DROPS';
   const small = open ? 'We only email when there\'s real news, like tickets or a release date.' : 'One email, the moment the trailer is out.';
   if (auth.currentUser) {
-    return `<button class="btn ${open ? 'btn-outline' : 'btn-amber'}" style="margin-top:12px" onclick="toggleWatch('${f.id}', this)">${label}</button>
+    return `<button class="btn ${open ? 'btn-outline' : 'btn-amber'}" style="margin-top:12px" onclick="toggleWatch('${idA(f.id)}', this)">${label}</button>
       <p style="font-size:12px;color:var(--muted);margin-top:8px">${small}</p>`;
   }
   return `<input id="soon-email" type="email" inputmode="email" autocomplete="email" placeholder="Your email address">
-    <button class="btn ${open ? 'btn-outline' : 'btn-amber'}" onclick="notifyByEmail('${f.id}', this)">${open ? 'SEND ME NEWS' : 'REMIND ME'}</button>
+    <button class="btn ${open ? 'btn-outline' : 'btn-amber'}" onclick="notifyByEmail('${idA(f.id)}', this)">${open ? 'SEND ME NEWS' : 'REMIND ME'}</button>
     <p id="soon-msg" style="font-size:12px;color:var(--muted);margin-top:8px">${small}</p>`;
 }
 
@@ -3672,11 +3692,11 @@ async function loadLibrary() {
       const progressHTML = pr ? `
           <div class="lib-prog"><div style="width:${Math.min(100, Math.round(pr.pos / pr.dur * 100))}%"></div></div>
           <p style="font-size:10px;color:var(--muted);margin-top:3px">${Math.max(1, Math.round((pr.dur - pr.pos) / 60))} min left</p>` : '';
-      return `<div class="lib-card" onclick="playFilm('${f.id}')">
-        <div class="lib-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'}${f.poster_url ? `;background-image:url('${f.poster_url}')` : ''}">${f.poster_url ? '' : `<span>${escHtml(f.title)}</span>`}</div>
+      return `<div class="lib-card" onclick="playFilm('${idA(f.id)}')">
+        <div class="lib-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(safeImg(f.poster_url))} style="background:${cssColor(f.poster_bg,'#1A1A1A')}${f.poster_url ? `;background-image:url('${safeImg(f.poster_url)}')` : ''}">${f.poster_url ? '' : `<span>${escHtml(f.title)}</span>`}</div>
         <div class="info">
           <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${escHtml(f.title)}</p>
-          <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker)} · ${f.duration_mins} min</p>
+          <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker)} · ${escHtml(f.duration_mins)} min</p>
           ${purchase.type === 'rent'
               ? (purchase.expires_at
                   ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">${
@@ -3701,11 +3721,11 @@ async function loadLibrary() {
     `<a class="list-chip" href="/by/${encodeURIComponent(m.slug)}" onclick="openMaker({ slug: '${m.slug}' });return false;">${escHtml(m.name)}</a>`).join('');
   document.getElementById('lib-watch-wrap').style.display = saved.length ? 'block' : 'none';
   document.getElementById('lib-watch').innerHTML = saved.map(f => `
-    <div class="lib-card" onclick="openFilm('${f.id}')">
-      <div class="lib-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(f.poster_url)} style="background:${f.poster_bg||'#1A1A1A'}${f.poster_url ? `;background-image:url('${f.poster_url}')` : ''}">${f.poster_url ? '' : `<span>${escHtml(f.title)}</span>`}</div>
+    <div class="lib-card" onclick="openFilm('${idA(f.id)}')">
+      <div class="lib-thumb${f.poster_url ? ' poster-loading' : ''}"${posterData(safeImg(f.poster_url))} style="background:${cssColor(f.poster_bg,'#1A1A1A')}${f.poster_url ? `;background-image:url('${safeImg(f.poster_url)}')` : ''}">${f.poster_url ? '' : `<span>${escHtml(f.title)}</span>`}</div>
       <div class="info">
         <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${escHtml(f.title)}</p>
-        <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker || '')}${f.duration_mins ? ` · ${f.duration_mins} min` : ''}</p>
+        <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker || '')}${f.duration_mins ? ` · ${escHtml(f.duration_mins)} min` : ''}</p>
         ${f.premiere
           ? `<span class="tag tag-amber" style="margin-top:4px;display:inline-block">${premiereOpen(f) ? 'EXCLUSIVE TRAILER' : 'TRAILER ' + escHtml((premiereWhen(f) || 'SOON').toUpperCase())}</span>`
           : f.status === 'soon'
@@ -3789,17 +3809,29 @@ let myGiftRecords = {};
 
 /* The social module keeps its own esc() inside a closure, so the app needs
    its own. Anything user-supplied that lands in markup goes through this. */
-function escHtml(v) {
-  const d = document.createElement('div');
-  d.textContent = v ?? '';
-  return d.innerHTML;
-}
+function escHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 /* ---- Poster loading sheen ----
    Templates mark a poster tile with class "poster-loading" and its URL in
    data-poster. This preloads each URL once and clears the sheen when the
    image arrives or fails. An image the browser already has is cleared
    straight away, so returning visitors never see the sheen at all. */
+/* Values from the database go into markup in a few risky places: ids inside
+   click handlers, colours and image links inside style="". These make sure
+   nothing a filmmaker types can break out of them. */
+function idA(v) { return String(v ?? '').replace(/[^A-Za-z0-9_-]/g, ''); }
+function jsQ(v) { return escHtml(String(v ?? '').replace(/['"\\\n\r`]/g, '')); }
+function cssColor(v, fallback) { return /^#[0-9A-Fa-f]{3,8}$/.test(String(v || '')) ? v : fallback; }
+function safeImg(u) { const s = String(u || ''); return /^https:\/\/[^\s"'<>()\\]+$/.test(s) ? s : ''; }
+function cleanFilm(f) {
+  if (!f || typeof f !== 'object') return f;
+  f.poster_url = safeImg(f.poster_url) || null;
+  f.poster_bg = cssColor(f.poster_bg, null);
+  if (f.trailer_url && !safeImg(f.trailer_url)) f.trailer_url = null;
+  if (f.duration_mins != null && !(Number(f.duration_mins) > 0)) f.duration_mins = null;
+  return f;
+}
+
 function posterData(url) {
   return url ? ` data-poster="${String(url).replace(/"/g, '%22')}"` : '';
 }

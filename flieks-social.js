@@ -18,7 +18,7 @@ const REF_TTL_DAYS = 30;          // how long an actor keeps credit for a visit
 const LS = 'flieks_ref_v1';
 
 const db = () => firebase.database();
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 const bump = path => db().ref(path).transaction(v => (v || 0) + 1).catch(() => {});
 
 /* ---------------------------------------------------------------------------
@@ -169,8 +169,27 @@ async function loadCast(filmId) {
   try { v = (await db().ref('flieks_cast/' + filmId).once('value')).val() || {}; }
   catch (e) { console.error('[flieks-social] cast read failed:', e); }
   return Object.entries(v)
-    .map(([slug, c]) => ({ slug, ...c }))
+    .filter(([slug, c]) => /^[A-Za-z0-9_-]{1,80}$/.test(slug) && c && typeof c === 'object')
+    .map(([slug, c]) => cleanPerson({ slug, ...c }))
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}
+
+/* Photos must be https images; social links must be https, or a plain handle
+   that becomes the network's profile link. Anything else (a javascript: link,
+   quotes that could break out of an attribute) is dropped. */
+const PROFILE = { instagram: h => 'https://instagram.com/' + h, tiktok: h => 'https://tiktok.com/@' + h,
+  x: h => 'https://x.com/' + h, youtube: h => 'https://youtube.com/@' + h, facebook: h => 'https://facebook.com/' + h };
+const httpsOk = u => /^https:\/\/[^\s"'<>()\\]+$/i.test(String(u || ''));
+function cleanPerson(c) {
+  if (c.photoUrl && !httpsOk(c.photoUrl)) c.photoUrl = null;
+  for (const k of Object.keys(PROFILE)) {
+    if (!c[k]) continue;
+    const v = String(c[k]).trim();
+    if (httpsOk(v)) c[k] = v;
+    else if (/^@?[A-Za-z0-9_.]{1,60}$/.test(v)) c[k] = PROFILE[k](v.replace(/^@/, ''));
+    else c[k] = null;
+  }
+  return c;
 }
 
 async function renderCast(container, filmId, options) {

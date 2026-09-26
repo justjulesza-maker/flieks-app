@@ -35,7 +35,7 @@ async function withTags(response, tags) {
   html = html
     .replace(/<title>[\s\S]*?<\/title>/i, '')
     .replace(/<meta\s+(?:property|name)="(?:og:|twitter:|description)[^"]*"[^>]*>/gi, '')
-    .replace(/<\/head>/i, tags + '\n</head>');
+    .replace(/<\/head>/i, () => tags + '\n</head>');
   const headers = new Headers();
   for (const [k, v] of response.headers) {
     const key = k.toLowerCase();
@@ -135,7 +135,7 @@ ${poster ? `<meta property="og:image" content="${esc(poster)}">` : ''}
   html = html
     .replace(/<title>[\s\S]*?<\/title>/i, '')
     .replace(/<meta\s+(?:property|name)="(?:og:|twitter:|description)[^"]*"[^>]*>/gi, '')
-    .replace(/<\/head>/i, tags + '\n</head>');
+    .replace(/<\/head>/i, () => tags + '\n</head>');
   const headers = new Headers();
   for (const [k, v] of response.headers) {
     const key = k.toLowerCase();
@@ -205,7 +205,7 @@ export default async (request, context) => {
   const image = film.og_image || film.still_url || film.poster_url || '';
   // A 9:16 poster is fine but crops oddly in a wide card; a 16:9 still is better.
   const wideImage = !!(film.og_image || film.still_url);
-  const mins  = film.duration_mins ? `${film.duration_mins} min` : '';
+  const mins  = Number(film.duration_mins) > 0 ? `${Math.round(Number(film.duration_mins))} min` : '';
 
   if (!wideImage && image) {
     // A 9:16 poster crops badly in a wide card and is often too large for
@@ -275,7 +275,7 @@ export default async (request, context) => {
   <h1>${esc(title)}</h1>
   <p>${esc(desc)}</p>
   ${film.filmmaker ? `<p>A film by ${esc(film.filmmaker)}</p>` : ''}
-  ${film.duration_mins ? `<p>${film.duration_mins} minutes</p>` : ''}
+  ${Number(film.duration_mins) > 0 ? `<p>${Math.round(Number(film.duration_mins))} minutes</p>` : ''}
   ${actors.length ? `<p>Starring ${actors.slice(0, 8).map(a => esc(a.name)).join(', ')}</p>` : ''}
   ${crew.length ? `<p>Crew: ${crew.slice(0, 8).map(c =>
       esc(c.name) + (c.role ? ` (${esc(c.role)})` : '')).join(', ')}</p>` : ''}
@@ -304,7 +304,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}">
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${esc(url.origin + '/' + path)}">
 <title>${esc(title)}${mins ? ' · ' + mins : ''} · 4flieks</title>
-<script type="application/ld+json">${JSON.stringify(ld)}</script>
+<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 `.trim();
 
   let html = await response.text();
@@ -313,8 +313,8 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}">
   html = html
     .replace(/<title>[\s\S]*?<\/title>/i, '')
     .replace(/<meta\s+(?:property|name)="(?:og:|twitter:|description)[^"]*"[^>]*>/gi, '')
-    .replace(/<\/head>/i, tags + '\n</head>')
-    .replace(/<body([^>]*)>/i, `<body$1>${crawlable}`);
+    .replace(/<\/head>/i, () => tags + '\n</head>')
+    .replace(/<body([^>]*)>/i, (m, attrs) => `<body${attrs}>${crawlable}`);
 
   /* Build the headers fresh rather than copying the original's.
      The body has been rewritten, so content-length and content-encoding from

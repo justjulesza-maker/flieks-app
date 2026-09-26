@@ -94,6 +94,7 @@ exports.handler = async event => {
   try {
     const { token, filmId, preview } = JSON.parse(event.body || '{}');
     if (!token || !filmId) return reply(400, { message: 'Missing details.' });
+    if (!/^[A-Za-z0-9_-]{1,120}$/.test(String(filmId))) return reply(404, { message: 'No such film.' });
 
     const user = await verifyToken(token);
 
@@ -118,7 +119,11 @@ exports.handler = async event => {
 
     const p = await dbGet(`flieks_purchases/${user.localId}/${filmId}`);
 
-    if (!p) return reply(403, { message: 'You have not bought this film.' });
+    // A real purchase: bought outright or rented, and not left incomplete.
+    // (Older purchases have no status field, so a missing status still counts.)
+    if (!p || (p.type !== 'own' && p.type !== 'rent') || (p.status && p.status !== 'complete')) {
+      return reply(403, { message: 'You have not bought this film.' });
+    }
 
     const now = Date.now();
 
@@ -134,8 +139,8 @@ exports.handler = async event => {
           filmId,
           bunnyId: priv.bunny_id,
           host: BUNNY_HOST,
-          tokenAuth: BUNNY_TOKEN ? 'on' : 'off',
-          url
+          tokenAuth: BUNNY_TOKEN ? 'on' : 'off'
+          // (the signed link itself is not logged: it works for hours)
         });
         return url;
       }

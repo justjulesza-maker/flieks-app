@@ -244,7 +244,8 @@ exports.handler = async event => {
 
       if (a === 'delete-episode') {
         const priv = await ops.dbGet(`flieks_private/pod_${eid}`) || {};
-        if (priv.bunny_id && LIB()) await bunny(`/videos/${priv.bunny_id}`, 'DELETE').catch(() => {});
+        // Delete from Bunny only a video this episode's own upload created.
+        if (priv.bunny_id && priv.bunny_owned === true && LIB()) await bunny(`/videos/${priv.bunny_id}`, 'DELETE').catch(() => {});
         await ops.dbWrite(`flieks_pod_episodes/${eid}`, null);
         await ops.dbWrite(`flieks_private/pod_${eid}`, null);
         return reply(200, { ok: true });
@@ -263,13 +264,14 @@ exports.handler = async event => {
         if (!LIB() || !BKEY()) return reply(200, { ok: true, ready: true, note: 'Saved. It plays from the upload (Bunny isn\'t set up).' });
         const made = await bunny('/videos', 'POST', { title: `Podcast: ${ep.title}`.slice(0, 120) });
         if (made.status >= 400 || !made.data.guid) return reply(200, { ok: true, ready: true, note: 'Saved. Bunny didn\'t accept it, so it plays from the upload.' });
-        await ops.dbWrite(`flieks_private/pod_${eid}`, { bunny_id: made.data.guid, bunny_ready: false, bunny_started_at: Date.now() }, 'PATCH');
+        await ops.dbWrite(`flieks_private/pod_${eid}`, { bunny_id: made.data.guid, bunny_ready: false, bunny_started_at: Date.now(), bunny_owned: true }, 'PATCH');
         // The same background mover films use (it gets 15 minutes).
-        const origin = `https://${(event.headers || {}).host || '4flieks.com'}`;
+        const origin = (process.env.URL || 'https://4flieks.com').replace(/\/$/, '');
+        const jobKey = crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':bunny-upload').digest('hex');
         await new Promise(done => {
-          const body = JSON.stringify({ filmId: `pod_${eid}`, videoId: made.data.guid, source: url, secret: process.env.FIREBASE_DB_SECRET });
+          const body = JSON.stringify({ filmId: `pod_${eid}`, videoId: made.data.guid, source: url });
           const r = https.request(`${origin}/.netlify/functions/flieks-bunny-upload-background`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-job-secret': jobKey }
           }, res => { res.resume(); res.on('end', done); });
           r.on('error', () => done()); r.write(body); r.end();
         });
@@ -277,6 +279,8 @@ exports.handler = async event => {
       }
 
       if (a === 'link-bunny') {
+        // The Bunny library holds every film too, so linking from it is for admins only.
+        if (me.role !== 'admin') return reply(403, { message: 'Only 4flieks admins can link an existing Bunny video. Upload the episode instead.' });
         const id = String(b.bunnyId || '').trim();
         if (!/^[0-9a-f-]{20,40}$/i.test(id)) return reply(400, { message: 'That doesn\'t look like a Bunny video ID.' });
         const v = await bunny(`/videos/${id}`, 'GET');

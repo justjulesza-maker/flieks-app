@@ -227,7 +227,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
   <div id="review-content"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<script src="/vendor/hls-1.5.17.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -242,7 +242,12 @@ const FIREBASE_CONFIG = {
   appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
 };
 const DB = "flieks_";
-const ADMIN_EMAILS = ["jules@danceafrikalive.com","julian@discovr.tv"]; // add admin emails
+// Who may use this page is decided by the admin role in the database, the same
+// check every server function and database rule makes. Grant it from Users → Access.
+async function isAdminUser(user) {
+  try { return (await db.ref(DB + 'users/' + user.uid + '/role').once('value')).val() === 'admin'; }
+  catch { return false; }
+}
 
 firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
@@ -251,7 +256,7 @@ let currentAdmin = null;
 let allFilmsCache = [];
 
 auth.onAuthStateChanged(async user => {
-  if (user && ADMIN_EMAILS.includes(user.email)) {
+  if (user && await isAdminUser(user)) {
     currentAdmin = user;
     document.getElementById('admin-name').textContent = user.email;
     document.getElementById('view-auth').classList.remove('active');
@@ -333,16 +338,16 @@ async function loadQueue() {
       <div class="card">
         <div class="row" style="margin-bottom:8px">
           <div>
-            <p style="font-size:14px;font-weight:700;color:var(--text)">${q.title}</p>
-            <p style="font-size:12px;color:var(--muted)">${q.filmmaker}${q.submitted_at ? ' · ' + new Date(q.submitted_at).toLocaleDateString('en-ZA') : ''}</p>
+            <p style="font-size:14px;font-weight:700;color:var(--text)">${escA(q.title)}</p>
+            <p style="font-size:12px;color:var(--muted)">${escA(q.filmmaker)}${q.submitted_at ? ' · ' + new Date(q.submitted_at).toLocaleDateString('en-ZA') : ''}</p>
           </div>
           <span class="tag tag-a">${q.status === 'soon' ? 'FILM ADDED · READY TO GO LIVE' : q.awaiting_film ? 'TRAILER ONLY' : 'PENDING'}</span>
         </div>
-        <button class="btn btn-a" onclick="openReview('${q.film_id}','')">${q.awaiting_film ? 'REVIEW TRAILER' : 'REVIEW FILM'}</button>
+        <button class="btn btn-a" onclick="openReview('${idA(q.film_id)}','')">${q.awaiting_film ? 'REVIEW TRAILER' : 'REVIEW FILM'}</button>
       </div>
     `).join('');
   } catch (e) {
-    el.innerHTML = `<p style="color:var(--red);font-size:14px">Error loading queue: ${e.message}</p>`;
+    el.innerHTML = `<p style="color:var(--red);font-size:14px">Error loading queue: ${escA(e.message)}</p>`;
   }
 }
 
@@ -383,24 +388,24 @@ async function openReview(filmId, queueId) {
   const f = { id: filmId, ...snap.val() };
   document.getElementById('review-content').innerHTML = `
     <div style="margin-bottom:16px">
-      <p style="font-size:24px;font-weight:700;color:var(--amber)">${f.title}</p>
-      <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.filmmaker_email} · ${f.duration_mins} min · ${f.language}</p>
+      <p style="font-size:24px;font-weight:700;color:var(--amber)">${escA(f.title)}</p>
+      <p style="font-size:12px;color:var(--muted)">${escA(f.filmmaker)} · ${escA(f.filmmaker_email)} · ${escA(f.duration_mins)} min · ${escA(f.language)}</p>
     </div>
     ${f.awaiting_film ? `<div class="card" style="border-color:var(--amber)"><p style="font-size:14px;color:var(--amber);font-weight:700">Trailer only: the film comes later</p>
       <p style="font-size:12px;color:var(--muted);margin-top:4px">Approve it as coming soon below${f.release_date ? ` (the filmmaker's release date is ${escA(f.release_date)})` : ''}. It can't go live until the filmmaker uploads the film; that brings it back to this queue.</p></div>` : ''}
     ${f.status === 'soon' && f.film_added_at ? `<div class="card" style="border-color:var(--green)"><p style="font-size:14px;color:var(--green);font-weight:700">The film has been added to this coming-soon title</p>
       <p style="font-size:12px;color:var(--muted);margin-top:4px">Check it plays, then APPROVE to put it live. Everyone who asked to hear gets an email.</p></div>` : ''}
-    ${f.filmmaker_uid ? `<p style="margin:-6px 0 12px"><a href="#" onclick="openThread('${f.filmmaker_uid}', '${filmId}');return false" style="font-size:12px;color:var(--amber)">✉ Message ${escA(f.filmmaker || 'the filmmaker')}</a></p>` : ''}
+    ${f.filmmaker_uid ? `<p style="margin:-6px 0 12px"><a href="#" onclick="openThread('${idA(f.filmmaker_uid)}', '${idA(filmId)}');return false" style="font-size:12px;color:var(--amber)">✉ Message ${escA(f.filmmaker || 'the filmmaker')}</a></p>` : ''}
     <div id="review-video"><p style="color:var(--muted);font-size:14px;margin-bottom:8px">Loading the film…</p></div>
     ${f.trailer_url ? `<p class="sl" style="margin-top:12px">TRAILER</p><video controls playsinline preload="metadata" class="video-preview" src="${escA(f.trailer_url)}"></video>` : ''}
     <div class="card" style="margin-top:12px">
       <p class="sl">SYNOPSIS</p>
-      <p style="font-size:14px;color:#999;line-height:1.6">${f.synopsis||'—'}</p>
+      <p style="font-size:14px;color:#999;line-height:1.6">${escA(f.synopsis)||'—'}</p>
     </div>
     ${f.about ? `<div class="card"><p class="sl">ABOUT THE FILM</p><p style="font-size:14px;color:#999;line-height:1.6;white-space:pre-line">${escA(f.about)}</p></div>` : ''}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
-      <div class="stat"><p style="font-size:12px;color:var(--muted)">Genre</p><p style="font-size:14px;margin-top:2px">${(f.genre||[]).join(', ')}</p></div>
-      <div class="stat"><p style="font-size:12px;color:var(--muted)">Subtitles</p><p style="font-size:14px;margin-top:2px">${f.subtitles||'None'}</p></div>
+      <div class="stat"><p style="font-size:12px;color:var(--muted)">Genre</p><p style="font-size:14px;margin-top:2px">${escA((f.genre||[]).join(', '))}</p></div>
+      <div class="stat"><p style="font-size:12px;color:var(--muted)">Subtitles</p><p style="font-size:14px;margin-top:2px">${escA(f.subtitles)||'None'}</p></div>
       <div class="stat"><p style="font-size:12px;color:var(--muted)">Rent</p><p style="font-size:14px;margin-top:2px;color:var(--amber)">${f.free ? 'Free' : 'R'+f.price_rent}</p></div>
       <div class="stat"><p style="font-size:12px;color:var(--muted)">Own</p><p style="font-size:14px;margin-top:2px;color:var(--amber)">${f.free ? 'Free' : 'R'+f.price_own}</p></div>
     </div>
@@ -417,8 +422,8 @@ async function openReview(filmId, queueId) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       ${f.awaiting_film || f.premiere ? `<button class="btn btn-g" disabled title="No film file yet" style="opacity:.4">✓ APPROVE (needs the film)</button>`
-        : `<button class="btn btn-g" onclick="approveFilm('${filmId}','${queueId}')">✓ ${f.status === 'soon' ? 'APPROVE AND GO LIVE' : 'APPROVE'}</button>`}
-      <button class="btn btn-r" onclick="rejectFilm('${filmId}','${queueId}')">✗ REJECT</button>
+        : `<button class="btn btn-g" onclick="approveFilm('${idA(filmId)}','${idA(queueId)}')">✓ ${f.status === 'soon' ? 'APPROVE AND GO LIVE' : 'APPROVE'}</button>`}
+      <button class="btn btn-r" onclick="rejectFilm('${idA(filmId)}','${idA(queueId)}')">✗ REJECT</button>
     </div>
     <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:12px">
       <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Or approve it as <b>coming soon</b>: it shows on the home page with its trailer and a
@@ -426,7 +431,7 @@ async function openReview(filmId, queueId) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input type="date" class="input" id="soon-date-review" value="${escA(f.release_date || '')}" style="max-width:180px;font-size:14px">
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber)"
-          onclick="approveSoon('${filmId}','${queueId}')">Approve as coming soon</button>
+          onclick="approveSoon('${idA(filmId)}','${idA(queueId)}')">Approve as coming soon</button>
       </div>
     </div>
   `;
@@ -569,30 +574,30 @@ function renderCast(rows) {
   rows.forEach(r => {
     if (r.filmTitle !== lastFilm) {
       lastFilm = r.filmTitle;
-      out += `<p class="sl" style="margin:18px 0 8px">${r.filmTitle}</p>`;
+      out += `<p class="sl" style="margin:18px 0 8px">${escA(r.filmTitle)}</p>`;
     }
     out += `<div class="card" style="padding:13px 14px">
       <div class="row" style="margin-bottom:9px;align-items:flex-start">
         <div style="min-width:0">
-          <p style="font-size:15px;font-weight:700;color:var(--text)">${r.name}</p>
+          <p style="font-size:15px;font-weight:700;color:var(--text)">${escA(r.name)}</p>
           <p style="font-size:12px;color:var(--muted)">
-            ${r.role || 'crew'} · <span style="font-family:ui-monospace,monospace">?a=${r.slug}</span>
+            ${escA(r.role || 'crew')} · <span style="font-family:ui-monospace,monospace">?a=${escA(r.slug)}</span>
             ${r.hidden ? ' · <span style="color:var(--dim)">link only</span>' : ''}</p>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
-          <p style="font-size:15px;font-weight:700;color:${r.sales ? 'var(--green)' : 'var(--muted)'}">${r.sales}</p>
+          <p style="font-size:15px;font-weight:700;color:${r.sales ? 'var(--green)' : 'var(--muted)'}">${escA(r.sales)}</p>
           <p style="font-size:10px;color:var(--muted);letter-spacing:.08em">SOLD</p>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E)"
-          onclick="copyText('${r.page}','Their page copied — send this one')">THEIR PAGE</button>
+          onclick="copyText('${jsA(r.page)}','Their page copied — send this one')">THEIR PAGE</button>
         <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--muted)"
-          onclick="copyText('${r.share}','Sharing link copied')">SHARING LINK</button>
+          onclick="copyText('${jsA(r.share)}','Sharing link copied')">SHARING LINK</button>
         <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--muted)"
-          onclick="window.open('${r.page}','_blank')">OPEN</button>
+          onclick="window.open('${jsA(r.page)}','_blank')">OPEN</button>
       </div>
-      <p style="font-size:11px;color:var(--dim);margin-top:8px;font-family:ui-monospace,monospace;word-break:break-all">${r.page}</p>
+      <p style="font-size:11px;color:var(--dim);margin-top:8px;font-family:ui-monospace,monospace;word-break:break-all">${escA(r.page)}</p>
     </div>`;
   });
   el.innerHTML = out;
@@ -731,7 +736,7 @@ async function linkBunny(filmId, title) {
   });
 
   const list = usable.map((v, i) =>
-    `${i + 1}. ${v.title} — ${v.mb}MB, ${v.state}`).join('\n');
+    `${i + 1}. ${escA(v.title)} — ${v.mb}MB, ${v.state}`).join('\n');
   const pick = prompt(
     `Which Bunny video is "${title}"?\n\n${list}\n\nEnter a number:`, '1');
   if (!pick) { refreshOne(filmId); return; }
@@ -801,42 +806,42 @@ function renderFilmsList(films) {
     <div class="card row">
       <div style="flex:1">
         <div class="row" style="margin-bottom:4px">
-          <p style="font-size:14px;font-weight:700">${f.title}</p>
+          <p style="font-size:14px;font-weight:700">${escA(f.title)}</p>
           <span class="tag ${statusTag[f.status]||'tag-m'}">${f.premiere ? 'TRAILER PREMIERE' : (statusName[f.status] || (f.status||'').toUpperCase())}${f.status === 'soon' && f.release_date && !f.premiere ? ' · ' + f.release_date : ''}</span>
           ${f.premiere && f.featured ? `<span class="tag tag-a">★ ON HOME</span>` : ''}
-          <span class="tag tag-m" id="wait-${f.id}" style="display:none"></span>
+          <span class="tag tag-m" id="wait-${idA(f.id)}" style="display:none"></span>
           ${f.awaiting_film ? `<span class="tag tag-r">NO FILM YET</span>` : ''}
           ${f.featured && f.status === 'live' ? `<span class="tag tag-a">★ ON HOME</span>` : ''}
         </div>
-        <p style="font-size:12px;color:var(--muted)">${f.filmmaker} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
-        <p style="font-size:11px;margin-top:3px" id="stream-${f.id}">checking…</p>
+        <p style="font-size:12px;color:var(--muted)">${escA(f.filmmaker)} · ${f.view_count||0} views · R${((f.own_count||0)*(f.price_own||0)*0.7 + (f.rent_count||0)*(f.price_rent||0)*0.7).toFixed(0)} earned</p>
+        <p style="font-size:11px;margin-top:3px" id="stream-${idA(f.id)}">checking…</p>
         ${f.status !== 'live' ? premierePanel(f, localDT) : ''}
         ${f.status !== 'live' && !f.premiere ? `<div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
-          <input type="date" class="input" id="soon-date-${f.id}" value="${f.release_date || ''}" style="max-width:160px;font-size:12px;padding:6px 8px">
-          <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="setSoon('${f.id}')">${f.status === 'soon' ? 'Change date' : 'Coming soon'}</button>
+          <input type="date" class="input" id="soon-date-${idA(f.id)}" value="${escA(f.release_date || '')}" style="max-width:160px;font-size:12px;padding:6px 8px">
+          <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="setSoon('${idA(f.id)}')">${f.status === 'soon' ? 'Change date' : 'Coming soon'}</button>
         </div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-left:10px">
         ${f.premiere ? '' : `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)${f.awaiting_film && f.status !== 'live' ? ';opacity:.4' : ''}"
-          ${f.awaiting_film && f.status !== 'live' ? 'disabled title="Trailer only: the filmmaker has not uploaded the film yet"' : ''} onclick="toggleFilmStatus('${f.id}','${f.status}')">
+          ${f.awaiting_film && f.status !== 'live' ? 'disabled title="Trailer only: the filmmaker has not uploaded the film yet"' : ''} onclick="toggleFilmStatus('${idA(f.id)}','${escA(f.status)}')">
           ${f.status === 'live' ? 'Take Down' : 'Go Live'}
         </button>`}
-        <button class="btn btn-sm" id="prep-${f.id}" style="display:none;background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="prepareStream('${f.id}')">
+        <button class="btn btn-sm" id="prep-${idA(f.id)}" style="display:none;background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="prepareStream('${idA(f.id)}')">
           Prepare
         </button>
-        <button class="btn btn-sm" id="link-${f.id}" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="linkBunny('${f.id}','${(f.title||'').replace(/'/g,'')}')">
+        <button class="btn btn-sm" id="link-${idA(f.id)}" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="linkBunny('${idA(f.id)}','${jsA(f.title)}')">
           Link
         </button>
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E)"
-          onclick="filmUpdate('${f.id}')">Update</button>
+          onclick="filmUpdate('${idA(f.id)}')">Update</button>
         ${f.filmmaker_uid ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)"
-          onclick="openThread('${f.filmmaker_uid}', '${f.id}')">Message</button>` : ''}
+          onclick="openThread('${idA(f.filmmaker_uid)}', '${idA(f.id)}')">Message</button>` : ''}
         <a class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);text-decoration:none;text-align:center"
           href="/?preview=${encodeURIComponent(f.id)}" target="_blank" rel="noopener">Preview</a>
         ${f.status === 'live' && !f.featured ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)"
-          onclick="featureFilm('${f.id}', this)">★ Feature on home</button>` : ''}
+          onclick="featureFilm('${idA(f.id)}', this)">★ Feature on home</button>` : ''}
         ${f.status === 'live' ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)"
-          onclick="emailFilmLive('${f.id}', true)">Send go-live email</button>` : ''}
+          onclick="emailFilmLive('${idA(f.id)}', true)">Send go-live email</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -872,7 +877,7 @@ async function loadThreads() {
   const el = document.getElementById('threads-list');
   el.innerHTML = '<div class="spinner"></div>';
   const threads = await refreshMsgBadge();
-  el.innerHTML = threads.length ? threads.map(t => `<div class="card row" style="cursor:pointer" onclick="openThread('${t.uid}')">
+  el.innerHTML = threads.length ? threads.map(t => `<div class="card row" style="cursor:pointer" onclick="openThread('${idA(t.uid)}')">
       <div style="flex:1;min-width:0">
         <p style="font-size:14px;font-weight:700">${escA(t.name || t.email || 'Filmmaker')}${t.unread_admin ? ` <span class="ev-new">${t.unread_admin} NEW</span>` : ''}</p>
         <p style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.last_from === 'admin' ? 'You: ' : ''}${escA(t.last_body || '')}</p>
@@ -908,7 +913,7 @@ async function openThread(uid, filmId) {
         <p style="font-size:14px;line-height:1.5;white-space:pre-line">${escA(m.body)}</p></div>`).join('') || '<p style="font-size:13px;color:var(--muted)">No messages yet.</p>'}
     </div>
     <textarea class="input" id="thread-text" rows="4" maxlength="3000" placeholder="Write to ${escA((d.name || 'them').split(' ')[0])}. They get an email and it waits in their portal.">${escA(draft)}</textarea>
-    <button class="btn btn-a" style="margin-top:8px" onclick="sendThread('${uid}', ${filmId ? `'${filmId}'` : 'null'}, this)">SEND</button>`;
+    <button class="btn btn-a" style="margin-top:8px" onclick="sendThread('${uid}', ${filmId ? `'${idA(filmId)}'` : 'null'}, this)">SEND</button>`;
   const list = document.getElementById('thread-list'); list.scrollTop = list.scrollHeight;
   refreshMsgBadge();
 }
@@ -939,9 +944,9 @@ function renderEverything() {
   const d = evData, isNew = x => (x.changed_at || 0) > (d.seen || 0);
   const films = d.films.sort((a, b) => b.changed_at - a.changed_at);
   const look = [
-    ...films.filter(f => f.price_request).map(f => ({ kind: 'film', f, why: `Price request: R${f.price_request.rent} / R${f.price_request.own}` })),
+    ...films.filter(f => f.price_request).map(f => ({ kind: 'film', f, why: `Price request: R${escA(f.price_request.rent)} / R${escA(f.price_request.own)}` })),
     ...films.filter(f => f.over_cap && !f.price_request).map(f => ({ kind: 'film', f, why: `Above the ceiling: R${f.price_rent} / R${f.price_own}` })),
-    ...d.reviews.filter(r => r.reports && !r.hidden).map(r => ({ kind: 'review', r, why: `Reported ${r.reports}×` })),
+    ...d.reviews.filter(r => r.reports && !r.hidden).map(r => ({ kind: 'review', r, why: `Reported ${escA(r.reports)}×` })),
     ...films.filter(isNew).map(f => ({ kind: 'film', f, why: 'New or changed' })),
     ...d.makers.filter(isNew).map(m => ({ kind: 'maker', m, why: 'New or changed' })),
     ...d.talent.filter(isNew).map(t => ({ kind: 'talent', t, why: 'New or changed' })),
@@ -970,33 +975,33 @@ function renderEverything() {
       </div></div>
       <div class="ev-acts">
         <a class="btn" href="/?preview=${encodeURIComponent(f.id)}" target="_blank" rel="noopener">View as viewers see it</a>
-        ${f.price_request ? `<button class="btn" style="color:var(--green)" onclick="decidePrice('${f.id}', true)">Approve R${f.price_request.rent} / R${f.price_request.own}</button>
-          <button class="btn" style="color:var(--red)" onclick="decidePrice('${f.id}', false)">Decline</button>` : ''}
-        <button class="btn" onclick="editPrice('${f.id}')">Change price</button>
-        ${f.filmmaker_uid ? `<button class="btn" style="color:var(--amber)" onclick="openThread('${f.filmmaker_uid}', '${f.id}')">Message</button>` : ''}
-        ${f.status === 'live' ? `<button class="btn" style="color:var(--red)" onclick="evTakeDown('${f.id}')">Take down</button>` : ''}
+        ${f.price_request ? `<button class="btn" style="color:var(--green)" onclick="decidePrice('${idA(f.id)}', true)">Approve R${escA(f.price_request.rent)} / R${escA(f.price_request.own)}</button>
+          <button class="btn" style="color:var(--red)" onclick="decidePrice('${idA(f.id)}', false)">Decline</button>` : ''}
+        <button class="btn" onclick="editPrice('${idA(f.id)}')">Change price</button>
+        ${f.filmmaker_uid ? `<button class="btn" style="color:var(--amber)" onclick="openThread('${idA(f.filmmaker_uid)}', '${idA(f.id)}')">Message</button>` : ''}
+        ${f.status === 'live' ? `<button class="btn" style="color:var(--red)" onclick="evTakeDown('${idA(f.id)}')">Take down</button>` : ''}
       </div></div>`;
   const makerCard = (m, why) => `<div class="card"><p style="font-size:14px;font-weight:700">${escA(m.name)}${badge(m)}${m.hidden ? ' <span class="tag tag-r">HIDDEN</span>' : ''}</p>
       <p style="font-size:12px;color:var(--muted)">/by/${escA(m.slug)}${m.location ? ' · ' + escA(m.location) : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
       ${m.bio ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5;white-space:pre-line">${escA(m.bio)}</p>` : ''}
       ${m.instagram || m.website ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${m.instagram ? '@' + escA(m.instagram) : ''} ${escA(m.website || '')}</p>` : ''}
       <div class="ev-acts"><a class="btn" href="/by/${encodeURIComponent(m.slug)}" target="_blank" rel="noopener">Open page</a>
-        <button class="btn" style="color:${m.hidden ? 'var(--green)' : 'var(--red)'}" onclick="evHide('maker', '${m.uid}', ${!m.hidden})">${m.hidden ? 'Show page again' : 'Hide page'}</button>
-        <button class="btn" style="color:var(--amber)" onclick="openThread('${m.uid}')">Message</button></div></div>`;
+        <button class="btn" style="color:${m.hidden ? 'var(--green)' : 'var(--red)'}" onclick="evHide('maker', '${idA(m.uid)}', ${!m.hidden})">${m.hidden ? 'Show page again' : 'Hide page'}</button>
+        <button class="btn" style="color:var(--amber)" onclick="openThread('${idA(m.uid)}')">Message</button></div></div>`;
   const talentCard = (t, why) => `<div class="card"><div style="display:flex;gap:10px">
       ${t.photo_url ? `<img src="${escA(t.photo_url)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:50%;flex-shrink:0">` : ''}
       <div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700">${escA(t.name || '—')}${badge(t)} ${t.suggest ? '<span class="tag tag-g">IN SEARCH</span>' : '<span class="tag tag-m">PRIVATE</span>'}${t.hidden ? ' <span class="tag tag-r">HIDDEN</span>' : ''}</p>
       <p style="font-size:12px;color:var(--muted)">${escA((t.disciplines || []).join(', '))}${t.city || t.country ? ' · ' + escA([t.city, t.country].filter(Boolean).join(', ')) : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
       ${t.bio ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5">${escA(t.bio)}</p>` : ''}</div></div>
       <div class="ev-acts"><a class="btn" href="/lab/talent/${encodeURIComponent(t.uid)}" target="_blank" rel="noopener">Open profile</a>
-        <button class="btn" style="color:${t.hidden ? 'var(--green)' : 'var(--red)'}" onclick="evHide('talent', '${t.uid}', ${!t.hidden})">${t.hidden ? 'Show again' : 'Hide from search'}</button></div></div>`;
+        <button class="btn" style="color:${t.hidden ? 'var(--green)' : 'var(--red)'}" onclick="evHide('talent', '${idA(t.uid)}', ${!t.hidden})">${t.hidden ? 'Show again' : 'Hide from search'}</button></div></div>`;
   const podCard = (p, why) => `<div class="card"><p style="font-size:14px;font-weight:700">${escA(p.title)}${badge(p)} <span class="tag ${p.status === 'live' ? 'tag-g' : 'tag-a'}">${escA((p.status || '').toUpperCase())}</span></p>
       <p style="font-size:12px;color:var(--muted)">${escA(p.host)} · ${p.episodes} episodes${p.paid ? ` · ${p.paid} paid` : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
       ${p.description ? `<p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5">${escA(p.description)}</p>` : ''}
       <div class="ev-acts">${p.status === 'live' ? `<a class="btn" href="/podcasts/${encodeURIComponent(p.slug)}" target="_blank" rel="noopener">Open channel</a>` : ''}<a class="btn" href="/studio" target="_blank" rel="noopener">Manage in Studio</a></div></div>`;
   const reviewCard = (r, why) => `<div class="card"><p style="font-size:13px"><b>${escA(r.name)}</b> on <b>${escA(r.film)}</b> · ${r.rating}★${badge(r)}${r.hidden ? ' <span class="tag tag-r">HIDDEN</span>' : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
       ${r.body ? `<p style="font-size:13px;color:#bbb;margin-top:4px;line-height:1.5">${escA(r.body)}</p>` : ''}
-      <div class="ev-acts">${!r.hidden && r.body ? `<button class="btn" style="color:var(--red)" onclick="evHideReview('${r.filmId}', '${r.reviewId}')">Hide comment</button>` : ''}</div></div>`;
+      <div class="ev-acts">${!r.hidden && r.body ? `<button class="btn" style="color:var(--red)" onclick="evHideReview('${idA(r.filmId)}', '${idA(r.reviewId)}')">Hide comment</button>` : ''}</div></div>`;
   const draw = x => x.kind === 'film' ? filmCard(x.f, x.why) : x.kind === 'maker' ? makerCard(x.m, x.why) : x.kind === 'talent' ? talentCard(x.t, x.why) : x.kind === 'pod' ? podCard(x.p, x.why) : reviewCard(x.r, x.why);
   let html = '';
   if (evTab === 'look') html = look.length ? `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Price requests, prices above your ceiling, reported reviews, and anything new or changed since you last marked everything as checked${d.seen ? ` (${whenA(d.seen)})` : ''}.</p>` + look.map(draw).join('') : '<p style="color:var(--muted);font-size:14px">Nothing new since your last check.</p>';
@@ -1036,11 +1041,11 @@ function editPrice(filmId) {
   wrap.innerHTML = `<div style="background:var(--surface);border-radius:14px;padding:18px;max-width:420px;width:100%">
     <p style="font-size:16px;font-weight:700;margin-bottom:4px">Price for ${escA(f.title)}</p>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Now ${f.free ? 'free' : `R${f.price_rent} / R${f.price_own}`}. Tell the filmmaker why (Message) before or after you change it.</p>
-    <div style="display:flex;gap:8px"><label style="flex:1;font-size:12px;color:var(--muted)">Rent (R)<input class="input" id="pm-rent" type="number" min="0" value="${f.price_rent || 25}"></label>
-      <label style="flex:1;font-size:12px;color:var(--muted)">Own (R)<input class="input" id="pm-own" type="number" min="0" value="${f.price_own || 49}"></label></div>
+    <div style="display:flex;gap:8px"><label style="flex:1;font-size:12px;color:var(--muted)">Rent (R)<input class="input" id="pm-rent" type="number" min="0" value="${escA(f.price_rent || 25)}"></label>
+      <label style="flex:1;font-size:12px;color:var(--muted)">Own (R)<input class="input" id="pm-own" type="number" min="0" value="${escA(f.price_own || 49)}"></label></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin-top:10px"><input type="checkbox" id="pm-free" ${f.free ? 'checked' : ''}> Free to watch</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
-      <button class="btn btn-g" onclick="savePrice('${f.id}', this)">SAVE</button>
+      <button class="btn btn-g" onclick="savePrice('${idA(f.id)}', this)">SAVE</button>
       <button class="btn" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="document.getElementById('price-modal').remove()">CANCEL</button></div></div>`;
   document.body.appendChild(wrap);
 }
@@ -1098,7 +1103,7 @@ async function loadAdminLists() {
   } catch (e) { el.innerHTML = `<p style="color:var(--red);font-size:14px">${escA(e.message)}</p>`; return; }
   if (!adminLists.length) { el.innerHTML = `<p style="color:var(--muted);font-size:14px">No lists yet. Start with a few: "Taxi stories", "isiZulu shorts", "Made in Durban".</p>`; return; }
   el.innerHTML = adminLists.map(l => `
-    <div class="card row" style="cursor:pointer" onclick="editAdminList('${l.id}')">
+    <div class="card row" style="cursor:pointer" onclick="editAdminList('${idA(l.id)}')">
       <div style="flex:1">
         <p style="font-size:14px;font-weight:700">${escA(l.title)}</p>
         <p style="font-size:12px;color:var(--muted)">${(l.films || []).length} film${(l.films || []).length === 1 ? '' : 's'} · /list/${escA(l.slug)}</p>
@@ -1157,7 +1162,7 @@ function renderListEditor(q = '') {
     ${pool.slice(0, 40).map(f => `
       <div class="card row" style="padding:8px 12px">
         <p style="flex:1;font-size:14px">${escA(f.title)} <span style="font-size:11px;color:var(--muted)">${escA(f.filmmaker || '')}${f.status === 'soon' ? ' · coming soon' : ''}</span></p>
-        <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="addListFilm('${f.id}')">+ Add</button>
+        <button class="btn btn-sm" style="width:auto;background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="addListFilm('${idA(f.id)}')">+ Add</button>
       </div>`).join('') || '<p style="font-size:13px;color:var(--muted)">No more films match.</p>'}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
       <button class="btn btn-g" onclick="saveAdminList(this)">SAVE LIST</button>
@@ -1182,7 +1187,7 @@ async function saveAdminList(btn) {
   btn.disabled = true;
   try {
     const d = await listsApi('save', { list: editingList });
-    snack(d.list.published ? `Saved. It's live at 4flieks.com/list/${d.list.slug}` : 'Saved as a draft.');
+    snack(d.list.published ? `Saved. It's live at 4flieks.com/list/${escA(d.list.slug)}` : 'Saved as a draft.');
     loadAdminLists();
   } catch (e) { snack(e.message); btn.disabled = false; }
 }
@@ -1203,26 +1208,26 @@ function premierePanel(f, localDT) {
   return `<details style="margin-top:8px" ${on ? 'open' : ''}>
     <summary style="font-size:12px;color:var(--amber);cursor:pointer">${on ? 'Trailer premiere settings' : 'Make this a trailer premiere (exclusive trailer, not sold here)'}</summary>
     <div style="display:grid;gap:6px;margin-top:8px">
-      <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center"><input type="checkbox" id="pm-on-${f.id}" ${on ? 'checked' : ''}> Trailer premiere</label>
+      <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center"><input type="checkbox" id="pm-on-${idA(f.id)}" ${on ? 'checked' : ''}> Trailer premiere</label>
       <label style="font-size:12px;color:var(--muted)">Trailer unlocks at (leave empty to show it straight away)
-        <input type="datetime-local" ${inp} id="pm-at-${f.id}" value="${localDT(f.premiere_at)}"></label>
+        <input type="datetime-local" ${inp} id="pm-at-${idA(f.id)}" value="${localDT(f.premiere_at)}"></label>
       <label style="font-size:12px;color:var(--muted)">Release line, e.g. "In cinemas March 2027"
-        <input type="text" ${inp} id="pm-line-${f.id}" maxlength="80" value="${escA(f.release_line || '')}"></label>
-      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber)" onclick="premiereSave('${f.id}', this)">Save premiere</button>
+        <input type="text" ${inp} id="pm-line-${idA(f.id)}" maxlength="80" value="${escA(f.release_line || '')}"></label>
+      <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--amber);color:var(--amber)" onclick="premiereSave('${idA(f.id)}', this)">Save premiere</button>
       ${on ? `
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${!f.featured ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="featureFilm('${f.id}', this)">★ Feature on home</button>` : ''}
-          <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="premiereReport('${f.id}', this)">Report link for their team</button>
-          ${open ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="premiereCall('premiere-remind', '${f.id}', this)">Send "trailer is out" now</button>` : ''}
+          ${!f.featured ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber)" onclick="featureFilm('${idA(f.id)}', this)">★ Feature on home</button>` : ''}
+          <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="premiereReport('${idA(f.id)}', this)">Report link for their team</button>
+          ${open ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted)" onclick="premiereCall('premiere-remind', '${idA(f.id)}', this)">Send "trailer is out" now</button>` : ''}
         </div>
         <p style="font-size:11px;color:var(--muted)">${f.premiere_at ? (open ? 'The trailer is out. Reminder emails go automatically within 15 minutes of the premiere time.' : `Reminders go automatically within 15 minutes of ${escA(new Date(f.premiere_at).toLocaleString('en-ZA'))}.`) : 'No premiere time: the trailer shows straight away.'}
           Tracked links: add <b>?a=name</b> to the film link (e.g. ?a=instagram) to see where viewers came from in the report.</p>
         <div style="border-top:1px solid var(--border);padding-top:8px">
           <p style="font-size:12px;color:var(--text);font-weight:700">Email everyone who asked for news</p>
-          <input ${inp} id="up-subj-${f.id}" placeholder="Subject, e.g. Tickets are on sale" maxlength="140" style="margin-top:6px">
-          <textarea ${inp} id="up-msg-${f.id}" rows="3" placeholder="The news, in a few lines" maxlength="2000" style="margin-top:6px"></textarea>
-          <input ${inp} id="up-link-${f.id}" placeholder="Link (optional), https://…" style="margin-top:6px">
-          <button class="btn btn-sm" style="margin-top:6px;background:var(--card);border:1px solid var(--border);color:var(--amber)" data-armed="" onclick="premiereUpdate('${f.id}', this)">Send the email…</button>
+          <input ${inp} id="up-subj-${idA(f.id)}" placeholder="Subject, e.g. Tickets are on sale" maxlength="140" style="margin-top:6px">
+          <textarea ${inp} id="up-msg-${idA(f.id)}" rows="3" placeholder="The news, in a few lines" maxlength="2000" style="margin-top:6px"></textarea>
+          <input ${inp} id="up-link-${idA(f.id)}" placeholder="Link (optional), https://…" style="margin-top:6px">
+          <button class="btn btn-sm" style="margin-top:6px;background:var(--card);border:1px solid var(--border);color:var(--amber)" data-armed="" onclick="premiereUpdate('${idA(f.id)}', this)">Send the email…</button>
         </div>` : ''}
     </div>
   </details>`;
@@ -1327,6 +1332,10 @@ async function toggleFilmStatus(id, status) {
 /* Keep in step with VERSION in netlify/functions/flieks-agree.js. */
 const AGREEMENT_VERSION = '2026-09-12';
 const escA = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+// IDs placed in element ids and click handlers: letters, digits, - and _ only, so nothing can break out.
+const idA = v => String(v ?? '').replace(/[^A-Za-z0-9_-]/g, '');
+// Text placed inside a quoted string in a click handler: no quotes, backslashes or line breaks.
+const jsA = v => escA(String(v ?? '').replace(/['"\\\n\r`]/g, ''));
 
 function agreementLine(u) {
   if (!u.agreement_ref) {
@@ -1407,18 +1416,18 @@ async function loadUsers() {
       apps.map(a => `
         <div class="card">
           <div class="row" style="margin-bottom:6px">
-            <div><p style="font-size:14px;font-weight:600">${a.name||'—'}</p><p style="font-size:12px;color:var(--muted)">${a.email||''} · ${a.location||'—'}</p></div>
+            <div><p style="font-size:14px;font-weight:600">${escA(a.name)||'—'}</p><p style="font-size:12px;color:var(--muted)">${escA(a.email)} · ${escA(a.location)||'—'}</p></div>
             <span class="tag tag-a">PENDING</span>
           </div>
-          ${a.bio ? `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">${a.bio}</p>` : ''}
+          ${a.bio ? `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">${escA(a.bio)}</p>` : ''}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button class="btn btn-g" onclick="approveFilmmaker('${a.uid}','${a.id}')">APPROVE</button>
-            <button class="btn btn-r" onclick="rejectFilmmaker('${a.uid}','${a.id}')">REJECT</button>
+            <button class="btn btn-g" onclick="approveFilmmaker('${idA(a.uid)}','${idA(a.id)}')">APPROVE</button>
+            <button class="btn btn-r" onclick="rejectFilmmaker('${idA(a.uid)}','${idA(a.id)}')">REJECT</button>
           </div>
         </div>
       `).join('');
   } catch(e) {
-    appEl.innerHTML = `<p style="color:var(--muted);font-size:14px">Error loading applications: ${e.message}</p>`;
+    appEl.innerHTML = `<p style="color:var(--muted);font-size:14px">Error loading applications: ${escA(e.message)}</p>`;
   }
   try {
     // All users — use REST API to bypass SDK caching
@@ -1445,14 +1454,14 @@ async function loadUsers() {
             ${isMaker(u) ? agreementLine(u) : ''}
           </div>
           ${u.agreement_ref ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-left:10px;white-space:nowrap"
-             onclick="sendAgreementCopy('${u.id}', this)">Email agreement</button>` : ''}
+             onclick="sendAgreementCopy('${idA(u.id)}', this)">Email agreement</button>` : ''}
           ${isMaker(u) ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--amber);margin-left:6px;white-space:nowrap"
-             onclick="openThread('${u.id}')">Message</button>` : ''}
+             onclick="openThread('${idA(u.id)}')">Message</button>` : ''}
         </div>
       `).join('');
     }
   } catch(e) {
-    uEl.innerHTML = `<p style="color:var(--red);font-size:14px">Error loading users: ${e.message}</p>`;
+    uEl.innerHTML = `<p style="color:var(--red);font-size:14px">Error loading users: ${escA(e.message)}</p>`;
   }
 }
 
@@ -1484,7 +1493,7 @@ async function loadPayouts() {
     if (!r.ok) throw new Error(d.message);
     payouts = d.payouts || [];
   } catch (e) {
-    el.innerHTML = `<p style="color:var(--red);font-size:14px">Could not load payouts. ${e.message || ''}</p>`;
+    el.innerHTML = `<p style="color:var(--red);font-size:14px">Could not load payouts. ${escA(e.message || '')}</p>`;
     return;
   }
 
@@ -1504,10 +1513,10 @@ async function loadPayouts() {
       <div class="row" style="margin-bottom:10px">
         <div>
           <p style="font-size:18px;font-weight:700;color:var(--green)">R${p.amount.toFixed(2)}</p>
-          <p style="font-size:13px;color:var(--text)">${p.name || 'Unnamed'}</p>
-          <p style="font-size:12px;color:var(--muted)">${p.email || ''}</p>
+          <p style="font-size:13px;color:var(--text)">${escA(p.name) || 'Unnamed'}</p>
+          <p style="font-size:12px;color:var(--muted)">${escA(p.email)}</p>
           <p style="font-size:11px;color:var(--dim)">
-            ${p.sales} sale${p.sales === 1 ? '' : 's'} ·
+            ${Number(p.sales) || 0} sale${p.sales === 1 ? '' : 's'} ·
             requested ${new Date(p.requested_at).toLocaleDateString('en-ZA')}</p>
         </div>
         <span class="tag tag-a">PENDING</span>
@@ -1516,16 +1525,16 @@ async function loadPayouts() {
       ${p.bank ? `
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;
                     padding:11px 12px;margin-bottom:10px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.7">
-          <div>${p.bank.holder}</div>
-          <div>${p.bank.bank} · ${p.bank.account_type || ''}</div>
-          <div>Acc ${p.bank.account_number}</div>
-          <div>Branch ${p.bank.branch_code}</div>
+          <div>${escA(p.bank.holder)}</div>
+          <div>${escA(p.bank.bank)} · ${escA(p.bank.account_type || '')}</div>
+          <div>Acc ${escA(p.bank.account_number)}</div>
+          <div>Branch ${escA(p.bank.branch_code)}</div>
         </div>
         <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-bottom:8px"
-          onclick='copyBank(${JSON.stringify(JSON.stringify(p.bank))})'>COPY DETAILS</button>`
+          data-bank="${escA(JSON.stringify(p.bank))}" onclick="copyBank(this.dataset.bank)">COPY DETAILS</button>`
       : `<p style="font-size:12px;color:var(--red);margin-bottom:10px">No bank details on file.</p>`}
 
-      <button class="btn btn-g" onclick="settlePayout('${p.uid}','${p.id}','${(p.name||'').replace(/'/g,'')}',${p.amount})">
+      <button class="btn btn-g" onclick="settlePayout('${idA(p.uid)}','${idA(p.id)}','${jsA(p.name)}',${Number(p.amount) || 0})">
         MARK AS PAID
       </button>
     </div>`).join('')}`;
@@ -1557,7 +1566,7 @@ async function filmUpdate(filmId) {
     if (!r.ok) throw new Error(d.message);
   } catch (e) {
     document.getElementById('upd-body').innerHTML =
-      `<p style="color:var(--red);font-size:14px">${e.message || 'Could not load that.'}</p>`;
+      `<p style="color:var(--red);font-size:14px">${escA(e.message || 'Could not load that.')}</p>`;
     return;
   }
 
@@ -1570,7 +1579,7 @@ async function filmUpdate(filmId) {
 
   document.getElementById('upd-body').innerHTML = `
     <p class="section-label" style="margin-bottom:3px">UPDATE FOR ${(film.filmmaker || 'THE FILMMAKER').toUpperCase()}</p>
-    <p style="font-family:var(--fb);font-size:20px;color:var(--text);margin-bottom:14px">${d.film.title}</p>
+    <p style="font-family:var(--fb);font-size:20px;color:var(--text);margin-bottom:14px">${escA(d.film.title)}</p>
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);
                 border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:14px">
@@ -1585,14 +1594,14 @@ async function filmUpdate(filmId) {
     <textarea id="upd-text" rows="13"
       style="width:100%;font:inherit;font-size:13.5px;line-height:1.55;padding:13px;border-radius:9px;
              background:var(--card);border:1px solid var(--border);color:var(--text);
-             resize:vertical;margin-bottom:10px">${message}</textarea>
+             resize:vertical;margin-bottom:10px">${escA(message)}</textarea>
 
     <button class="btn btn-g" onclick="copyUpdate()">COPY MESSAGE</button>
     <button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--muted);margin-top:8px;width:100%"
       onclick="mailUpdate('${(film.filmmaker_email || '').replace(/'/g,'')}','${(d.film.title || '').replace(/'/g,'')}')">
       OPEN IN EMAIL</button>
     ${!reportUrl ? `<button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--accent,#F0A62E);margin-top:8px;width:100%"
-      onclick="makeReport('${filmId}')">CREATE A SHAREABLE REPORT FIRST</button>` : ''}
+      onclick="makeReport('${idA(filmId)}')">CREATE A SHAREABLE REPORT FIRST</button>` : ''}
     <button class="btn btn-sm" style="background:none;border:0;color:var(--muted);margin-top:10px;width:100%"
       onclick="document.getElementById('upd-modal').remove()">CLOSE</button>`;
 }
@@ -1610,13 +1619,13 @@ function writeUpdate(d, film, reportUrl) {
   L.push('');
 
   if (!h.buyers) {
-    L.push(`Quick update on ${d.film.title}. It's live and ${h.clicks} ${h.clicks === 1 ? 'person has' : 'people have'} opened a link to it, but nobody has bought yet.`);
+    L.push(`Quick update on ${escA(d.film.title)}. It's live and ${h.clicks} ${h.clicks === 1 ? 'person has' : 'people have'} opened a link to it, but nobody has bought yet.`);
     L.push('');
     L.push(top
-      ? `Most of that traffic came through ${top.name}. Getting the rest of the cast posting is usually what turns opens into sales — each of them has their own link in the portal.`
+      ? `Most of that traffic came through ${escA(top.name)}. Getting the rest of the cast posting is usually what turns opens into sales — each of them has their own link in the portal.`
       : `The thing that moves the needle is cast links. Everyone in the film has their own in the portal, and we can see exactly who brings people in.`);
   } else {
-    L.push(`Quick update on ${d.film.title}.`);
+    L.push(`Quick update on ${escA(d.film.title)}.`);
     L.push('');
     L.push(`${h.buyers} ${h.buyers === 1 ? 'person has' : 'people have'} paid to watch it${
       h.clicks ? `, out of ${h.clicks} who opened a link — that's ${h.conversion}% converting` : ''}.`);
@@ -1629,9 +1638,9 @@ function writeUpdate(d, film, reportUrl) {
     }
     L.push('');
     if (top && top.sales) {
-      L.push(`${top.name} has brought in the most — ${top.sales} ${top.sales === 1 ? 'sale' : 'sales'} from ${top.clicks} opens. Worth thanking them.`);
+      L.push(`${escA(top.name)} has brought in the most — ${top.sales} ${top.sales === 1 ? 'sale' : 'sales'} from ${top.clicks} opens. Worth thanking them.`);
     } else if (top) {
-      L.push(`${top.name} has driven the most traffic so far with ${top.clicks} opens.`);
+      L.push(`${escA(top.name)} has driven the most traffic so far with ${top.clicks} opens.`);
     }
   }
 

@@ -607,7 +607,7 @@ global.FlieksThemes = { apply, get, list, previewStyle, DEFAULT, THEMES };
 
 const db = () => firebase.database();
 const store = () => firebase.storage();
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 const slugify = s => String(s||'').toLowerCase().trim()
   .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
 
@@ -993,7 +993,7 @@ const storage = firebase.storage();
 /* The cast-panel module below has its own copy of this, scoped to itself.
    This one is for the rest of the file — anywhere a filmmaker's own title,
    synopsis or bio gets dropped into innerHTML. */
-const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 
 let currentUser = null;
 let myFilms = [];
@@ -1096,11 +1096,7 @@ function showPendingState(profile) {
 }
 
 /* Matches escHtml's escaping but for use inside an attribute value. */
-function escHtmlAttr(s) {
-  const d = document.createElement('div');
-  d.textContent = s ?? '';
-  return d.innerHTML.replace(/"/g, '&quot;');
-}
+function escHtmlAttr(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 async function applyAsFilmmaker() {
   const msg = document.getElementById('applyMsg');
