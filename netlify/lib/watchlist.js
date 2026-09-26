@@ -228,4 +228,4 @@ async function startNotify(filmId, extra = {}, fetchImpl = fetch) {
   return ok;
 }
 
-module.exports = { startNotify, okFilm, validEmail, emailKey, saveable, whenText, liveNowEmail, premiereEmail, updateEmail, sendBatch, waiting, counts, notifyWatchers, MAX_ITEMS };
+module.exports = { startNotify, okFilm, validEmail, emailKey, saveable, whenText, liveNowEmail, premiereEmail, updateEmail, sendBatch, waiting, counts, notifyWatchers, MAX_ITEMS, shell, filmUrl, posterOf };

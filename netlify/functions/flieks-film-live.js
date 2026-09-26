@@ -15,10 +15,12 @@ const { sendLiveEmail } = require('../lib/film-mail');
 const { waiting, startNotify } = require('../lib/watchlist');
 
 /* Email the people waiting for this film, in the background. Returns how many are waiting. */
-async function startWatchNotify(filmId) {
+async function startWatchNotify(filmId, film) {
   const w = await waiting(filmId).catch(() => ({ accounts: [], emails: [] }));
   const n = w.accounts.length + w.emails.length;
-  if (n) await startNotify(filmId, { kind: 'live' });
+  // The same background run emails the filmmaker's followers afterwards.
+  const followers = film && film.filmmaker_uid ? Object.keys(await ops.dbGet(`flieks_followers/${film.filmmaker_uid}`).catch(() => null) || {}).length : 0;
+  if (n || followers) await startNotify(filmId, { kind: 'live' });
   return n;
 }
 
@@ -37,7 +39,7 @@ exports.handler = async event => {
     const r = await sendLiveEmail(String(filmId || ''), { force: !!force });
     console.log('[film-live]', filmId, r.ok ? (r.already ? 'already sent' : 'sent') : r.reason);
     const film = await ops.dbGet(`flieks_films/${String(filmId || '').replace(/[.#$\[\]\/]/g, '')}`).catch(() => null);
-    const watchers = film && film.status === 'live' && !film.premiere ? await startWatchNotify(String(filmId)) : 0;
+    const watchers = film && film.status === 'live' && !film.premiere ? await startWatchNotify(String(filmId), film) : 0;
     return reply(200, { ...r, watchers });
   } catch (e) {
     console.error('[film-live]', e);

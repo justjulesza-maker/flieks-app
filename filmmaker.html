@@ -199,6 +199,7 @@ select.input option{background:#1A1A1A;color:var(--text)}
       <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <p>You earn <strong style="color:var(--green)">70%</strong> of every rental and purchase. Platform takes 30% for hosting, payment processing, and distribution.</p>
     </div>
+    <div id="my-page-card"></div>
     <a href="/lab" style="display:block;text-decoration:none;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--card)">
       <p class="section-label" style="margin-bottom:4px;color:var(--amber)">NEW · 4FLIEKS LAB</p>
       <p style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px">Script Report →</p>
@@ -1170,6 +1171,7 @@ async function loadDashboard() {
   let statement;
   try {
     statement = await refreshMyFilms();
+    loadMyPage();
   } catch (e) {
     console.error('[filmmaker] dashboard load failed:', e);
     document.getElementById('stats-grid').innerHTML =
@@ -1245,6 +1247,54 @@ function filmRowHTML(f) {
     </div>
     <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--dim);fill:none;stroke-width:2;flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`;
+}
+
+/* Your public page on 4flieks (4flieks.com/by/<you>): followers, and what it says. */
+async function followApi(action, extra = {}) {
+  const r = await fetch('/.netlify/functions/flieks-follow', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, token: await auth.currentUser.getIdToken(), ...extra })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong.');
+  return d;
+}
+
+async function loadMyPage() {
+  const box = document.getElementById('my-page-card');
+  if (!box || !auth.currentUser) return;
+  let p;
+  try { p = (await followApi('my-page')).page; } catch { box.innerHTML = ''; return; }
+  const inp = (id, v, ph, max) => `<input class="input" id="${id}" value="${esc(v || '')}" placeholder="${ph}" maxlength="${max}" style="margin-bottom:8px">`;
+  box.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--card)">
+      <p class="section-label" style="margin-bottom:4px;color:var(--amber)">YOUR PUBLIC PAGE</p>
+      <p style="font-size:15px;font-weight:700;color:var(--text)">${p.followers} follower${p.followers === 1 ? '' : 's'}</p>
+      <p style="font-size:13px;color:var(--muted);line-height:1.5;margin:3px 0 10px">${p.films
+        ? `Viewers who follow you get an email when you have a new film. Share your page: <a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:var(--amber)">${esc(p.url.replace('https://', ''))}</a>`
+        : 'Your page goes up once you have a film on 4flieks. Viewers who follow you get an email when you have a new film.'}</p>
+      <details>
+        <summary style="font-size:13px;color:var(--amber);cursor:pointer">Edit what it says</summary>
+        <div style="margin-top:10px">
+          ${inp('mp-name', p.name, 'Your name, as viewers should see it', 80)}
+          ${inp('mp-location', p.location, 'Where you are (e.g. Soweto, Lagos)', 60)}
+          <textarea class="input" id="mp-bio" maxlength="600" rows="4" placeholder="A few lines about you and your films" style="margin-bottom:8px">${esc(p.bio || '')}</textarea>
+          ${inp('mp-instagram', p.instagram, 'Instagram (e.g. @yourname)', 60)}
+          ${inp('mp-website', p.website, 'Website (https://…)', 200)}
+          <button class="btn btn-amber btn-sm" onclick="saveMyPage(this)">SAVE PAGE</button>
+        </div>
+      </details>
+    </div>`;
+}
+
+async function saveMyPage(btn) {
+  const v = id => document.getElementById(id).value;
+  btn.disabled = true;
+  try {
+    await followApi('save-page', { page: { name: v('mp-name'), location: v('mp-location'), bio: v('mp-bio'), instagram: v('mp-instagram'), website: v('mp-website') } });
+    showSnack('Your page is saved.');
+    loadMyPage();
+  } catch (e) { showSnack(e.message); btn.disabled = false; }
 }
 
 /* How many viewers saved this film, or asked to hear when it's live. */

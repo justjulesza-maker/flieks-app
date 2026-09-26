@@ -153,6 +153,10 @@ exports.handler = async event => {
           premiere: true, premiere_at: at, release_line: String(b.release_line || '').trim().slice(0, 80) || null,
           trailer_url: null, trailer_hidden: true, status: 'soon', awaiting_film: null
         }, 'PATCH');
+        // Tell the filmmaker's followers (once per film; they are skipped if already told).
+        if (film.filmmaker_uid && Object.keys(await ops.dbGet(`flieks_followers/${film.filmmaker_uid}`) || {}).length) {
+          await wl.startNotify(b.filmId, { kind: 'followers', event: 'soon' });
+        }
         return reply(200, { ok: true, premiere: true, premiere_at: at });
       }
 

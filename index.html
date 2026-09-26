@@ -200,6 +200,10 @@ input,textarea{font-family:var(--fb)}
 .hrow .film-thumb{height:200px}
 .row-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 20px;margin:18px 0 10px}
 .row-head a{font-size:12px;color:var(--amber);text-decoration:none}
+.mk-head{display:flex;gap:14px;align-items:center}
+.mk-avatar{width:64px;height:64px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--fn);font-size:30px;flex-shrink:0}
+.follow-btn{padding:9px 18px;border-radius:20px;border:1px solid var(--amber);background:var(--amber-fill);color:var(--on-amber);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.follow-btn.on{background:transparent;color:var(--amber)}
 .list-chips{display:flex;gap:8px;flex-wrap:wrap}
 .list-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:600;text-decoration:none;cursor:pointer}
 .list-chip svg{width:14px;height:14px;stroke:var(--amber);fill:none;stroke-width:2}
@@ -450,6 +454,19 @@ input,textarea{font-family:var(--fb)}
 </div>
 
 <!-- ================================================================
+     VIEW: FILMMAKER  (4flieks.com/by/<slug>)
+================================================================ -->
+<div id="view-maker" class="view">
+  <div class="topbar">
+    <button onclick="navBack()" style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+  </div>
+  <div id="maker-content"></div>
+</div>
+
+<!-- ================================================================
      VIEW: LIST  (4flieks.com/list/<slug>)
 ================================================================ -->
 <div id="view-list" class="view">
@@ -605,6 +622,10 @@ input,textarea{font-family:var(--fb)}
   <div class="topbar">
     <a href="#" onclick="nav('home');return false;" class="topbar-logo"><img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt=""></a>
     <span style="font-size:14px;color:var(--muted)">My Library</span>
+  </div>
+  <div id="lib-follow-wrap" style="padding:16px 20px 0;display:none">
+    <p class="section-label">FILMMAKERS YOU FOLLOW</p>
+    <div class="list-chips" id="lib-follow"></div>
   </div>
   <div id="lib-watch-wrap" style="padding:16px 20px 0;display:none">
     <p class="section-label">WATCHLIST</p>
@@ -1073,6 +1094,8 @@ let userProgress = {};     // filmId -> { pos, dur, at, done } — where they go
 let soonFilms = [];        // films marked "coming soon" by an admin
 let userWatch = {};        // filmId -> { at } — the viewer's watchlist
 let homeGenre = 'all';
+let userFollows = {};      // filmmaker uid -> { slug, name } — who this viewer follows
+const makerPages = {};     // cache: uid -> public page
 let allLists = [];         // published lists: { id, slug, title, description, films: [ids], on_home }
 const findFilm = id => allFilms.find(f => f.id === id) || soonFilms.find(f => f.id === id);
 let playing = null;        // { id, trailer, lastSaved } — what the player has loaded
@@ -1131,8 +1154,9 @@ auth.onAuthStateChanged(async user => {
     await loadUserPurchases();
     maybeOfferInstall();
     loadWatchlist();
+    loadFollows();
   } else {
-    userWatch = {};
+    userWatch = {}; userFollows = {};
     if (allFilms.length) renderHome(homeGenre);
   }
   // Handle return from Yoco
@@ -1301,6 +1325,97 @@ function renderHomeRows(genre = homeGenre) {
 const listFilms = l => (l.films || []).map(findFilm).filter(Boolean);
 const LIST_ICON = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
 
+/* ---- Filmmakers' pages and following ---- */
+async function followApi(action, extra = {}) {
+  const body = { action, ...extra };
+  if (auth.currentUser) body.token = await auth.currentUser.getIdToken();
+  const r = await fetch('/.netlify/functions/flieks-follow', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong. Try again.');
+  return d;
+}
+
+async function loadFollows() {
+  if (!auth.currentUser) { userFollows = {}; return; }
+  try {
+    userFollows = Object.fromEntries(((await followApi('mine')).following || []).map(x => [x.uid, x]));
+  } catch (e) { console.warn('follows unavailable:', e); }
+  const open = document.querySelector('.view.active');
+  if (open && open.id === 'view-library') loadLibrary();
+}
+
+/* 4flieks.com/by/<slug>: who they are, their films, and a Follow button. */
+async function openMaker(ref) {
+  const box = document.getElementById('maker-content');
+  const cached = ref.uid && makerPages[ref.uid];
+  if (!cached) box.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+  nav('maker');
+  let page = cached;
+  if (!page) {
+    try { page = (await followApi('page', ref)).page; makerPages[page.uid] = page; }
+    catch (e) { box.innerHTML = `<div class="empty"><p>${escHtml(e.message)}</p></div>`; return; }
+  }
+  renderMaker(page);
+}
+
+function renderMaker(page) {
+  const films = (page.films || []).map(findFilm).filter(Boolean);
+  const on = !!userFollows[page.uid];
+  const mine = auth.currentUser && auth.currentUser.uid === page.uid;
+  document.getElementById('maker-content').innerHTML = `
+    <div style="padding:16px 20px 6px">
+      <div class="mk-head">
+        <div class="mk-avatar">${escHtml((page.name || '?').charAt(0).toUpperCase())}</div>
+        <div style="flex:1;min-width:0">
+          <p class="section-label" style="margin-bottom:2px">FILMMAKER</p>
+          <p class="bbn" style="font-size:30px;line-height:1.05;color:var(--text)">${escHtml(page.name)}</p>
+          <p style="font-size:12px;color:var(--muted);margin-top:3px">${[page.location, `${films.length} film${films.length === 1 ? '' : 's'}`, `<span id="mk-followers">${page.followers}</span> follower${page.followers === 1 ? '' : 's'}`].filter(Boolean).map(x => x.startsWith('<') || /follower/.test(x) ? x : escHtml(x)).join(' · ')}</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        ${mine ? `<a class="follow-btn on" href="/filmmaker" style="text-decoration:none">Edit your page</a>`
+          : `<button class="follow-btn${on ? ' on' : ''}" id="mk-follow" onclick="toggleFollow('${page.uid}', this)">${on ? 'Following' : 'Follow'}</button>`}
+        <button class="follow-btn on" style="border-color:var(--border);color:var(--text)" onclick="shareMaker('${page.uid}')">Share</button>
+      </div>
+      ${!mine && !on ? `<p style="font-size:12px;color:var(--muted);margin-top:8px">Follow to get an email when ${escHtml(page.name.split(' ')[0])} has a new film.</p>` : ''}
+      ${page.bio ? `<p style="color:var(--muted);font-size:14px;line-height:1.65;margin-top:14px;white-space:pre-line">${escHtml(page.bio)}</p>` : ''}
+      ${page.instagram || page.website ? `<div class="list-chips" style="margin-top:12px">
+        ${page.instagram ? `<a class="list-chip" href="https://instagram.com/${encodeURIComponent(page.instagram)}" target="_blank" rel="noopener">@${escHtml(page.instagram)}</a>` : ''}
+        ${page.website ? `<a class="list-chip" href="${escHtml(page.website)}" target="_blank" rel="noopener nofollow">${escHtml(page.website.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, ''))}</a>` : ''}
+      </div>` : ''}
+    </div>
+    <p class="section-label" style="padding:0 20px;margin:14px 0 10px">FILMS</p>
+    <div class="film-grid">${films.map(filmCardHTML).join('') || '<div style="grid-column:span 2" class="empty"><p>No films on 4flieks yet.</p></div>'}</div>`;
+}
+
+async function toggleFollow(uid, btn) {
+  const user = await requireUser();
+  if (!user) { showSnack('Sign in to follow filmmakers.'); nav('auth'); return; }
+  const page = makerPages[uid];
+  if (!page) return;
+  const was = !!userFollows[uid];
+  btn.disabled = true;
+  try {
+    const d = await followApi(was ? 'unfollow' : 'follow', { slug: page.slug });
+    if (d.following) userFollows[uid] = { uid, slug: page.slug, name: page.name }; else delete userFollows[uid];
+    page.followers = d.followers;
+    showSnack(d.following ? `Following ${page.name}. We'll email you when they have a new film.` : `You no longer follow ${page.name}.`);
+    renderMaker(page);
+  } catch (e) { showSnack(e.message); btn.disabled = false; }
+}
+
+async function shareMaker(uid) {
+  const page = makerPages[uid];
+  if (!page) return;
+  const url = `${location.origin}/by/${encodeURIComponent(page.slug)}`;
+  try {
+    if (navigator.share) await navigator.share({ title: page.name, text: `${page.name}'s films on 4flieks`, url });
+    else { await navigator.clipboard.writeText(url); showSnack('Link copied.'); }
+  } catch {}
+}
+
 /* A list's own page: 4flieks.com/list/<slug>. */
 function openList(slug) {
   const l = allLists.find(x => x.slug === slug);
@@ -1432,11 +1547,11 @@ function renderFilmDetail() {
       </div>
     </div>
     <div style="padding:0 20px 14px;display:flex;justify-content:space-between;align-items:center">
-      <div class="filmmaker-row">
+      <div class="filmmaker-row"${f.filmmaker_uid ? ` style="cursor:pointer" onclick="openMaker({ uid: '${f.filmmaker_uid}' })" title="See all their films"` : ''}>
         <div class="filmmaker-avatar" style="background:var(--red);color:#fff">${escHtml((f.filmmaker||'?').charAt(0))}</div>
         <div>
-          <p style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(f.filmmaker)}</p>
-          <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker_location||'')}</p>
+          <p style="font-size:14px;font-weight:600;color:var(--text)">${escHtml(f.filmmaker)}${f.filmmaker_uid ? ' <span style="color:var(--amber)">›</span>' : ''}</p>
+          <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker_location||'')}${f.filmmaker_uid && userFollows[f.filmmaker_uid] ? `${f.filmmaker_location ? ' · ' : ''}<span style="color:var(--amber)">Following</span>` : ''}</p>
         </div>
       </div>
       <div class="stats-row"${f.status === 'soon' ? ' style="display:none"' : ''}>
@@ -3080,6 +3195,10 @@ async function loadLibrary() {
   };
   // Watchlist: saved films not bought yet. Tap opens the film page.
   const saved = watchlistFilms().filter(f => !userPurchases[f.id]);
+  const follows = Object.values(userFollows);
+  document.getElementById('lib-follow-wrap').style.display = follows.length ? 'block' : 'none';
+  document.getElementById('lib-follow').innerHTML = follows.map(m =>
+    `<a class="list-chip" href="/by/${encodeURIComponent(m.slug)}" onclick="openMaker({ slug: '${m.slug}' });return false;">${escHtml(m.name)}</a>`).join('');
   document.getElementById('lib-watch-wrap').style.display = saved.length ? 'block' : 'none';
   document.getElementById('lib-watch').innerHTML = saved.map(f => `
     <div class="lib-card" onclick="openFilm('${f.id}')">
@@ -3434,7 +3553,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const { filmId } = await FlieksSocial.readLink();
       const listPath = location.pathname.match(/^\/list\/([a-z0-9-]{1,80})\/?$/);
+      const byPath = location.pathname.match(/^\/by\/([a-z0-9-]{1,60})\/?$/);
       if (listPath) openList(listPath[1]);
+      else if (byPath) openMaker({ slug: byPath[1] });
       else if (filmId && findFilm(filmId)) openFilm(filmId);
 
       // Home-screen shortcuts land here

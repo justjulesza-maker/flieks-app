@@ -436,6 +436,19 @@ async function approveSoon(filmId, queueId) {
   if (queueId) await db.ref(DB+'admin_queue/'+queueId).update({ status: 'approved' });
   snack(date ? `Coming soon, from ${date}. Press Go Live in Films on the day.` : 'Marked coming soon. Press Go Live in Films on the day.');
   nav('queue');
+  announceToFollowers(filmId);
+}
+
+/* Email the filmmaker's followers that a new film is coming (once per film). */
+async function announceToFollowers(filmId) {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-follow', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action: 'announce', filmId })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.followers) setTimeout(() => snack(`Telling the filmmaker's ${d.followers} follower${d.followers === 1 ? '' : 's'}.`), 2600);
+  } catch (e) { console.warn('[admin] announce', e); }
 }
 
 async function setSoon(id) {
@@ -443,6 +456,7 @@ async function setSoon(id) {
   await db.ref(DB+'films/'+id).update({ status: 'soon', release_date: date, featured: false });
   snack(date ? `Coming soon, from ${date}.` : 'Marked coming soon.');
   loadAllFilms();
+  announceToFollowers(id);
 }
 
 async function rejectFilm(filmId, queueId) {
