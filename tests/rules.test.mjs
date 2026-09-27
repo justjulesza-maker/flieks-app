@@ -55,8 +55,9 @@ await check('L4 a stranger cannot delete another film\'s results link', assertFa
 await check('L4 the film\'s owner can delete it', assertSucceeds(remove(ref(as('fm2'), 'flieks_result_keys/key1'))));
 await check('roles: a viewer cannot make themselves admin', assertFails(update(ref(as('v'), 'flieks_users/v'), { role: 'admin' })));
 
-// Budget & call sheets: server-only, the page goes through flieks-budget
-for (const node of ['flieks_budgets/v/p1', 'flieks_budget_index/v/p1', 'flieks_callsheets/abc', 'flieks_callsheet_acks/abc/x', 'flieks_budget_jobs/j1']) {
+// Budget & call sheets and the opportunities board: server-only, the pages go through their functions
+for (const node of ['flieks_budgets/v/p1', 'flieks_budget_index/v/p1', 'flieks_callsheets/abc', 'flieks_callsheet_acks/abc/x', 'flieks_budget_jobs/j1',
+                    'flieks_board_posts/b1', 'flieks_board_apps/b1/a1', 'flieks_board_my_apps/v/a1', 'flieks_board_reports/b1/x']) {
   await check(`budget: the browser cannot write ${node.split('/')[0]}`, assertFails(set(ref(as('v'), node), { title: 'x' })));
   await check(`budget: the browser cannot read ${node.split('/')[0]}`, assertFails(get(ref(as('v'), node))));
 }

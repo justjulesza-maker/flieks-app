@@ -1,7 +1,7 @@
 /**
  * In-memory stand-ins for the database (ops-core) and the outside services,
  * so flieks-budget and budget-import-background can be attacked locally.
- * Used by tests/budget.test.mjs and tests/budget-browser.test.mjs.
+ * Used by tests/budget.test.mjs and tests/board.test.mjs.
  */
 const path = require('path');
 const Module = require('module');
@@ -10,6 +10,7 @@ process.env.FIREBASE_API_KEY = 'test-key';
 process.env.FIREBASE_DB_SECRET = 'test-secret';
 process.env.ANTHROPIC_API_KEY = 'test-anthropic';
 process.env.URL = 'http://localhost:0';
+process.env.OPS_EMAIL_TO = 'team@4flieks.test';
 
 const db = {};
 const segs = p => String(p).split('/').filter(Boolean);
@@ -21,6 +22,7 @@ function put(p, v) {
   if (v === null || v === undefined) delete o[last]; else o[last] = JSON.parse(JSON.stringify(v));
 }
 const locks = new Map();
+const emails = [];
 let failCounters = false;
 const ops = {
   dbGet: async p => get(p),
@@ -30,6 +32,8 @@ const ops = {
   withLock: async (name, fn) => { const prev = locks.get(name) || Promise.resolve(); let done; const cur = new Promise(r => done = r); locks.set(name, prev.then(() => cur));
     await prev; await new Promise(r => setTimeout(r, 1)); try { return await fn(); } finally { done(); } },
   logLabEvent: async () => {},
+  SITE: 'https://4flieks.com',
+  sendEmailTo: async m => { emails.push(m); return { ok: true }; },
 };
 const opsPath = path.resolve(__dirname, '../netlify/lib/ops-core.js');
 require.cache[opsPath] = { id: opsPath, filename: opsPath, loaded: true, exports: ops };
@@ -62,12 +66,17 @@ global.fetch = async (url, opts = {}) => {
 
 const budget = require('../netlify/functions/flieks-budget.js');
 const background = require('../netlify/functions/budget-import-background.js');
+const board = require('../netlify/functions/flieks-board.js');
+async function boardApi(body, headers = {}) {
+  const r = await board.handler({ httpMethod: 'POST', body: JSON.stringify(body), headers });
+  return { status: r.statusCode, d: JSON.parse(r.body || '{}') };
+}
 async function api(body, headers = {}) {
   const r = await budget.handler({ httpMethod: 'POST', body: JSON.stringify(body), headers });
   return { status: r.statusCode, d: JSON.parse(r.body || '{}') };
 }
 module.exports = {
-  db, get, put, ops, users, addUser, api, budget, background,
+  db, get, put, ops, users, addUser, api, budget, background, board, boardApi, emails,
   setAnthropic: t => { anthropicText = t; }, lastBackground: () => lastBackgroundCall,
   setFailCounters: v => { failCounters = v; }
 };

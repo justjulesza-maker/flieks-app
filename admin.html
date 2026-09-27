@@ -996,7 +996,10 @@ async function sendThread(uid, filmId, btn) {
 let evData = null, evTab = 'look';
 async function loadEverything() {
   document.getElementById('ev-body').innerHTML = '<div class="spinner"></div>';
-  try { evData = await adminApi('flieks-moderate', 'everything'); }
+  try {
+    const [ev, board] = await Promise.all([adminApi('flieks-moderate', 'everything'), adminApi('flieks-board', 'admin-list').catch(() => ({ items: [] }))]);
+    evData = ev; evData.board = board.items || [];
+  }
   catch (e) { document.getElementById('ev-body').innerHTML = `<p style="color:var(--red)">${escA(e.message)}</p>`; return; }
   renderEverything();
 }
@@ -1012,18 +1015,20 @@ function renderEverything() {
     ...d.makers.filter(isNew).map(m => ({ kind: 'maker', m, why: 'New or changed' })),
     ...d.talent.filter(isNew).map(t => ({ kind: 'talent', t, why: 'New or changed' })),
     ...d.podcasts.filter(isNew).map(p => ({ kind: 'pod', p, why: 'New or changed' })),
-    ...d.reviews.filter(r => isNew(r) && !r.reports).map(r => ({ kind: 'review', r, why: 'New review' }))
+    ...d.reviews.filter(r => isNew(r) && !r.reports).map(r => ({ kind: 'review', r, why: 'New review' })),
+    ...(d.board || []).filter(b => b.status === 'pending' || b.hidden_reports || (b.reports.length && b.status === 'live')).map(b => ({ kind: 'board', b,
+      why: b.status === 'pending' ? 'Board post to approve' + (b.flags.length ? ' · FLAGGED: ' + b.flags.join(', ') : '') : `Reported ${b.reports.length}×${b.hidden_reports ? ' · hidden until you look' : ''}` }))
   ];
   // One card per thing, with all its reasons.
   const merged = [], byKey = {};
   look.forEach(x => {
-    const k = x.kind + ':' + (x.f ? x.f.id : x.m ? x.m.uid : x.t ? x.t.uid : x.p ? x.p.id : x.r.filmId + '/' + x.r.reviewId);
+    const k = x.kind + ':' + (x.f ? x.f.id : x.m ? x.m.uid : x.t ? x.t.uid : x.p ? x.p.id : x.b ? x.b.id : x.r.filmId + '/' + x.r.reviewId);
     if (byKey[k]) { if (!byKey[k].why.includes(x.why)) byKey[k].why += ' · ' + x.why; }
     else { byKey[k] = { ...x }; merged.push(byKey[k]); }
   });
   look.length = 0; look.push(...merged);
   const tabs = [['look', `Needs a look (${look.length})`], ['films', `Films (${films.length})`], ['makers', `Filmmaker pages (${d.makers.length})`],
-    ['talent', `Talent (${d.talent.length})`], ['pods', `Podcasts (${d.podcasts.length})`], ['lists', `Lists (${d.lists.length})`], ['reviews', 'Reviews'], ['prices', 'Price rules']];
+    ['talent', `Talent (${d.talent.length})`], ['pods', `Podcasts (${d.podcasts.length})`], ['board', `Board (${(d.board || []).length})`], ['lists', `Lists (${d.lists.length})`], ['reviews', 'Reviews'], ['prices', 'Price rules']];
   document.getElementById('ev-tabs').innerHTML = tabs.map(([k, l]) => `<button class="${evTab === k ? 'on' : ''}" onclick="evTab='${k}';renderEverything()">${l}</button>`).join('');
   const badge = x => isNew(x) ? '<span class="ev-new">NEW</span>' : '';
   const filmCard = (f, why) => `<div class="card"><div style="display:flex;gap:10px">
@@ -1063,13 +1068,24 @@ function renderEverything() {
   const reviewCard = (r, why) => `<div class="card"><p style="font-size:13px"><b>${escA(r.name)}</b> on <b>${escA(r.film)}</b> · ${r.rating}★${badge(r)}${r.hidden ? ' <span class="tag tag-r">HIDDEN</span>' : ''}${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
       ${r.body ? `<p style="font-size:13px;color:#bbb;margin-top:4px;line-height:1.5">${escA(r.body)}</p>` : ''}
       <div class="ev-acts">${!r.hidden && r.body ? `<button class="btn" style="color:var(--red)" onclick="evHideReview('${idA(r.filmId)}', '${idA(r.reviewId)}')">Hide comment</button>` : ''}</div></div>`;
-  const draw = x => x.kind === 'film' ? filmCard(x.f, x.why) : x.kind === 'maker' ? makerCard(x.m, x.why) : x.kind === 'talent' ? talentCard(x.t, x.why) : x.kind === 'pod' ? podCard(x.p, x.why) : reviewCard(x.r, x.why);
+  const KINDB = { casting: 'Casting call', crew: 'Crew call', collab: 'Collaborators' }, PAYB = { paid: 'Paid', deferred: 'Deferred', profit_share: 'Profit share', unpaid: 'Unpaid' };
+  const boardCard = (b, why) => `<div class="card"><p style="font-size:14px;font-weight:700">${escA(b.title)} <span class="tag ${b.status === 'live' ? 'tag-g' : b.status === 'pending' ? 'tag-a' : 'tag-m'}">${escA((b.status || '').toUpperCase())}</span>${b.flags.length ? ' <span class="tag tag-r">FLAGGED</span>' : ''}${b.hidden_reports ? ' <span class="tag tag-r">HIDDEN</span>' : ''}</p>
+      <p style="font-size:12px;color:var(--muted)">${escA(KINDB[b.kind] || b.kind)} · ${escA(b.poster)} (${escA(b.owner_email)}) · ${escA(PAYB[b.pay_type] || '')}${b.pay_note ? ': ' + escA(b.pay_note) : ''} · ${escA([b.city, b.country].filter(Boolean).join(', '))} · closes ${escA(b.closes)} · ${b.applications} applications${why ? ` · <span style="color:var(--amber)">${escA(why)}</span>` : ''}</p>
+      <p style="font-size:12px;color:#999;margin-top:4px;line-height:1.5;white-space:pre-line">${escA(b.synopsis)}</p>
+      <p style="font-size:12px;color:#bbb;margin-top:4px">Roles: ${b.roles.map(r => escA(r.name) + (r.minors ? ' [under 18]' : '') + (r.nudity ? ' [nudity]' : '') + (r.rate ? ' R' + escA(r.rate) + '/' + escA(r.rate_unit) : '')).join(' · ')}</p>
+      ${b.reports.length ? `<p style="font-size:12px;color:var(--red);margin-top:4px">Reports: ${b.reports.map(escA).join(' | ')}</p>` : ''}
+      <div class="ev-acts"><a class="btn" href="/lab/board/p/${encodeURIComponent(b.id)}" target="_blank" rel="noopener">Open post</a>
+        ${b.status !== 'live' || b.hidden_reports ? `<button class="btn" style="color:var(--green)" onclick="evBoard('decide', '${idA(b.id)}', true)">Approve</button>` : ''}
+        ${b.status === 'pending' ? `<button class="btn" style="color:var(--red)" onclick="evBoard('decide', '${idA(b.id)}', false)">Decline</button>` : ''}
+        ${b.status === 'live' ? `<button class="btn" style="color:var(--red)" onclick="evBoard('takedown', '${idA(b.id)}', false)">Take down</button>` : ''}</div></div>`;
+  const draw = x => x.kind === 'board' ? boardCard(x.b, x.why) : x.kind === 'film' ? filmCard(x.f, x.why) : x.kind === 'maker' ? makerCard(x.m, x.why) : x.kind === 'talent' ? talentCard(x.t, x.why) : x.kind === 'pod' ? podCard(x.p, x.why) : reviewCard(x.r, x.why);
   let html = '';
   if (evTab === 'look') html = look.length ? `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Price requests, prices above your ceiling, reported reviews, and anything new or changed since you last marked everything as checked${d.seen ? ` (${whenA(d.seen)})` : ''}.</p>` + look.map(draw).join('') : '<p style="color:var(--muted);font-size:14px">Nothing new since your last check.</p>';
   if (evTab === 'films') html = films.map(f => filmCard(f)).join('');
   if (evTab === 'makers') html = d.makers.map(m => makerCard(m)).join('') || '<p style="color:var(--muted)">No filmmaker pages yet.</p>';
   if (evTab === 'talent') html = d.talent.map(t => talentCard(t)).join('') || '<p style="color:var(--muted)">No talent profiles yet.</p>';
   if (evTab === 'pods') html = d.podcasts.map(p => podCard(p)).join('') || '<p style="color:var(--muted)">No podcast channels yet.</p>';
+  if (evTab === 'board') html = (d.board || []).map(b => boardCard(b)).join('') || '<p style="color:var(--muted)">No board posts yet.</p>';
   if (evTab === 'lists') html = d.lists.map(l => `<div class="card"><p style="font-size:14px;font-weight:700">${escA(l.title)}${badge(l)}</p><p style="font-size:12px;color:var(--muted)">${l.films} films · ${l.published ? 'published' : 'draft'}</p>
       <div class="ev-acts">${l.published ? `<a class="btn" href="/list/${encodeURIComponent(l.slug)}" target="_blank" rel="noopener">Open list</a>` : ''}<button class="btn" onclick="nav('lists')">Edit in Lists</button></div></div>`).join('') || '<p style="color:var(--muted)">No lists yet.</p>';
   if (evTab === 'reviews') html = d.reviews.map(r => reviewCard(r)).join('') || '<p style="color:var(--muted)">No reviews yet.</p>';
@@ -1122,6 +1138,12 @@ async function saveCap(btn) {
   btn.disabled = true;
   try { await adminApi('flieks-moderate', 'settings-save', { rent: document.getElementById('cap-rent').value, own: document.getElementById('cap-own').value }); snack('Price ceiling saved.'); loadEverything(); }
   catch (e) { snack(e.message); btn.disabled = false; }
+}
+async function evBoard(action, id, approve) {
+  let reason = '';
+  if (action !== 'decide' || !approve) { reason = prompt(action === 'takedown' ? 'Why is it coming down? (the poster is told)' : 'Why not? (the poster is told)') || ''; if (!reason.trim()) return; }
+  try { await adminApi('flieks-board', action, { id, approve, reason }); snack(approve ? 'Approved. It is on the board and the poster has been told.' : 'Done. The poster has been told.'); loadEverything(); }
+  catch (e) { snack(e.message); }
 }
 async function evHide(kind, uid, hidden) {
   try { await adminApi('flieks-moderate', 'hide', { kind, uid, hidden }); snack(hidden ? 'Hidden from the site.' : 'Showing again.'); loadEverything(); }

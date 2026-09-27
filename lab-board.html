@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Opportunities board — 4flieks Lab</title>
+<meta name="description" content="Casting calls, crew calls and collaborators for African film. Free to apply. From 4flieks Lab.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F0E6; --card:#FBF8F1; --ink:#17110E; --ink-2:#5E564D; --ink-3:#8A8177;
+  --rule:#D9D1C2; --sunset:#C2501F; --ochre:#A87515; --green:#2E7D32; --red:#B3261E;
+  --fb:'Archivo Black',sans-serif; --fn:'DM Sans',system-ui,sans-serif; --fm:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8E2D4;color:var(--ink);font-family:var(--fn);padding:28px 14px 70px;-webkit-font-smoothing:antialiased}
+.sheet{position:relative;max-width:1040px;margin:0 auto;background:var(--paper);padding:46px 52px 40px;box-shadow:0 1px 3px rgba(23,17,14,.08),0 12px 40px rgba(23,17,14,.09)}
+.sheet::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;background:repeating-linear-gradient(90deg,var(--sunset) 0 15px,transparent 15px 24px)}
+@media (max-width:640px){body{padding:0 0 60px}.sheet{padding:34px 16px 30px}}
+.masthead{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:28px}
+.mark{font-family:var(--fb);font-size:15px;color:var(--ink);text-decoration:none}
+.mark em{color:var(--sunset);font-style:normal}
+.docref{font-family:var(--fm);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);text-align:right;line-height:1.7}
+.labnav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:-14px 0 26px;padding-bottom:2px}
+.labnav::-webkit-scrollbar{display:none}
+.labnav a{flex:none;font-family:var(--fm);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);text-decoration:none;padding:7px 10px;border:1px solid transparent;border-radius:4px;white-space:nowrap}
+.labnav a:hover{color:var(--ink);border-color:var(--rule)}
+.labnav a.on{color:var(--ink);border-color:var(--ink)}
+.labnav a.acct{margin-left:auto;background:var(--ink);color:var(--paper)}
+h1{font-family:var(--fb);font-size:34px;line-height:1.1;letter-spacing:-.015em;margin-bottom:8px}
+h2{font-family:var(--fm);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--sunset);margin:30px 0 12px}
+h3{font-size:16px;font-weight:700;margin-bottom:4px}
+p{font-size:15px;line-height:1.6}
+.muted{color:var(--ink-2)} .small{font-size:13px} .tiny{font-size:12px;color:var(--ink-3);line-height:1.55}
+.lead{font-size:16px;color:var(--ink-2);max-width:640px}
+a{color:var(--sunset)}
+button,.btn{font:700 13px var(--fn);padding:10px 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink)}
+button.sm,.btn.sm{padding:6px 10px;font-size:12px}
+button.danger,.btn.danger{background:transparent;color:var(--red);border-color:var(--red)}
+button.go,.btn.go{background:var(--sunset);border-color:var(--sunset);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+button.link{background:none;border:0;padding:0;color:var(--ink-2);font-weight:500;text-decoration:underline;font-size:12.5px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+label.f{display:flex;flex-direction:column;gap:5px;font-family:var(--fm);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+label.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--ink);cursor:pointer;line-height:1.45}
+label.chk input{margin-top:3px;accent-color:var(--sunset);width:16px;height:16px;flex:none}
+input[type=text],input[type=date],input[type=number],input[type=url],input:not([type]),select,textarea{width:100%;font:15px var(--fn);padding:10px 11px;border:1px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink);letter-spacing:0;text-transform:none;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
+textarea{min-height:90px;resize:vertical}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:700px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--card);border:1px solid var(--rule);padding:16px 18px;border-radius:2px}
+.banner{background:#FFF3E6;border:1px solid #F0C9A6;border-left:4px solid var(--sunset);padding:13px 16px;margin:0 0 18px;font-size:14px;line-height:1.5}
+.banner.ok{background:#EEF6EE;border-color:#BFDDBF;border-left-color:var(--green)}
+.center{text-align:center;padding:40px 0}
+.spin{width:28px;height:28px;border:3px solid var(--rule);border-top-color:var(--sunset);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 14px}
+@keyframes s{to{transform:rotate(360deg)}}
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 8px;border:1px solid var(--ink);border-radius:3px;white-space:nowrap;color:var(--ink)}
+.chip.dark{background:var(--ink);color:var(--paper)}
+.chip.sun{background:var(--sunset);border-color:var(--sunset);color:#fff}
+.chip.green{background:var(--green);border-color:var(--green);color:#fff}
+.chip.soft{border-color:var(--rule);color:var(--ink-2)}
+.chip.warn{border-color:var(--red);color:var(--red)}
+/* filters + cards */
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;background:var(--card);border:1px solid var(--rule);padding:14px;margin:18px 0 16px;align-items:end}
+@media (max-width:760px){.filters{grid-template-columns:1fr 1fr}.filters .q{grid-column:1/-1}}
+.segs{display:flex;gap:6px;flex-wrap:wrap;margin-top:18px}
+.segs button{background:transparent;color:var(--ink);border-color:var(--rule);font-weight:500}
+.segs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.post{background:var(--card);border:1px solid var(--rule);border-top:3px solid var(--ink);padding:18px 18px 16px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:var(--ink);border-radius:2px}
+.post:hover{border-top-color:var(--sunset)}
+.post.casting{border-top-color:var(--sunset)}
+.post h3{font-family:var(--fb);font-size:19px;font-weight:400;line-height:1.2}
+.post .meta{font-size:13px;color:var(--ink-2)}
+.post .roles{font-size:13px;color:var(--ink-2);flex:1}
+.post .foot{display:flex;justify-content:space-between;gap:8px;font-family:var(--fm);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);border-top:1px solid var(--rule);padding-top:8px}
+/* detail */
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:18px 0}
+.facts div{background:var(--card);padding:11px 13px}
+.facts b{display:block;font-family:var(--fm);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:400;margin-bottom:3px}
+.facts span{font-size:14px;font-weight:700}
+.synopsis{white-space:pre-line;font-size:15.5px;line-height:1.65;max-width:720px}
+.role{background:var(--card);border:1px solid var(--rule);padding:16px 18px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:10px 18px;align-items:start}
+@media (max-width:640px){.role{grid-template-columns:1fr}}
+.role .desc{font-size:14px;color:var(--ink-2);white-space:pre-line;margin-top:6px;line-height:1.55}
+.role .rmeta{font-size:13px;color:var(--ink-2);margin-top:4px}
+.spot{background:var(--ink);color:var(--paper);padding:16px 18px;margin:18px 0;border-radius:4px;font-size:14px;line-height:1.55}
+.spot b{color:#F2C7A8}
+.safety{border-left:3px solid var(--ochre);padding:6px 0 6px 12px;font-size:13px;color:var(--ink-2);margin:20px 0}
+/* editor */
+.redit{background:var(--card);border:1px solid var(--rule);padding:14px;margin-bottom:10px}
+.redit .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+/* manager */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--rule);margin:14px 0}
+.tabs button{background:transparent;color:var(--ink-2);border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 12px;font-weight:500}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--sunset)}
+.app{background:var(--card);border:1px solid var(--rule);padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:72px 1fr;gap:14px}
+@media (max-width:560px){.app{grid-template-columns:1fr}}
+.app .ph{width:72px;height:72px;border-radius:50%;background:#E4DCCB center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-family:var(--fb);font-size:24px;color:var(--ink-3)}
+.app .qa{font-size:13.5px;margin-top:8px}
+.app .qa b{display:block;font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+.app .qa p{white-space:pre-line;font-size:14px}
+.item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--rule);flex-wrap:wrap}
+.item a.t{color:var(--ink);font-weight:700;text-decoration:none}
+.st{font-family:var(--fm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+/* modal + toast */
+.modal-bg{position:fixed;inset:0;background:rgba(23,17,14,.55);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:6vh 14px;overflow:auto}
+.modal{background:var(--paper);border-radius:6px;width:100%;max-width:560px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.modal h3{font-family:var(--fb);font-size:22px;font-weight:400}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:6px;font-weight:700;font-size:13px;z-index:200;transition:.2s;pointer-events:none;max-width:92vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.bad{background:var(--red)}
+.empty{text-align:center;padding:40px 16px;color:var(--ink-2)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <a class="mark" href="/lab">4<em>flieks</em> Lab</a>
+    <div class="docref" id="docref">OPPORTUNITIES<br>BOARD</div>
+  </div>
+  <nav class="labnav" id="labnav">
+    <a href="/lab">Lab</a>
+    <a href="/lab/board" class="on">Board</a>
+    <a href="/lab/report">Script Report</a>
+    <a href="/lab/talent">Talent</a>
+    <a href="/lab/budget">Budget</a>
+    <a href="/lab#join" class="acct" id="navAcct">Join free</a>
+  </nav>
+  <div id="app"><div class="center"><div class="spin"></div><p class="muted">Loading…</p></div></div>
+</div>
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+'use strict';
+/* Sign-in only: this page never talks to the database. Everything goes through
+   /.netlify/functions/flieks-board, which checks who is asking. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+const API = '/.netlify/functions/flieks-board';
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // quote-safe (audit C2)
+const safeUrl = u => /^https:\/\/[^\s"'<>()\\]+$/i.test(String(u || '')) ? String(u) : '';
+const rid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const dstr = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const R = n => 'R ' + Math.round(n || 0).toLocaleString('en-ZA');
+function toast(m, bad) { const t = $('#toast'); t.textContent = m; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(t._t); t._t = setTimeout(() => t.className = 'toast', 3000); }
+const daysLeft = d => Math.round((new Date(d + 'T23:59:59') - new Date()) / 864e5);
+
+const KIND = { casting: 'Casting call', crew: 'Crew call', collab: 'Collaborators' };
+const PAY = { paid: 'Paid', deferred: 'Deferred pay', profit_share: 'Profit share', unpaid: 'Unpaid' };
+const PAY_HELP = { paid: 'Paid on the job', deferred: 'Paid later, from what the film earns, as agreed in writing', profit_share: 'A share of the film\'s profit, as agreed in writing', unpaid: 'No pay. Say what people get: credit, meals, footage, experience' };
+const RTYPE = { lead: 'Lead', supporting: 'Supporting', featured: 'Featured', extra: 'Extra / background', crew: 'Crew', other: 'Other' };
+const FORMATS = ['Short', 'Feature', 'Series', 'Documentary', 'Music video', 'Commercial', 'Stage', 'Other'];
+const DISCIPLINES = ['Actor', 'Director', 'Writer', 'Producer', 'Camera / DOP', 'Editor', 'Sound', 'Production design', 'Wardrobe', 'Make-up', 'Music', 'Other crew'];
+const COUNTRIES = ['South Africa', 'Nigeria', 'Kenya', 'Ghana', 'Zimbabwe', 'Botswana', 'Namibia', 'Lesotho', 'Eswatini', 'Mozambique', 'Zambia', 'Malawi', 'Tanzania', 'Uganda', 'Rwanda', 'Ethiopia', 'Egypt', 'Morocco', 'Senegal', "Côte d'Ivoire", 'Cameroon', 'Democratic Republic of the Congo', 'Angola', 'Other'];
+
+let auth = null, USER = null, MINE = null;
+async function call(action, extra, withToken = true) {
+  const body = Object.assign({ action }, extra || {});
+  if (withToken && USER) body.token = await USER.getIdToken();
+  try {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return { ok: r.ok, status: r.status, d: await r.json().catch(() => ({})) };
+  } catch (e) { return { ok: false, status: 0, d: { message: 'No connection. Check your internet and try again.' } }; }
+}
+const app = () => $('#app');
+function go(path) { history.pushState(null, '', path); route(); window.scrollTo(0, 0); }
+window.addEventListener('popstate', route);
+function modal(html) { $('#modalRoot').innerHTML = `<div class="modal-bg" data-act="bgClose"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; }
+function closeModal() { $('#modalRoot').innerHTML = ''; }
+function needSignIn(what) { return `<div class="center"><h1>${esc(what)}</h1><p class="muted" style="margin:8px 0 18px">Free in 4flieks Lab.</p><a class="btn" href="/lab#join">Join or sign in</a></div>`; }
+function verifyBanner() {
+  if (!USER || !MINE || MINE.verified || MINE.role === 'filmmaker' || MINE.role === 'admin') return '';
+  return `<div class="banner"><b>One step left: confirm your email.</b> We sent a link to ${esc(USER.email)}. Open it, then come back to post and apply.
+    <div class="actions" style="margin-top:8px"><button class="sm ghost" data-act="resendVerify">Send the link again</button><button class="sm ghost" data-act="reload">I've confirmed it</button></div></div>`;
+}
+const payLine = p => `${PAY[p.pay_type] || ''}${p.pay_note ? ': ' + p.pay_note : ''}`;
+const whereLine = p => [[p.city, p.country].filter(Boolean).join(', '), p.remote ? 'Remote OK' : ''].filter(Boolean).join(' · ');
+const rateLine = r => r.rate ? `${R(r.rate)} ${r.rate_unit === 'flat' ? 'flat' : 'per ' + r.rate_unit}` : '';
+const ageLine = r => r.age_min && r.age_max ? `Playing age ${r.age_min}–${r.age_max}` : r.age_min ? `Playing age ${r.age_min}+` : '';
+
+/* ═════════ the board ═════════ */
+let FILTER = { kind: '', q: '', country: '', pay: '' };
+async function showBoard() {
+  document.title = 'Opportunities board — 4flieks Lab';
+  const sp = new URLSearchParams(location.search);
+  FILTER = { kind: sp.get('kind') || '', q: sp.get('q') || '', country: sp.get('country') || '', pay: sp.get('pay') || '' };
+  app().innerHTML = `${verifyBanner()}
+    <h1>Opportunities</h1>
+    <p class="lead">Casting calls, crew calls and collaborators for African film. Free to apply, and nobody on this board may ask you to pay to apply, audition or be cast.</p>
+    <div class="actions">${USER ? `<button class="go" data-act="newPost">Post an opportunity</button><button class="ghost" data-act="nav" data-to="/lab/board/mine">My posts &amp; applications</button>` : `<a class="btn go" href="/lab#join">Join free to post or apply</a>`}</div>
+    <div class="segs">${[['', 'All'], ['casting', 'Casting calls'], ['crew', 'Crew calls'], ['collab', 'Collaborators']].map(([k, n]) => `<button class="${FILTER.kind === k ? 'on' : ''}" data-act="kind" data-k="${k}">${n}</button>`).join('')}</div>
+    <div class="filters">
+      <label class="f q">Search<input id="fq" value="${esc(FILTER.q)}" placeholder="Role, language, town…"></label>
+      <label class="f">Country<select id="fc"><option value="">Anywhere</option>${COUNTRIES.map(c => `<option ${FILTER.country === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <label class="f">Pay<select id="fp"><option value="">Any</option>${Object.entries(PAY).map(([k, n]) => `<option value="${k}" ${FILTER.pay === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <button data-act="search">Search</button>
+    </div>
+    <div id="posts"><div class="center"><div class="spin"></div></div></div>`;
+  $('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') ACT.search(); });
+  const { ok, d } = await call('list', FILTER, false);
+  const box = $('#posts'); if (!box) return;
+  if (!ok) { box.innerHTML = `<div class="banner">${esc(d.message || 'Could not load the board.')}</div>`; return; }
+  box.innerHTML = d.items.length ? `<div class="posts">${d.items.map(postCard).join('')}</div>`
+    : `<div class="empty"><p><b>Nothing here yet${FILTER.kind || FILTER.q || FILTER.country || FILTER.pay ? ' for that search' : ''}.</b></p><p class="small" style="margin-top:6px">Making something? Post the first one.</p></div>`;
+}
+function postCard(p) {
+  const left = daysLeft(p.closes);
+  return `<a class="post ${esc(p.kind)}" href="/lab/board/p/${encodeURIComponent(p.id)}" data-nav>
+    <div class="chips"><span class="chip ${p.kind === 'casting' ? 'sun' : 'dark'}">${esc(KIND[p.kind])}</span><span class="chip soft">${esc(p.format)}</span><span class="chip ${p.pay_type === 'paid' ? 'green' : 'soft'}">${esc(PAY[p.pay_type])}</span>${p.releases_on_4flieks ? '<span class="chip soft">On 4flieks</span>' : ''}</div>
+    <h3>${esc(p.title)}</h3>
+    <div class="meta">${esc(p.poster)}${whereLine(p) ? ' · ' + esc(whereLine(p)) : ''}</div>
+    <div class="roles">${p.roles.slice(0, 5).map(r => esc(r.name)).join(' · ')}${p.roles.length > 5 ? ` · +${p.roles.length - 5} more` : ''}</div>
+    <div class="foot"><span>${p.shoot_start ? 'Shoots ' + esc(dstr(p.shoot_start)) : ''}</span><span>${left <= 0 ? 'Closes today' : `Closes in ${left} day${left === 1 ? '' : 's'}`}</span></div></a>`;
+}
+
+/* ═════════ one post ═════════ */
+let POST = null;
+async function showPost(id) {
+  app().innerHTML = '<div class="center"><div class="spin"></div></div>';
+  const { ok, d } = await call('get', { id });
+  if (!ok) { app().innerHTML = `<div class="center"><h1>Not on the board</h1><p class="muted" style="margin:8px 0 18px">${esc(d.message || 'This opportunity has closed.')}</p><button data-act="nav" data-to="/lab/board">See what's open</button></div>`; return; }
+  const p = POST = d.post;
+  document.title = `${p.title} — 4flieks Lab board`;
+  const applied = new Set(p.applied || []);
+  const status = p.is_owner || p.flags ? `<div class="banner ${p.status === 'live' ? 'ok' : ''}">
+      ${p.status === 'pending' ? '<b>Waiting for the 4flieks team to check it.</b> It goes on the board once approved, usually within a day.' : p.status === 'declined' ? `<b>Not approved.</b> ${esc(p.decline_reason)}` : p.status === 'closed' ? '<b>Closed.</b> Nobody can apply.' : p.open ? '<b>Live on the board.</b>' : '<b>Past its closing date.</b> Edit it to extend.'}
+      ${(p.flags || []).length ? `<br><span class="small">Flagged: ${esc(p.flags.join(', '))}</span>` : ''}
+      ${p.is_owner ? `<div class="actions" style="margin-top:8px"><button class="sm" data-act="nav" data-to="/lab/board/manage/${esc(p.id)}">Applications</button><button class="sm ghost" data-act="nav" data-to="/lab/board/edit/${esc(p.id)}">Edit</button></div>` : ''}</div>` : '';
+  app().innerHTML = `${status}${verifyBanner()}
+    <p class="tiny"><a href="/lab/board" data-nav style="color:var(--ink-2)">← All opportunities</a></p>
+    <div class="chips" style="margin:14px 0 10px"><span class="chip ${p.kind === 'casting' ? 'sun' : 'dark'}">${esc(KIND[p.kind])}</span><span class="chip soft">${esc(p.format)}</span><span class="chip ${p.pay_type === 'paid' ? 'green' : 'soft'}">${esc(PAY[p.pay_type])}</span></div>
+    <h1>${esc(p.title)}</h1>
+    <p class="muted">${esc(p.poster)}</p>
+    <div class="facts">
+      <div><b>Where</b><span>${esc(whereLine(p) || '—')}</span></div>
+      <div><b>Shoot</b><span>${p.shoot_start ? esc(dstr(p.shoot_start)) + (p.shoot_end && p.shoot_end !== p.shoot_start ? ' – ' + esc(dstr(p.shoot_end)) : '') : 'TBC'}</span></div>
+      <div><b>Pay</b><span>${esc(payLine(p))}</span></div>
+      <div><b>Closes</b><span>${esc(dstr(p.closes))}</span></div>
+    </div>
+    <p class="synopsis">${esc(p.synopsis)}</p>
+    ${p.releases_on_4flieks ? `<div class="spot"><b>This film will be released on 4flieks.</b> Everyone who works on it gets their own tracked link. When people buy a ticket through your link, it counts to your name, and the filmmaker can pay you a share of the sales you bring in.</div>` : ''}
+    <h2>Roles</h2>
+    ${p.roles.map(r => `<div class="role"><div>
+        <h3>${esc(r.name)}</h3>
+        <div class="chips" style="margin:6px 0">${r.type ? `<span class="chip soft">${esc(RTYPE[r.type] || r.type)}</span>` : ''}${r.discipline ? `<span class="chip soft">${esc(r.discipline)}</span>` : ''}${r.minors ? '<span class="chip warn">Under 18: guardian applies</span>' : ''}${r.nudity ? '<span class="chip warn">Nudity: see description</span>' : ''}${r.open === false ? '<span class="chip soft">Filled</span>' : ''}</div>
+        <div class="rmeta">${[ageLine(r), (r.languages || []).length ? 'Languages: ' + r.languages.join(', ') : '', rateLine(r), r.skills ? 'Skills: ' + r.skills : ''].filter(Boolean).map(esc).join(' · ')}</div>
+        ${r.description ? `<p class="desc">${esc(r.description)}</p>` : ''}</div>
+      <div>${p.is_owner ? '' : applied.has(r.id) ? '<span class="chip green">Applied ✓</span>' : (r.open === false || !p.open) ? '' : `<button class="go" data-act="apply" data-role="${esc(r.id)}">Apply</button>`}</div></div>`).join('')}
+    ${p.questions.length ? `<p class="tiny" style="margin-top:6px">When you apply you'll answer: ${p.questions.map(q => '“' + esc(q) + '”').join(' ')}</p>` : ''}
+    <div class="safety"><b>Stay safe.</b> 4flieks never asks you to pay to apply, audition or be cast, and nobody on this board may. Meet in public or at a proper set, take someone with you, and don't send ID or bank details before you've signed a contract.
+      <br><button class="link" data-act="report">Report this post</button></div>`;
+}
+
+/* ═════════ apply ═════════ */
+async function applyModal(roleId) {
+  if (!USER) { location.href = '/lab#join'; return; }
+  const p = POST; const r = p.roles.find(x => x.id === roleId); if (!r) return;
+  let hasProfile = false;
+  try { const t = await fetch('/.netlify/functions/flieks-talent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'me', token: await USER.getIdToken() }) }); const td = await t.json(); hasProfile = !!td.profile; } catch (e) { }
+  modal(`<h3>Apply: ${esc(r.name)}</h3><p class="small muted" style="margin:4px 0 14px">${esc(p.title)} · ${esc(p.poster)}</p>
+    ${hasProfile ? `<div class="banner ok small">Your <b>4flieks talent profile</b> will be shared with ${esc(p.poster)} for this application, even if you're not in the talent search.</div>`
+      : `<div class="banner small">You have no talent profile yet. <a href="/talent" target="_blank" rel="noopener">Make one</a> (photo, credits, showreel) and you'll stand out. Or just tell them about yourself below.</div>`}
+    ${r.minors ? `<div class="banner small"><b>This role is for under-18s.</b> A parent or guardian must apply on the young person's behalf.</div>
+      <label class="f">Parent / guardian name<input id="apG" maxlength="80"></label>
+      <label class="chk" style="margin:10px 0"><input type="checkbox" id="apGc"> I am the parent or legal guardian and I agree to this application.</label>` : ''}
+    <label class="f" style="margin-top:10px">About you, for this role<textarea id="apNote" maxlength="1000" placeholder="Why you, what you've done, when you're free"></textarea></label>
+    ${p.questions.map((q, i) => `<label class="f" style="margin-top:10px">${esc(q)}<textarea class="apA" data-i="${i}" maxlength="400" style="min-height:60px"></textarea></label>`).join('')}
+    <label class="f" style="margin-top:10px">Showreel or self-tape link (optional)<input id="apReel" type="url" maxlength="300" placeholder="https://…"></label>
+    <p class="tiny" style="margin-top:10px">Your email is not shown to them. They can message you through 4flieks, and you'll see their email when you reply.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="ghost" data-act="closeModal">Cancel</button><button class="go" data-act="sendApply" data-role="${esc(r.id)}">Send application</button></div>`);
+}
+
+/* ═════════ post editor ═════════ */
+let ED = null;
+function blankPost() { return { kind: 'casting', title: '', company: '', format: 'Short', synopsis: '', city: '', country: 'South Africa', remote: false, shoot_start: '', shoot_end: '', closes: '', pay_type: 'paid', pay_note: '', releases_on_4flieks: true, questions: ['', '', ''], roles: [newRole('casting')], prod_id: '', no_fees: false }; }
+function newRole(kind) { return { id: rid(), name: '', type: kind === 'casting' ? 'supporting' : 'crew', discipline: kind === 'casting' ? 'Actor' : '', age_min: '', age_max: '', languages: '', skills: '', description: '', rate: '', rate_unit: 'day', minors: false, nudity: false, open: true }; }
+async function showEditor(id) {
+  if (!USER) { app().innerHTML = needSignIn('Post an opportunity'); return; }
+  ED = { id: id || null, post: blankPost(), budgets: [] };
+  if (id) {
+    const { ok, d } = await call('get', { id });
+    if (!ok || !d.post.is_owner) { app().innerHTML = '<div class="center"><h1>Not found</h1></div>'; return; }
+    const p = d.post;
+    ED.post = Object.assign(blankPost(), p, { questions: [...p.questions, '', '', ''].slice(0, 3), roles: p.roles.map(r => Object.assign(newRole(p.kind), r, { languages: (r.languages || []).join(', '), age_min: r.age_min || '', age_max: r.age_max || '', rate: r.rate || '' })), no_fees: false, prod_id: p.prod_id || '' });
+  }
+  const b = await call('budgets'); ED.budgets = b.ok ? b.d.items : [];
+  drawEditor();
+}
+function drawEditor() {
+  const p = ED.post;
+  document.title = (ED.id ? 'Edit' : 'Post') + ' an opportunity — 4flieks Lab';
+  app().innerHTML = `${verifyBanner()}
+    <p class="tiny"><a href="/lab/board" data-nav style="color:var(--ink-2)">← Board</a></p>
+    <h1 style="margin-top:12px">${ED.id ? 'Edit your post' : 'Post an opportunity'}</h1>
+    <p class="muted">The 4flieks team checks every post before it goes on the board${ED.id ? ', and again after every edit' : ''}.</p>
+    <h2>What is it</h2>
+    <div class="segs" style="margin-top:0">${Object.entries(KIND).map(([k, n]) => `<button class="${p.kind === k ? 'on' : ''}" data-act="edKind" data-k="${k}">${n}</button>`).join('')}</div>
+    ${ED.budgets.length ? `<div class="box" style="margin-top:14px"><label class="f">Fill roles from one of your budgets<div class="actions" style="margin-top:4px"><select id="edBudget" style="flex:1;min-width:200px"><option value="">Choose a budget…</option>${ED.budgets.map(x => `<option value="${esc(x.id)}" ${p.prod_id === x.id ? 'selected' : ''}>${esc(x.title)}</option>`).join('')}</select><button class="sm" data-act="fromBudget">Add its ${p.kind === 'casting' ? 'cast' : 'crew'} roles</button></div></label>
+      <p class="tiny" style="margin-top:6px">Rates come from the budget. When you hire someone here, they're added to that budget's cast &amp; crew, ready for call sheets.</p></div>` : ''}
+    <div class="grid g2" style="margin-top:14px">
+      <label class="f">Title<input data-p="title" maxlength="100" value="${esc(p.title)}" placeholder="e.g. Short film 'The Nothing Mirror': cast"></label>
+      <label class="f">Production company or your name<input data-p="company" maxlength="80" value="${esc(p.company)}"></label>
+      <label class="f">Format<select data-p="format">${FORMATS.map(f => `<option ${p.format === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label>
+      <label class="f">Closing date<input type="date" data-p="closes" value="${esc(p.closes)}"></label>
+    </div>
+    <label class="f" style="margin-top:12px">About the project<textarea data-p="synopsis" maxlength="1200" placeholder="The story, who's making it, what stage it's at">${esc(p.synopsis)}</textarea></label>
+    <h2>Where and when</h2>
+    <div class="grid g4">
+      <label class="f">Town / city<input data-p="city" maxlength="60" value="${esc(p.city)}"></label>
+      <label class="f">Country<select data-p="country">${COUNTRIES.map(c => `<option ${p.country === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <label class="f">Shoot starts<input type="date" data-p="shoot_start" value="${esc(p.shoot_start)}"></label>
+      <label class="f">Shoot ends<input type="date" data-p="shoot_end" value="${esc(p.shoot_end)}"></label>
+    </div>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" data-p="remote" ${p.remote ? 'checked' : ''}> Remote work is fine (e.g. editing, music, writing)</label>
+    <h2>Pay</h2>
+    <div class="grid g2">
+      <label class="f">Type<select data-p="pay_type" data-redraw>${Object.entries(PAY).map(([k, n]) => `<option value="${k}" ${p.pay_type === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="f">Pay note<input data-p="pay_note" maxlength="200" value="${esc(p.pay_note)}" placeholder="${p.pay_type === 'unpaid' ? 'Credit, meals, transport, footage for your reel' : 'e.g. R1,500 a day, paid within 7 days'}"></label>
+    </div>
+    <p class="tiny" style="margin-top:6px">${esc(PAY_HELP[p.pay_type])}. Be honest: people decide on this.</p>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" data-p="releases_on_4flieks" ${p.releases_on_4flieks ? 'checked' : ''}> We plan to release it on 4flieks (cast and crew get their own tracked link)</label>
+    <h2>Roles</h2>
+    <div id="edRoles">${p.roles.map(roleEditor).join('')}</div>
+    <button class="ghost sm" data-act="addRole">+ Add a role</button>
+    <h2>Questions for applicants (optional)</h2>
+    <div class="grid">${p.questions.map((q, i) => `<input data-q="${i}" maxlength="160" value="${esc(q)}" placeholder="e.g. Are you free 6–8 October?">`).join('')}</div>
+    <h2>Before you post</h2>
+    <label class="chk"><input type="checkbox" data-p="no_fees" ${p.no_fees ? 'checked' : ''}> Nobody will be asked to pay anything to apply, audition or be cast, and I won't ask applicants for ID, bank details or revealing photos.</label>
+    <p id="edMsg" class="small" style="color:var(--red);margin-top:10px;min-height:18px"></p>
+    <div class="actions"><button class="go" data-act="savePost">${ED.id ? 'Save and send for checking' : 'Send for checking'}</button><button class="ghost" data-act="nav" data-to="/lab/board/mine">Cancel</button></div>`;
+}
+function roleEditor(r, i) {
+  const kind = ED.post.kind;
+  return `<div class="redit"><div class="top"><span class="st">Role ${i + 1}</span>${ED.post.roles.length > 1 ? `<button class="link" data-act="delRole" data-id="${esc(r.id)}">Remove</button>` : ''}</div>
+    <div class="grid g3">
+      <label class="f">${kind === 'casting' ? 'Character' : 'Role'}<input data-r="${esc(r.id)}" data-k="name" maxlength="80" value="${esc(r.name)}"></label>
+      <label class="f">Type<select data-r="${esc(r.id)}" data-k="type">${Object.entries(RTYPE).map(([k, n]) => `<option value="${k}" ${r.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="f">Discipline<select data-r="${esc(r.id)}" data-k="discipline"><option value="">—</option>${DISCIPLINES.map(d => `<option ${r.discipline === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
+    </div>
+    <div class="grid g4" style="margin-top:10px">
+      ${kind === 'casting' ? `<label class="f">Playing age from<input type="number" min="1" max="99" data-r="${esc(r.id)}" data-k="age_min" value="${esc(r.age_min)}"></label>
+      <label class="f">to<input type="number" min="1" max="99" data-r="${esc(r.id)}" data-k="age_max" value="${esc(r.age_max)}"></label>` : ''}
+      <label class="f">Rate (R, optional)<input type="number" min="0" data-r="${esc(r.id)}" data-k="rate" value="${esc(r.rate)}"></label>
+      <label class="f">Per<select data-r="${esc(r.id)}" data-k="rate_unit">${['day', 'week', 'flat'].map(u => `<option ${r.rate_unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label>
+    </div>
+    <div class="grid g2" style="margin-top:10px">
+      <label class="f">Languages<input data-r="${esc(r.id)}" data-k="languages" maxlength="200" value="${esc(r.languages)}" placeholder="e.g. isiZulu, English"></label>
+      <label class="f">Skills<input data-r="${esc(r.id)}" data-k="skills" maxlength="200" value="${esc(r.skills)}" placeholder="e.g. driving licence, horse riding"></label>
+    </div>
+    <label class="f" style="margin-top:10px">Description<textarea data-r="${esc(r.id)}" data-k="description" maxlength="800" style="min-height:70px">${esc(r.description)}</textarea></label>
+    <div class="actions" style="margin-top:8px">
+      ${kind === 'casting' ? `<label class="chk"><input type="checkbox" data-r="${esc(r.id)}" data-k="minors" ${r.minors ? 'checked' : ''}> For an under-18 (a guardian applies)</label>
+      <label class="chk"><input type="checkbox" data-r="${esc(r.id)}" data-k="nudity" ${r.nudity ? 'checked' : ''}> Involves nudity (explain in the description)</label>` : ''}
+      ${ED.id ? `<label class="chk"><input type="checkbox" data-r="${esc(r.id)}" data-k="filled" ${r.open === false ? 'checked' : ''}> Filled (stop applications)</label>` : ''}
+    </div></div>`;
+}
+function editorPayload() {
+  const p = ED.post;
+  return Object.assign({}, p, {
+    questions: p.questions.filter(q => q.trim()),
+    roles: p.roles.map(r => Object.assign({}, r, { languages: String(r.languages || '').split(',').map(s => s.trim()).filter(Boolean),
+      age_min: r.age_min === '' ? null : Number(r.age_min), age_max: r.age_max === '' ? null : Number(r.age_max), rate: r.rate === '' ? null : Number(r.rate) }))
+  });
+}
+
+/* ═════════ my posts & applications ═════════ */
+async function showMine() {
+  if (!USER) { app().innerHTML = needSignIn('My posts & applications'); return; }
+  document.title = 'My posts & applications — 4flieks Lab';
+  const { ok, d } = await call('mine');
+  if (!ok) { app().innerHTML = `<div class="banner">${esc(d.message || 'Could not load.')}</div>`; return; }
+  const st = p => p.status === 'pending' ? 'Being checked' : p.status === 'declined' ? 'Not approved' : p.status === 'closed' ? 'Closed' : p.hidden_reports ? 'Hidden: reported' : p.open ? 'Live' : 'Past closing date';
+  app().innerHTML = `${verifyBanner()}
+    <p class="tiny"><a href="/lab/board" data-nav style="color:var(--ink-2)">← Board</a></p>
+    <h1 style="margin-top:12px">My posts &amp; applications</h1>
+    <div class="actions"><button class="go" data-act="newPost">Post an opportunity</button></div>
+    <h2>My posts</h2>
+    ${d.posts.length ? d.posts.map(p => `<div class="item"><div><a class="t" href="/lab/board/p/${encodeURIComponent(p.id)}" data-nav>${esc(p.title)}</a>
+        <div class="st">${esc(KIND[p.kind])} · ${esc(st(p))} · ${p.applications} application${p.applications === 1 ? '' : 's'} · closes ${esc(dstr(p.closes))}</div>
+        ${p.status === 'declined' && p.decline_reason ? `<div class="small" style="color:var(--red)">${esc(p.decline_reason)}</div>` : ''}</div>
+      <div class="actions" style="margin:0"><button class="sm" data-act="nav" data-to="/lab/board/manage/${esc(p.id)}">Applications</button><button class="sm ghost" data-act="nav" data-to="/lab/board/edit/${esc(p.id)}">Edit</button>
+        ${p.status === 'closed' ? `<button class="sm ghost" data-act="reopen" data-id="${esc(p.id)}">Reopen</button>` : `<button class="sm ghost" data-act="closePost" data-id="${esc(p.id)}">Close</button>`}
+        <button class="sm danger" data-act="delPost" data-id="${esc(p.id)}">Delete</button></div></div>`).join('') : '<p class="small muted">Nothing posted yet.</p>'}
+    <h2>My applications</h2>
+    ${d.apps.length ? d.apps.map(x => `<div class="item"><div><a class="t" href="/lab/board/p/${encodeURIComponent(x.post_id)}" data-nav>${esc(x.title)}</a><div class="st">${esc(x.role)} · ${x.status === 'hired' ? 'You got it' : x.status === 'closed' ? 'Closed' : 'Applied'} · ${esc(new Date(x.at).toLocaleDateString('en-ZA'))}</div></div>
+      ${x.status === 'applied' ? `<button class="sm ghost" data-act="withdraw" data-id="${esc(x.appId)}">Withdraw</button>` : ''}</div>`).join('') : '<p class="small muted">No applications yet. <a href="/lab/board" data-nav>See what\'s open</a>.</p>'}
+    <p class="tiny" style="margin-top:14px">Posters see your application, your talent profile if you have one, and your answers. They never see your email unless you reply to them.</p>`;
+}
+
+/* ═════════ application manager ═════════ */
+let MG = null;
+const FOLDER = { review: 'To review', shortlist: 'Shortlist', hire: 'Hired', no: 'No' };
+async function showManage(id) {
+  if (!USER) { app().innerHTML = needSignIn('Applications'); return; }
+  const { ok, d } = await call('apps', { id });
+  if (!ok) { app().innerHTML = `<div class="center"><h1>Not found</h1><p class="muted">${esc(d.message || '')}</p></div>`; return; }
+  MG = Object.assign({ role: (MG && MG.post && MG.post.id === id && MG.role) || '', folder: (MG && MG.post && MG.post.id === id && MG.folder) || 'review' }, d);
+  if (!MG.role || !MG.post.roles.some(r => r.id === MG.role)) MG.role = (MG.post.roles[0] || {}).id || '';
+  drawManage();
+}
+function drawManage() {
+  const p = MG.post; document.title = `Applications: ${p.title} — 4flieks Lab`;
+  const inRole = MG.apps.filter(x => x.role_id === MG.role);
+  const list = inRole.filter(x => x.folder === MG.folder);
+  const qs = p.questions || [];
+  app().innerHTML = `<p class="tiny"><a href="/lab/board/mine" data-nav style="color:var(--ink-2)">← My posts</a></p>
+    <h1 style="margin-top:12px">${esc(p.title)}</h1>
+    <p class="muted">${MG.apps.length} application${MG.apps.length === 1 ? '' : 's'}${p.prod_id ? ' · Hires join your budget\'s cast &amp; crew' : ''}</p>
+    <div class="tabs">${p.roles.map(r => `<button class="${MG.role === r.id ? 'on' : ''}" data-act="mgRole" data-id="${esc(r.id)}">${esc(r.name)} (${MG.apps.filter(x => x.role_id === r.id).length})</button>`).join('')}</div>
+    <div class="segs" style="margin:0 0 14px">${Object.entries(FOLDER).map(([k, n]) => `<button class="${MG.folder === k ? 'on' : ''}" data-act="mgFolder" data-k="${k}">${n} (${inRole.filter(x => x.folder === k).length})</button>`).join('')}</div>
+    ${MG.folder === 'no' ? '<p class="tiny" style="margin-bottom:10px">People in No are never told. When the role is filled, close it in Edit.</p>' : ''}
+    ${list.length ? list.map(x => { const pr = x.profile; const photo = pr && safeUrl(pr.photo_url); return `<div class="app">
+      <div class="ph" ${photo ? `style="background-image:url('${esc(photo)}')"` : ''}>${photo ? '' : esc((x.name || '?').slice(0, 1).toUpperCase())}</div>
+      <div><h3>${esc(x.name)}</h3>
+        <div class="small muted">${pr ? [pr.disciplines && pr.disciplines.join(', '), [pr.city, pr.country].filter(Boolean).join(', '), pr.playing_age ? 'Playing age ' + pr.playing_age : '', (pr.languages || []).join(', ')].filter(Boolean).map(esc).join(' · ') : 'No talent profile'} · applied ${esc(new Date(x.at).toLocaleDateString('en-ZA'))}</div>
+        ${x.guardian ? `<div class="chips" style="margin-top:6px"><span class="chip warn">Guardian: ${esc(x.guardian.name)}</span></div>` : ''}
+        ${pr && pr.bio ? `<div class="qa"><b>Profile</b><p>${esc(pr.bio)}</p></div>` : ''}
+        ${x.note ? `<div class="qa"><b>For this role</b><p>${esc(x.note)}</p></div>` : ''}
+        ${qs.map((q, i) => x.answers[i] ? `<div class="qa"><b>${esc(q)}</b><p>${esc(x.answers[i])}</p></div>` : '').join('')}
+        <div class="actions" style="margin-top:8px">
+          ${safeUrl(x.reel) ? `<a class="btn sm ghost" href="${esc(safeUrl(x.reel))}" target="_blank" rel="noopener noreferrer">Reel / self-tape</a>` : ''}
+          ${pr && safeUrl(pr.showreel) ? `<a class="btn sm ghost" href="${esc(safeUrl(pr.showreel))}" target="_blank" rel="noopener noreferrer">Showreel</a>` : ''}
+          ${pr && safeUrl(pr.imdb) ? `<a class="btn sm ghost" href="${esc(safeUrl(pr.imdb))}" target="_blank" rel="noopener noreferrer">IMDb</a>` : ''}
+        </div>
+        <div class="actions">
+          ${Object.entries(FOLDER).filter(([k]) => k !== x.folder).map(([k, n]) => `<button class="sm ${k === 'hire' ? 'go' : k === 'no' ? 'ghost' : ''}" data-act="move" data-id="${esc(x.appId)}" data-k="${k}">${k === 'review' ? 'Back to review' : k === 'hire' ? 'Hire' : n}</button>`).join('')}
+          <button class="sm ghost" data-act="msg" data-id="${esc(x.appId)}">Message${x.messaged_at ? ' again' : ''}</button>
+        </div>
+        <label class="f" style="margin-top:10px">Private note (only you)<textarea data-note="${esc(x.appId)}" maxlength="1000" style="min-height:50px">${esc(x.private_note)}</textarea></label>
+      </div></div>`; }).join('') : `<p class="small muted">Nobody in ${esc(FOLDER[MG.folder])} for this role.</p>`}`;
+}
+
+/* ═════════ events ═════════ */
+const ACT = {
+  bgClose: (el, e) => { if (e.target === el) closeModal(); }, closeModal,
+  reload: () => location.reload(),
+  resendVerify: async el => { el.disabled = true; try { await USER.sendEmailVerification({ url: 'https://4flieks.com/lab/board' }); el.textContent = 'Sent. Check your inbox (and spam).'; } catch (e) { el.textContent = 'Could not send. Try again in a minute.'; } },
+  nav: el => go(el.dataset.to),
+  newPost: () => go('/lab/board/new'),
+  kind: el => { FILTER.kind = el.dataset.k; pushFilters(); },
+  search: () => { FILTER.q = $('#fq').value.trim(); FILTER.country = $('#fc').value; FILTER.pay = $('#fp').value; pushFilters(); },
+  apply: el => applyModal(el.dataset.role),
+  sendApply: async el => {
+    const r = POST.roles.find(x => x.id === el.dataset.role);
+    const body = { id: POST.id, roleId: r.id, note: $('#apNote').value, reel: $('#apReel').value.trim(), answers: $$('.apA').map(t => t.value) };
+    if (body.reel && !safeUrl(body.reel)) return toast('The link must start with https://', true);
+    if (r.minors) { if (!$('#apGc').checked) return toast('A parent or guardian must agree', true); body.guardian = { name: $('#apG').value.trim(), consent: true }; }
+    el.disabled = true;
+    const { ok, d } = await call('apply', body);
+    if (!ok) { el.disabled = false; return toast(d.message || 'Could not apply', true); }
+    closeModal(); toast('Application sent'); showPost(POST.id);
+  },
+  report: () => modal(`<h3>Report this post</h3><p class="small muted" style="margin:6px 0 12px">Tell the 4flieks team what's wrong: asking for money, fake, unsafe, offensive. We check every report.</p>
+    <textarea id="repR" maxlength="300"></textarea><div class="actions" style="justify-content:flex-end"><button class="ghost" data-act="closeModal">Cancel</button><button class="danger" data-act="sendReport">Report</button></div>`),
+  sendReport: async el => { el.disabled = true; const { ok, d } = await call('report', { id: POST.id, reason: $('#repR').value }, false); if (!ok) { el.disabled = false; return toast(d.message || 'Could not send', true); } closeModal(); toast('Thanks. The team will look at it.'); },
+  edKind: el => { ED.post.kind = el.dataset.k; drawEditor(); },
+  addRole: () => { ED.post.roles.push(newRole(ED.post.kind)); drawEditor(); },
+  delRole: el => { ED.post.roles = ED.post.roles.filter(r => r.id !== el.dataset.id); drawEditor(); },
+  fromBudget: async () => {
+    const prodId = $('#edBudget').value; if (!prodId) return toast('Choose a budget', true);
+    const { ok, d } = await call('from-budget', { prodId });
+    if (!ok) return toast(d.message || 'Could not read that budget', true);
+    const want = ED.post.kind === 'casting' ? r => r.type !== 'crew' : r => r.type === 'crew';
+    const add = d.roles.filter(want).map(r => Object.assign(newRole(ED.post.kind), r, { discipline: r.type === 'crew' ? '' : 'Actor' }));
+    if (!add.length) return toast(`That budget has no ${ED.post.kind === 'casting' ? 'cast' : 'crew'} roles marked`, true);
+    ED.post.roles = ED.post.roles.filter(r => r.name.trim()).concat(add).slice(0, 30);
+    ED.post.prod_id = prodId;
+    if (!ED.post.title) ED.post.title = d.title + (ED.post.kind === 'casting' ? ': cast' : ': crew');
+    if (d.format) ED.post.format = d.format;
+    if (!ED.post.shoot_start && d.shoot_start) ED.post.shoot_start = d.shoot_start;
+    drawEditor(); toast(add.length + ' roles added');
+  },
+  savePost: async el => {
+    const m = $('#edMsg'); m.textContent = '';
+    ED.post.roles.forEach(r => { if (r.filled !== undefined) r.open = !r.filled; });
+    el.disabled = true;
+    const { ok, d } = await call('save', { id: ED.id || undefined, post: editorPayload() });
+    el.disabled = false;
+    if (!ok) { m.textContent = d.message || 'Could not save.'; return; }
+    toast(d.status === 'live' ? 'Posted' : 'Sent to the 4flieks team to check');
+    go('/lab/board/p/' + d.id);
+  },
+  closePost: async el => { if (!confirm('Close this post? Nobody will be able to apply.')) return; const { ok, d } = await call('close', { id: el.dataset.id }); if (!ok) return toast(d.message, true); showMine(); },
+  reopen: async el => { const { ok, d } = await call('reopen', { id: el.dataset.id }); if (!ok) return toast(d.message, true); toast('Reopened'); showMine(); },
+  delPost: async el => { if (!confirm('Delete this post and all its applications? This can\'t be undone.')) return; const { ok, d } = await call('delete', { id: el.dataset.id }); if (!ok) return toast(d.message, true); showMine(); },
+  withdraw: async el => { if (!confirm('Withdraw this application?')) return; const { ok, d } = await call('withdraw', { appId: el.dataset.id }); if (!ok) return toast(d.message, true); showMine(); },
+  mgRole: el => { MG.role = el.dataset.id; drawManage(); },
+  mgFolder: el => { MG.folder = el.dataset.k; drawManage(); },
+  move: async el => {
+    const k = el.dataset.k;
+    if (k === 'hire' && !confirm('Hire them? We\'ll email them that they got the part, and they can reply to you directly.')) return;
+    const { ok, d } = await call('move', { id: MG.post.id, appId: el.dataset.id, folder: k });
+    if (!ok) return toast(d.message || 'Could not move', true);
+    const x = MG.apps.find(a => a.appId === el.dataset.id); if (x) x.folder = k;
+    toast(k === 'hire' ? (d.added_to_budget ? 'Hired, and added to your budget\'s cast & crew' : 'Hired. We\'ve emailed them') : 'Moved to ' + FOLDER[k]); drawManage();
+  },
+  msg: el => { const x = MG.apps.find(a => a.appId === el.dataset.id); modal(`<h3>Message ${esc(x.name)}</h3><p class="small muted" style="margin:6px 0 12px">We email it to them. Their reply comes straight to your email. Neither address is shown on the site.</p>
+    <textarea id="msgT" maxlength="1200" placeholder="e.g. We'd like to see a self-tape of scene 3. Can you send it by Friday?"></textarea>
+    <div class="actions" style="justify-content:flex-end"><button class="ghost" data-act="closeModal">Cancel</button><button class="go" data-act="sendMsg" data-id="${esc(x.appId)}">Send</button></div>`); },
+  sendMsg: async el => { el.disabled = true; const { ok, d } = await call('message', { id: MG.post.id, appId: el.dataset.id, message: $('#msgT').value }); if (!ok) { el.disabled = false; return toast(d.message || 'Could not send', true); } const x = MG.apps.find(a => a.appId === el.dataset.id); if (x) x.messaged_at = Date.now(); closeModal(); toast('Sent'); drawManage(); }
+};
+function pushFilters() { const q = new URLSearchParams(Object.entries(FILTER).filter(([, v]) => v)); history.replaceState(null, '', '/lab/board' + (q.toString() ? '?' + q : '')); showBoard(); }
+document.addEventListener('click', e => {
+  const n = e.target.closest('a[data-nav]');
+  if (n && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); go(n.getAttribute('href')); return; }
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  const fn = ACT[a.dataset.act]; if (!fn) return;
+  if (a.dataset.act !== 'bgClose') e.preventDefault();
+  fn(a, e);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+/* editor fields */
+document.addEventListener('input', e => editField(e));
+document.addEventListener('change', e => editField(e, true));
+function editField(e, changed) {
+  const el = e.target; if (!ED) return;
+  const val = el.type === 'checkbox' ? el.checked : el.value;
+  if (el.dataset.p) { ED.post[el.dataset.p] = val; if (changed && el.dataset.redraw !== undefined) drawEditor(); }
+  else if (el.dataset.q !== undefined) ED.post.questions[+el.dataset.q] = val;
+  else if (el.dataset.r) { const r = ED.post.roles.find(x => x.id === el.dataset.r); if (r) r[el.dataset.k] = val; }
+}
+/* private notes save when you leave the box */
+document.addEventListener('focusout', async e => {
+  const el = e.target; if (!el.dataset || !el.dataset.note || !MG) return;
+  const x = MG.apps.find(a => a.appId === el.dataset.note); if (!x || x.private_note === el.value) return;
+  const { ok } = await call('note', { id: MG.post.id, appId: x.appId, note: el.value });
+  if (ok) { x.private_note = el.value; toast('Note saved'); } else toast('Note not saved', true);
+});
+
+/* ═════════ routes ═════════ */
+function route() {
+  closeModal();
+  const path = location.pathname.replace(/\/+$/, '');
+  let m;
+  if ((m = path.match(/^\/lab\/board\/p\/(b[a-f0-9]{14})$/))) return showPost(m[1]);
+  if ((m = path.match(/^\/lab\/board\/edit\/(b[a-f0-9]{14})$/))) return showEditor(m[1]);
+  if ((m = path.match(/^\/lab\/board\/manage\/(b[a-f0-9]{14})$/))) return showManage(m[1]);
+  if (path === '/lab/board/new') return showEditor(null);
+  if (path === '/lab/board/mine') return showMine();
+  if (path !== '/lab/board') history.replaceState(null, '', '/lab/board');
+  return showBoard();
+}
+function boot() {
+  if (typeof firebase === 'undefined') { app().innerHTML = '<div class="center"><h1>Could not load</h1><p class="muted">Check your connection and refresh.</p></div>'; return; }
+  firebase.initializeApp(FIREBASE_CONFIG);
+  auth = firebase.auth();
+  auth.onAuthStateChanged(async u => {
+    USER = u || null; MINE = null;
+    const acct = $('#navAcct'); if (acct) { acct.textContent = u ? 'My work' : 'Join free'; acct.href = u ? '/lab#work' : '/lab#join'; }
+    if (u) { const r = await call('mine'); if (r.ok) MINE = { verified: r.d.verified, role: r.d.role }; }
+    route();
+  });
+}
+boot();
+</script>
+</body>
+</html>

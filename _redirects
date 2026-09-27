@@ -26,6 +26,8 @@
 /me/*            /me.html           200
 /script/*        /script.html       200
 /report/*        /results.html      200
+/lab/board       /lab-board.html    200
+/lab/board/*     /lab-board.html    200
 /lab/budget      /lab-budget.html   200
 /lab/budget/*    /lab-budget.html   200
 /call/*          /lab-budget.html   200

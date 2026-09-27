@@ -203,7 +203,9 @@ function labFacts({ U, byUser, events, coachUse, coachDone, talent, claims, unli
         talent_contact: `${nameOf(e.uid)} messaged ${e.title || 'someone'} from the talent search`,
         budget_create: `${nameOf(e.uid)} started a budget`,
         budget_import: `${nameOf(e.uid)} imported a supplier quote into a budget`,
-        callsheet_publish: `${nameOf(e.uid)} shared a call sheet`
+        callsheet_publish: `${nameOf(e.uid)} shared a call sheet`,
+        board_post: `${nameOf(e.uid)} posted${e.title ? ` "${e.title}"` : ' an opportunity'} on the board`,
+        board_apply: `${nameOf(e.uid)} applied${e.title ? ` for "${e.title}"` : ' for an opportunity'} on the board`
       }[e.type] || `${nameOf(e.uid)}: ${e.type}` })),
     ...labUsers.map(([, u]) => ({ at: u.created_at, kind: 'join', text: `${u.name || 'Someone'} joined the Lab`, link: null }))
   ].filter(x => x.at).sort((a, b) => b.at - a.at).slice(0, 14);

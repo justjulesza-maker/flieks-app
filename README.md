@@ -47,6 +47,7 @@ No sign-in. The link they were given is the key.
 | `4flieks.com/filmmaker` | The portal — upload, cast, pricing, earnings |
 | `4flieks.com/report/<key>` | A shareable release report for funders and festivals |
 | `4flieks.com/lab/budget` | Budget & call sheets (4flieks Lab): budget, top sheet, cast & crew, scenes, call sheets, actuals |
+| `4flieks.com/lab/board` | Opportunities board (4flieks Lab): casting calls, crew calls, collaborators. Every post is approved by the team first; free to apply; no fees allowed |
 | `4flieks.com/call/<token>` | A published call sheet. No sign-in: the link is the key. Crew tap "Got it" |
 
 ### For you
@@ -141,6 +142,7 @@ pay it.** That keeps you out of a dispute between a filmmaker and their actors.
 | `flieks-bunny` | Hands a film to Bunny, reports transcode progress |
 | `flieks-bunny-upload-background` | The actual file transfer — 15-minute limit |
 | `flieks-budget` | Budget & call sheets: the only way in to budgets (the page never touches the database). Cleans every field, checks ownership, publishes call sheets, weather, quote imports |
+| `flieks-board` | The opportunities board: posts, moderation, applications, application manager, hire → budget, reports. The only way in to board data |
 | `budget-import-background` | Reads a supplier quote PDF into budget lines. Only `flieks-budget` can start it (hashed job secret) |
 | `og` *(edge)* | Rewrites link previews per film |
 
@@ -193,6 +195,7 @@ has a `readNode()` helper that does this.
 | `flieks_result_keys` | Report link → film | Server only |
 | `flieks_budgets`, `flieks_budget_index` | Lab budgets, per member | Server only (via `flieks-budget`) |
 | `flieks_callsheets`, `flieks_callsheet_acks` | Published call sheets and "Got it" confirmations | Server only; the public sheet is served by `flieks-budget` |
+| `flieks_board_posts`, `flieks_board_apps`, `flieks_board_my_apps`, `flieks_board_reports` | Board posts, applications (with the applicant's email, never shown to posters) and reports | Server only (via `flieks-board`) |
 | `flieks_budget_jobs` | Quote imports in progress, deleted once read | Server only |
 
 ---
