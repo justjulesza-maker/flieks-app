@@ -7,7 +7,7 @@
 
 const pdfParse = require("pdf-parse");
 const crypto = require("crypto");
-const { extractCharacters } = require("../lib/coach-extract");
+const { extractCharacters, looksScanned, transcribePdf } = require("../lib/coach-extract");
 
 // Only script-coach-start (which checks who is asking) may start a job.
 const coachSecret = () => crypto.createHash("sha256").update(String(process.env.FIREBASE_DB_SECRET) + ":script-coach").digest("hex");
@@ -99,9 +99,34 @@ exports.handler = async (event) => {
     let scriptText = "";
 
     const ext = fileName.toLowerCase().split(".").pop();
+    let scanned = false;
     if (ext === "pdf") {
-      const pdfData = await pdfParse(fileBuffer);
-      scriptText = pdfData.text;
+      const pdfData = await pdfParse(fileBuffer).catch(() => ({ text: "", numpages: 0 }));
+      scriptText = pdfData.text || "";
+      // A scan has page images and no text: have the AI read the pages instead.
+      if (looksScanned(scriptText, pdfData.numpages)) {
+        scanned = true;
+        try {
+          const ocr = await transcribePdf(fileBuffer, title, {
+            apiKey,
+            onProgress: stage => fbPatch(`script_coach/jobs/${jobId}`, { stage }, firebaseUrl, firebaseSecret)
+          });
+          console.log(`Script Coach: ${title} scanned, ${ocr.pages} page(s) read, tokens in ${ocr.usage.input_tokens} out ${ocr.usage.output_tokens}`);
+          scriptText = ocr.text;
+        } catch (e) {
+          console.error("Script Coach scan reading failed:", e);
+          await fbPatch(`script_coach/jobs/${jobId}`, {
+            status: "error",
+            error: e.code === "too_long"
+              ? `This scan has ${e.pages} pages, which is more than Script Coach can read in one go. Upload again and choose just the pages you need.`
+              : e.status === 429 || e.status === 529
+                ? "The AI is busy right now. Try again in a few minutes."
+                : "The AI couldn't read the scanned pages. Try again; if it keeps failing, try a clearer scan or just the pages you need.",
+            finishedAt: new Date().toISOString()
+          }, firebaseUrl, firebaseSecret);
+          return { statusCode: 200 };
+        }
+      }
     } else if (ext === "docx") {
       const mammoth = require("mammoth");
       const result = await mammoth.extractRawText({ buffer: fileBuffer });
@@ -118,7 +143,9 @@ exports.handler = async (event) => {
     if (!scriptText || scriptText.trim().length < 100) {
       await fbPatch(`script_coach/jobs/${jobId}`, {
         status: "error",
-        error: "Could not extract enough text from the file. Make sure it's a text-based PDF (not a scan).",
+        error: scanned
+          ? "The scanned pages were too faint or unclear to read. Try a clearer scan."
+          : "Could not extract enough text from the file. Check it's a screenplay and not an empty or locked file.",
         finishedAt: new Date().toISOString()
       }, firebaseUrl, firebaseSecret);
       return { statusCode: 200 };

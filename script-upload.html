@@ -132,6 +132,27 @@
     margin-top: 6px;
   }
 
+  .field-hint {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .check-row input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+
   /* ── Button ── */
   .btn {
     display: block;
@@ -347,6 +368,8 @@
     <p class="subtitle">
       Upload a screenplay PDF or DOCX. We'll extract every character's lines
       and generate personalised coaching links — ready for actors to start learning.
+      Practising from a film you love? Old scanned scripts work too, and you can
+      pick just the pages of your scene.
     </p>
 
     <div class="form-group">
@@ -372,11 +395,27 @@
           <div class="file-drop-icon">📄</div>
           <div class="file-drop-text">
             <strong>Choose a file</strong> or drag it here<br>
-            PDF or DOCX — text-based, not scanned
+            PDF or DOCX — typed or scanned, up to 4 MB
           </div>
         </div>
         <div class="file-name" id="fileName" style="display:none"></div>
       </div>
+    </div>
+
+    <div class="form-group" id="pagesGroup" style="display:none">
+      <label for="pages">Only these pages <span class="optional">— optional</span></label>
+      <input type="text" id="pages" placeholder="e.g. 42-47, or 12-14, 30" autocomplete="off" inputmode="numeric">
+      <p class="field-hint" id="pagesHint">Leave empty for the whole script. Use the page numbers your PDF viewer shows,
+        which can be one more than the script's own numbers if there's a title page.</p>
+    </div>
+
+    <div class="form-group">
+      <label class="check-row">
+        <input type="checkbox" id="keepPrivate" checked>
+        <span>Keep it private <span class="optional">— only people you send the link to can use it</span></span>
+      </label>
+      <p class="field-hint">Always tick this for someone else's film you're practising from.
+        Filmmakers can untick it to list their own film's script on the public Script Coach page.</p>
     </div>
 
     <button class="btn" id="submitBtn" disabled>Extract Characters & Lines</button>
@@ -466,8 +505,67 @@ firebase.auth().onAuthStateChanged(user => {
   const resultsSummary = document.getElementById("resultsSummary");
   const characterCards = document.getElementById("characterCards");
   const anotherBtn     = document.getElementById("anotherBtn");
+  const pagesGroup     = document.getElementById("pagesGroup");
+  const pagesInput     = document.getElementById("pages");
+  const keepPrivate    = document.getElementById("keepPrivate");
+
+  // What script-coach-start accepts: about 4 MB once encoded for sending.
+  const MAX_UPLOAD = 4 * 1024 * 1024;
+  const PDF_LIB = "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";
 
   let selectedFile = null;
+
+  // ── Page selection ──
+  // "42-47, 50" -> [42..47, 50]. Returns null for an empty box, throws on nonsense.
+  function parsePages(text) {
+    const t = String(text || "").trim();
+    if (!t) return null;
+    const out = [];
+    for (const part of t.split(/[,;]+/).map(s => s.trim()).filter(Boolean)) {
+      const m = part.match(/^(\d{1,4})\s*(?:[-–—]|to)\s*(\d{1,4})$/i) || part.match(/^(\d{1,4})$/);
+      if (!m) throw new Error(`"${part}" isn't a page or a range. Write pages like 42-47, or 12-14, 30.`);
+      let a = parseInt(m[1], 10), b = parseInt(m[2] || m[1], 10);
+      if (a < 1 || b < 1) throw new Error("Page numbers start at 1.");
+      if (b < a) [a, b] = [b, a];
+      for (let p = a; p <= b; p++) if (!out.includes(p)) out.push(p);
+    }
+    if (out.length > 300) throw new Error("That's a lot of pages. Leave the box empty for the whole script.");
+    return out.sort((x, y) => x - y);
+  }
+
+  function loadPdfLib() {
+    if (window.PDFLib) return Promise.resolve(window.PDFLib);
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = PDF_LIB;
+      s.onload = () => window.PDFLib ? resolve(window.PDFLib) : reject(new Error("PDF tools didn't load"));
+      s.onerror = () => reject(new Error("PDF tools didn't load. Check your connection and try again."));
+      document.head.appendChild(s);
+    });
+  }
+
+  // Make a new PDF holding only the chosen pages, so only those are read (and uploaded).
+  async function cutPages(file, pages) {
+    const { PDFDocument } = await loadPdfLib();
+    let src;
+    try { src = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true }); }
+    catch (e) { throw new Error("Couldn't open this PDF to pick pages. Try the whole file, or save a copy with just those pages."); }
+    const total = src.getPageCount();
+    const idx = pages.filter(p => p <= total).map(p => p - 1);
+    if (!idx.length) throw new Error(`This PDF only has ${total} page${total > 1 ? "s" : ""}.`);
+    const out = await PDFDocument.create();
+    (await out.copyPages(src, idx)).forEach(p => out.addPage(p));
+    return new Blob([await out.save()], { type: "application/pdf" });
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
 
   // ── File handling ──
   function handleFile(file) {
@@ -477,15 +575,23 @@ firebase.auth().onAuthStateChanged(user => {
       showError("Please upload a PDF or DOCX file.");
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      showError("File too large — 20 MB max.");
+    // Big scans are fine to choose: only the chosen pages are uploaded.
+    if (file.size > 100 * 1024 * 1024) {
+      showError("File too large — 100 MB max.");
       return;
     }
     selectedFile = file;
+    clearError();
     fileDropContent.style.display = "none";
     fileNameEl.textContent = "📎 " + file.name + " (" + (file.size / 1024).toFixed(0) + " KB)";
     fileNameEl.style.display = "block";
     fileDrop.classList.add("has-file");
+    // Picking pages works on PDFs; a DOCX has no fixed pages.
+    pagesGroup.style.display = ext === "pdf" ? "" : "none";
+    if (ext !== "pdf") pagesInput.value = "";
+    if (ext === "pdf" && file.size > MAX_UPLOAD) {
+      showError("This PDF is over 4 MB, which is common for scans. Put the pages you need in \"Only these pages\" and it will be cut down before uploading.");
+    }
     checkReady();
   }
 
@@ -622,17 +728,36 @@ firebase.auth().onAuthStateChanged(user => {
 
     if (!title || !selectedFile) return;
 
-    // Read file as base64
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(",")[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(selectedFile);
-    });
-
-    const jobId = makeJobId(title);
     const user = firebase.auth().currentUser;
     if (!user) { showError("Please sign in to 4flieks first."); return; }
+
+    // Cut the PDF down to the chosen pages first, then check the size.
+    let upload = selectedFile;
+    const isPdf = selectedFile.name.toLowerCase().endsWith(".pdf");
+    submitBtn.disabled = true;
+    try {
+      const pages = isPdf ? parsePages(pagesInput.value) : null;
+      if (pages) {
+        submitBtn.textContent = "Picking your pages…";
+        upload = await cutPages(selectedFile, pages);
+      }
+    } catch (e) {
+      showError(e.message);
+      submitBtn.textContent = "Extract Characters & Lines"; checkReady();
+      return;
+    }
+    submitBtn.textContent = "Extract Characters & Lines"; checkReady();
+    if (upload.size > MAX_UPLOAD) {
+      showError(isPdf
+        ? `That's ${(upload.size / 1048576).toFixed(1)} MB, and the limit is 4 MB. Choose fewer pages (a scene or two) and try again.`
+        : "That file is over 4 MB. Save it as a PDF and choose just the pages you need.");
+      return;
+    }
+
+    // Read file as base64
+    const base64 = await blobToBase64(upload);
+
+    const jobId = makeJobId(title);
     const token = await user.getIdToken();
 
     showSection("progress");
@@ -649,7 +774,8 @@ firebase.auth().onAuthStateChanged(user => {
           storyBy,
           fileBase64: base64,
           fileName: selectedFile.name,
-          jobId
+          jobId,
+          private: keepPrivate.checked
         })
       });
 
@@ -730,6 +856,9 @@ firebase.auth().onAuthStateChanged(user => {
     storyByInput.value = "";
     fileInput.value = "";
     selectedFile = null;
+    pagesInput.value = "";
+    pagesGroup.style.display = "none";
+    keepPrivate.checked = true;
     fileDropContent.style.display = "";
     fileNameEl.style.display = "none";
     fileDrop.classList.remove("has-file");

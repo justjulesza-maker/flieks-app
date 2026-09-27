@@ -99,11 +99,12 @@ function splitScript(text, size = PART_CHARS) {
 
 /* ---------- the AI call, streamed ---------- */
 
-async function streamClaude({ system, user, maxTokens, apiKey, fetchImpl = fetch }) {
+// `user` is the message text, or an array of content blocks (a PDF plus text, for scans).
+async function streamClaude({ system, user, maxTokens, apiKey, fetchImpl = fetch, model = MODEL }) {
   const res = await fetchImpl('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, stream: true, system, messages: [{ role: 'user', content: user }] })
+    body: JSON.stringify({ model, max_tokens: maxTokens, stream: true, system, messages: [{ role: 'user', content: user }] })
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
@@ -249,4 +250,89 @@ async function extractCharacters(scriptText, title, { apiKey, onProgress = () =>
   return { characters: mergeParts(results), parts: parts.length, truncated, usage };
 }
 
-module.exports = { extractCharacters, splitScript, mergeParts, parseCharacters, streamClaude, keyOf, SYSTEM };
+/* ---------- scanned scripts ---------- */
+
+// Old screenplays are often scans: the PDF holds page images and no text, so
+// pdf-parse finds nothing. Those pages are sent to the model as a PDF in small
+// batches and transcribed back into screenplay text, which then goes through
+// extractCharacters like any other script.
+const OCR_MODEL = process.env.SCRIPT_COACH_OCR_MODEL || MODEL;
+const OCR_PAGES = parseInt(process.env.SCRIPT_COACH_OCR_PAGES || '8', 10);            // pages per AI call
+const OCR_MAX_PAGES = parseInt(process.env.SCRIPT_COACH_OCR_MAX_PAGES || '150', 10);  // a long feature
+
+const OCR_SYSTEM = `You transcribe scanned screenplay pages into plain text for a line-learning tool.
+Write out every page you are given, in order, exactly as written:
+- Keep the screenplay layout: scene headings on their own line, the speaking character's name in capitals on its own line, their dialogue on the lines below it, parentheticals in brackets, and action as ordinary paragraphs. Put a blank line between blocks.
+- Keep the exact words, spelling, slang, profanity and punctuation. Do not correct, modernise, summarise or skip anything.
+- Leave out page numbers, running headers and footers, "(CONTINUED)" / "CONTINUED:" markers, revision marks and stray scanning marks.
+- If a word cannot be read, write [illegible] in its place.
+Return only the transcribed text: no commentary, no markdown.`;
+
+/** True when a PDF has too little text to be anything but page images. */
+function looksScanned(text, pages) {
+  const chars = String(text || '').replace(/\s+/g, '').length;
+  return chars < 100 || chars / Math.max(1, pages || 1) < 250;   // a typed screenplay page has ~1,200
+}
+
+/** Split a PDF into smaller PDFs of `per` pages each, as base64. */
+async function splitPdf(buffer, per = OCR_PAGES) {
+  const { PDFDocument } = require('pdf-lib');
+  const src = await PDFDocument.load(buffer, { ignoreEncryption: true });
+  const total = src.getPageCount();
+  const chunks = [];
+  for (let s = 0; s < total; s += per) {
+    const idx = Array.from({ length: Math.min(per, total - s) }, (_, i) => s + i);
+    const doc = await PDFDocument.create();
+    (await doc.copyPages(src, idx)).forEach(p => doc.addPage(p));
+    chunks.push({ from: s + 1, to: s + idx.length, data: Buffer.from(await doc.save()).toString('base64') });
+  }
+  return { total, chunks };
+}
+
+/** Transcribe a scanned screenplay PDF to text. Throws err.code 'too_long' past OCR_MAX_PAGES. */
+async function transcribePdf(buffer, title, { apiKey, onProgress = () => {}, fetchImpl, perCall } = {}) {
+  const { total, chunks } = await splitPdf(buffer, perCall || OCR_PAGES);
+  if (total > OCR_MAX_PAGES) {
+    const err = new Error(`scan has ${total} pages`); err.code = 'too_long'; err.pages = total; throw err;
+  }
+  const texts = new Array(chunks.length);
+  const usage = { input_tokens: 0, output_tokens: 0 };
+  let done = 0;
+  await onProgress(`This looks like a scanned script, so the AI is reading the ${total} page${total > 1 ? 's' : ''}…`);
+
+  const readChunk = async i => {
+    const c = chunks[i];
+    const user = [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: c.data } },
+      { type: 'text', text: `Pages ${c.from}–${c.to} of ${total} of the screenplay "${title}". Transcribe them.` }
+    ];
+    let lastErr;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await streamClaude({ system: OCR_SYSTEM, user, maxTokens: 16000, apiKey, fetchImpl, model: OCR_MODEL });
+        usage.input_tokens += r.usage.input_tokens; usage.output_tokens += r.usage.output_tokens;
+        return r.text.replace(/^```\w*\n?|```$/g, '').trim();
+      } catch (e) {
+        lastErr = e;
+        if (e.status === 400 || e.status === 401 || e.status === 403) break;
+        await new Promise(r => setTimeout(r, e.status === 429 || e.status === 529 ? 8000 : 2000));
+      }
+    }
+    throw lastErr;
+  };
+
+  let next = 0;
+  const worker = async () => {
+    while (next < chunks.length) {
+      const i = next++;
+      texts[i] = await readChunk(i);
+      done++;
+      if (chunks.length > 1) await onProgress(`Reading the scanned pages: ${Math.min(done * (perCall || OCR_PAGES), total)} of ${total} done…`);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, chunks.length) }, worker));
+  return { text: texts.join('\n\n'), pages: total, usage };
+}
+
+module.exports = { extractCharacters, splitScript, mergeParts, parseCharacters, streamClaude, keyOf, SYSTEM,
+  looksScanned, splitPdf, transcribePdf, OCR_SYSTEM };

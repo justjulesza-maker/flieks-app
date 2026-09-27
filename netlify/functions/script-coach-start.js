@@ -7,7 +7,7 @@
  * size cap, then hands the job to the background function with a shared
  * secret the browser never sees.
  *
- * POST { token, title, writers, storyBy, fileBase64, fileName, jobId } -> { ok }
+ * POST { token, title, writers, storyBy, fileBase64, fileName, jobId, private } -> { ok }
  * POST { token, action: 'list' } -> { items, limit, used }   my Coach scripts
  *
  * Open to any 4flieks Lab member with a verified email. Filmmakers' and admins'
@@ -101,7 +101,9 @@ exports.handler = async event => {
       body: JSON.stringify({
         title, writers: String(b.writers || '').slice(0, 300), storyBy: String(b.storyBy || '').slice(0, 300),
         fileBase64: b.fileBase64, fileName, jobId,
-        owner: u.localId, listed: trusted, canReplace: role === 'admin'
+        // Filmmakers' and admins' scripts go on the public picker unless they
+        // ticked "keep it private" (a practice copy of someone else's film, say).
+        owner: u.localId, listed: trusted && b.private !== true, canReplace: role === 'admin'
       })
     }).catch(e => ({ ok: false, status: 0 }));
     if (kick.status !== 202 && !kick.ok) return reply(502, { message: 'Could not start the extraction. Try again.' });
