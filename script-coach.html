@@ -39,7 +39,7 @@
   .content { padding: 24px 20px; max-width: 720px; }
 
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
-  .filter-btn { padding: 5px 12px; background: transparent; color: var(--text-light); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 10px; letter-spacing: .08em; font-family: Georgia,serif; }
+  .filter-btn { padding: 5px 12px; background: transparent; color: var(--text-light); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 10px; letter-spacing: .08em; font-family: Georgia,serif; margin: 0 6px 6px 0; }
   .filter-btn.active { background: var(--surface-alt); color: var(--text); border-color: #aaa; }
 
   /* ── Breakdown ── */
@@ -94,9 +94,46 @@
 
   /* ── Stats bar ── */
   .stats-bar { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); }
-  .stat { text-align: center; }
+  .stat { text-align: center; flex: 1; }
   .stat-num { font-size: 22px; font-weight: bold; }
   .stat-label { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-light); }
+
+  /* ── Why before the line ── */
+  .why { background: var(--surface-alt); border-left: 2px solid var(--accent); padding: 12px 14px; margin-bottom: 18px; }
+  .why-label { font-size: 10px; letter-spacing: .15em; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+  .why-text { font-size: 14px; color: var(--text-mid); line-height: 1.7; }
+  .why-play { font-size: 13.5px; color: var(--accent-light); font-style: italic; line-height: 1.6; margin-top: 8px; }
+  .why-play span { font-style: normal; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-light); margin-right: 4px; }
+  .why-prompt { font-size: 16px; color: var(--text); line-height: 1.6; margin: 4px 0 6px; }
+
+  /* ── First letters ── */
+  .ini-line { font-size: 24px; line-height: 2; letter-spacing: .03em; padding: 6px 0 16px; word-spacing: .3em; color: var(--text); }
+  .ini { cursor: pointer; border-bottom: 1px dotted var(--border-dark); padding: 0 2px; }
+  .ini.rev { color: var(--accent); border-bottom-color: transparent; letter-spacing: 0; }
+  .ini-p { color: var(--text-light); }
+  .ini-tip { font-size: 12px; color: var(--text-light); letter-spacing: .03em; line-height: 1.6; margin-bottom: 12px; }
+
+  /* ── Self-rating ── */
+  .rate-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-light); margin: 10px 0 8px; }
+  .rate-row { display: flex; gap: 8px; }
+  .rate-btn { flex: 1; padding: 13px 6px; background: transparent; border: 1px solid var(--border-dark); cursor: pointer; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-family: Georgia,serif; color: var(--text-mid); }
+  .rate-btn.miss { border-color: var(--accent-border); color: #a33; }
+  .rate-btn.shaky { border-color: #e6d39a; color: #7a5f00; }
+  .rate-btn.good { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .str { font-size: 10px; letter-spacing: .12em; color: var(--accent); margin-left: 8px; white-space: nowrap; }
+  .str.new { color: var(--text-light); }
+
+  /* ── Run Scene ── */
+  .mic { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; font-size: 14px; color: var(--text-mid); }
+  .mic-dot { width: 14px; height: 14px; border-radius: 50%; background: #c0392b; animation: pulse 1.2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(192,57,43,.5); } 70% { box-shadow: 0 0 0 12px rgba(192,57,43,0); } 100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); } }
+  .heard { min-height: 60px; background: #fafafa; border: 1px solid var(--border); padding: 12px 14px; font-size: 15px; line-height: 1.7; font-style: italic; color: var(--text-mid); margin-bottom: 14px; }
+  .notice { font-size: 13px; color: #a33; margin-bottom: 12px; line-height: 1.6; }
+  .run-links { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; }
+  .link-btn { background: none; border: none; color: var(--accent); text-decoration: underline; font-family: Georgia,serif; font-size: 12.5px; cursor: pointer; padding: 6px 0; }
+  .opts { display: flex; gap: 8px 18px; flex-wrap: wrap; margin-top: 20px; font-size: 12.5px; color: var(--text-mid); }
+  .opts label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .opts input { accent-color: var(--accent); }
 
   /* ── Full Script ── */
   .script-view { font-family: "Courier New", Courier, monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; background: var(--surface); border: 1px solid var(--border); padding: 28px 24px; color: var(--text); max-height: 70vh; overflow-y: auto; }
@@ -123,6 +160,8 @@
 <script>
 /* ═══════════════════════════════════════════════
    4Flieks Script Coach — generic, script-agnostic
+   Modes: Today's Lines (spaced review), Scene Breakdown, Cue Cards,
+   First Letters, Line Quiz, Run Scene (cue + speak), Full Script
    ═══════════════════════════════════════════════ */
 
 const FUNCTION_URL = "/.netlify/functions/line-coach";
@@ -139,7 +178,7 @@ const SCRIPT_INDEX = [
 let fullIndex = [...SCRIPT_INDEX];
 
 let scriptData = null;
-let mode = "breakdown";
+let mode = "today";
 let sceneFilter = "All";
 let cardIndex = 0, cardShowLine = false, cardShowHook = false;
 let quizIndex = 0;
@@ -148,10 +187,30 @@ let fullScriptText = null;
 let fullScriptLoading = false;
 let highlightMyLines = true;
 
+// First Letters state
+let iniIndex = 0, iniRevealed = new Set(), iniAll = false;
+
+// Today's Lines state
+const NEW_PER_SESSION = 8;     // new lines introduced per round
+let todayQueue = null, todayPos = 0, todayStage = 0, todayIni = false;
+let todayIniRevealed = new Set(), todayRequeued = {}, todayAll = false;
+
+// Run Scene state
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const canSpeak = "speechSynthesis" in window;
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+const SILENCE_MS = 3500;       // stop listening after this much quiet
+let srLang = "en-ZA";
+let runIndex = 0, runPhase = "ready", runTranscript = "", runHeard = "", runResult = null;
+let runNotice = "", runError = null, runShowLine = false, runAutoPending = false;
+let runTyping = !SR, runAuto = true, runSlow = false;
+let rec = null, runTimer = null, silenceTimer = null, runToken = 0;
+
 // Session stats (persisted per script in sessionStorage)
 let stats = { attempts: 0, totalScore: 0, bestScore: 0 };
 
 function loadStats() {
+  stats = { attempts: 0, totalScore: 0, bestScore: 0 };
   if (!scriptData) return;
   try {
     const key = `sc_${scriptData.filmTitle}_${scriptData.character}`;
@@ -165,6 +224,58 @@ function saveStats() {
     const key = `sc_${scriptData.filmTitle}_${scriptData.character}`;
     sessionStorage.setItem(key, JSON.stringify(stats));
   } catch(e) {}
+}
+function bumpStats(score) {
+  stats.attempts++;
+  stats.totalScore += score;
+  if (score > stats.bestScore) stats.bestScore = score;
+  saveStats();
+}
+
+/* ── Smart review (spaced repetition) ──
+   Each line sits in a box 0–5. A good attempt moves it up a box and it comes
+   back later; a miss drops it to box 0 so it comes straight back.
+   Kept in this browser (localStorage), so it survives closing the page. */
+const HOUR = 36e5, DAY = 864e5;
+const INTERVALS = [0, 4 * HOUR, DAY, 2 * DAY, 4 * DAY, 8 * DAY];
+let srs = {};
+
+function srsKey() { return `sc_srs_${scriptData.filmTitle}_${scriptData.character}`; }
+function loadSrs() {
+  srs = {};
+  try { const s = localStorage.getItem(srsKey()); if (s) srs = JSON.parse(s) || {}; } catch(e) { srs = {}; }
+}
+function saveSrs() { try { localStorage.setItem(srsKey(), JSON.stringify(srs)); } catch(e) {} }
+function lineKey(l) { return String(l.id ?? scriptData.lines.indexOf(l)); }
+function lineByKey(k) { return scriptData.lines.find(l => lineKey(l) === k); }
+
+function recordResult(l, score) {
+  if (!l) return;
+  score = Number(score) || 0;
+  const k = lineKey(l), now = Date.now();
+  const r = srs[k] || { box: 0, seen: 0 };
+  if (score >= 85) r.box = r.seen ? Math.min(5, r.box + 1) : 2;
+  else if (score >= 60) r.box = Math.max(1, r.box - 1);
+  else r.box = 0;
+  r.seen = (r.seen || 0) + 1;
+  r.last = score; r.at = now; r.due = now + INTERVALS[r.box];
+  srs[k] = r;
+  saveSrs();
+}
+
+function strengthHTML(l) {
+  const r = srs[lineKey(l)];
+  if (!r) return '<span class="str new">NEW</span>';
+  const b = r.box;
+  return `<span class="str" title="Strength ${b} of 5">${"●".repeat(b)}${"○".repeat(5 - b)}</span>`;
+}
+
+function fmtWhen(ms) {
+  const h = Math.round(ms / HOUR);
+  if (h < 1) return "within the hour";
+  if (h < 24) return `in about ${h} hour${h > 1 ? "s" : ""}`;
+  const d = Math.round(ms / DAY);
+  return d <= 1 ? "tomorrow" : `in ${d} days`;
 }
 
 function filtered() {
@@ -181,6 +292,74 @@ function scoreColor(s) {
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ── Shared pieces ──
+function whyBox(l) {
+  if (!l.beat && !l.emotion) return "";
+  return `<div class="why">
+    <div class="why-label">Why</div>
+    ${l.beat ? `<div class="why-text">${esc(l.beat)}</div>` : ""}
+    ${l.emotion ? `<div class="why-play"><span>Play it</span>${esc(l.emotion)}</div>` : ""}
+  </div>`;
+}
+
+function rateRow(fn, label) {
+  return `<div class="rate-label">${label || "How did you do before you looked?"}</div>
+    <div class="rate-row">
+      <button class="rate-btn miss" onclick="${fn}(30)">Missed it</button>
+      <button class="rate-btn shaky" onclick="${fn}(70)">Shaky</button>
+      <button class="rate-btn good" onclick="${fn}(95)">Got it</button>
+    </div>`;
+}
+
+// First-letter version of a line: "I don't know." -> "I d k."
+const ALNUM = /[\p{L}\p{N}]/u;
+function initialsHTML(line, revealed, handler, all) {
+  let i = 0;
+  return String(line || "").split("\n").map(row =>
+    row.split(/\s+/).filter(Boolean).map(tok => {
+      const chars = Array.from(tok);
+      const k = chars.findIndex(c => ALNUM.test(c));
+      if (k < 0) return `<span class="ini-p">${esc(tok)}</span>`;
+      const idx = i++;
+      if (all || revealed.has(idx)) return `<span class="ini rev" onclick="${handler}(${idx})">${esc(tok)}</span>`;
+      let end = chars.length;
+      while (end > k + 1 && !ALNUM.test(chars[end - 1])) end--;
+      const shown = chars.slice(0, k + 1).join("") + chars.slice(end).join("");
+      return `<span class="ini" onclick="${handler}(${idx})">${esc(shown)}</span>`;
+    }).join(" ")
+  ).join("<br>");
+}
+
+// ── Scoring via the line-coach function ──
+async function scoreLine(l, actorLine, spoken) {
+  const res = await fetch(FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      correctLine: l.line,
+      actorLine,
+      emotion: l.emotion,
+      character: scriptData.character,
+      filmTitle: scriptData.filmTitle,
+      spoken: !!spoken
+    })
+  });
+  const fb = await res.json().catch(() => ({}));
+  if (!res.ok || fb.error) throw new Error(fb.error || `Server returned ${res.status}`);
+  fb.score = Math.max(0, Math.min(100, Math.round(Number(fb.score) || 0)));
+  return fb;
+}
+
+function scoreBlock(fb) {
+  const col = scoreColor(fb.score);
+  return `<div class="score-row">
+      <div class="score-num" style="color:${col}">${fb.score}</div>
+      <div><div class="verdict" style="color:${col}">${esc(fb.verdict)}</div><div class="score-sub">out of 100</div></div>
+    </div>
+    <div class="fb-text">${esc(fb.feedback)}</div>
+    ${fb.hint ? `<div class="hint-box">Hint: ${esc(fb.hint)}</div>` : ''}`;
 }
 
 // ── Fetch dynamic index from Firebase and merge with static ──
@@ -211,6 +390,24 @@ async function loadDynamicIndex() {
   }
 }
 
+function onScriptLoaded() {
+  document.title = `${scriptData.character} — Line Coach`;
+  loadStats();
+  loadSrs();
+  resetPractice();
+  mode = "today";
+  renderApp();
+}
+
+function resetPractice() {
+  stopRun();
+  cardIndex = 0; cardShowLine = false; cardShowHook = false;
+  quizIndex = 0; expandedId = null;
+  iniIndex = 0; iniRevealed = new Set(); iniAll = false;
+  todayQueue = null; todayAll = false;
+  runIndex = 0; runPhase = "ready"; runNotice = ""; runResult = null; runHeard = ""; runShowLine = false;
+}
+
 // ── Load script data from Firebase ──
 async function loadFirebaseScript(filmSlug, charSlug) {
   const app = document.getElementById("app");
@@ -221,9 +418,7 @@ async function loadFirebaseScript(filmSlug, charSlug) {
     const data = await res.json();
     if (!data || !data.lines) throw new Error("Character data not found");
     scriptData = data;
-    document.title = `${scriptData.character} — Line Coach`;
-    loadStats();
-    renderApp();
+    onScriptLoaded();
   } catch(e) {
     app.innerHTML = `<div class="loader"><h2>Script Coach</h2><div class="error">Couldn't load script: ${esc(e.message)}</div></div>`;
   }
@@ -260,9 +455,7 @@ async function loadScript(file) {
     const res = await fetch(file);
     if (!res.ok) throw new Error(`${res.status}`);
     scriptData = await res.json();
-    document.title = `${scriptData.character} — Line Coach`;
-    loadStats();
-    renderApp();
+    onScriptLoaded();
   } catch(e) {
     app.innerHTML = `<div class="loader"><h2>Script Coach</h2><div class="error">Couldn't load script: ${esc(e.message)}</div></div>`;
   }
@@ -277,9 +470,7 @@ async function loadFullScript() {
   fullScriptLoading = true;
 
   try {
-    // Determine the film slug
     const filmSlug = scriptData.filmTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const params = new URLSearchParams(location.search);
 
     // Try Firebase first (works for both dynamic and static if uploaded)
     const fbRes = await fetch(`${FIREBASE_DB}/script_coach/films/${filmSlug}/fullScript.json`);
@@ -302,7 +493,6 @@ async function loadFullScript() {
       return;
     }
 
-    // No script found
     fullScriptText = null;
     fullScriptLoading = false;
     renderMain();
@@ -329,14 +519,12 @@ function formatScreenplay(text) {
     const raw = lines[i];
     const trimmed = raw.trim();
 
-    // Scene headings (INT./EXT. or SCENE)
     if (/^(INT\.|EXT\.|INT\/EXT\.|SCENE\s*\d)/i.test(trimmed)) {
       inMyDialogue = false;
       html += `<div class="scene-heading">${esc(trimmed)}</div>\n`;
       continue;
     }
 
-    // Character names (all caps line, often centred, possibly with (V.O.) etc)
     if (/^[A-Z][A-Z\s.''\-]+(\s*\(.*\))?\s*$/.test(trimmed) && trimmed.length < 50 && trimmed.length > 1) {
       const isMe = shortNames.some(n => trimmed.includes(n));
       inMyDialogue = isMe;
@@ -344,7 +532,6 @@ function formatScreenplay(text) {
       continue;
     }
 
-    // Dialogue or action
     if (trimmed === "") {
       inMyDialogue = false;
       html += "\n";
@@ -365,16 +552,20 @@ function toggleHighlight() {
 function renderApp() {
   const app = document.getElementById("app");
   const scenes = scriptData.scenes || extractScenes();
+  const tab = (m, label) => `<button class="tab ${mode===m?'active':''}" onclick="switchMode('${m}')">${label}</button>`;
   app.innerHTML = `
     <div class="header">
       <div class="header-sub">${esc(scriptData.filmTitle)} — <span>Line Coach</span></div>
       ${fullIndex.length > 1 ? `<span class="back-link" onclick="backToPicker()">← All Scripts</span>` : ""}
       <h1>${esc(scriptData.character.toUpperCase())}</h1>
       <div class="tabs">
-        <button class="tab ${mode==='breakdown'?'active':''}" onclick="switchMode('breakdown')">Scene Breakdown</button>
-        <button class="tab ${mode==='cards'?'active':''}" onclick="switchMode('cards')">Cue Cards</button>
-        <button class="tab ${mode==='quiz'?'active':''}" onclick="switchMode('quiz')">Line Quiz</button>
-        <button class="tab ${mode==='script'?'active':''}" onclick="switchMode('script')">Full Script</button>
+        ${tab('today', "Today's Lines")}
+        ${tab('breakdown', 'Scene Breakdown')}
+        ${tab('cards', 'Cue Cards')}
+        ${tab('initials', 'First Letters')}
+        ${tab('quiz', 'Line Quiz')}
+        ${tab('run', 'Run Scene')}
+        ${tab('script', 'Full Script')}
       </div>
     </div>
     <div class="content">
@@ -396,7 +587,8 @@ function extractScenes() {
 }
 
 function backToPicker() {
-  scriptData = null; mode = "breakdown"; sceneFilter = "All";
+  stopRun();
+  scriptData = null; mode = "today"; sceneFilter = "All";
   expandedId = null; cardIndex = 0; quizIndex = 0;
   fullScriptText = null; fullScriptLoading = false;
   document.title = "Script Coach — 4Flieks";
@@ -404,15 +596,23 @@ function backToPicker() {
 }
 
 function switchMode(m) {
+  stopRun();
   mode = m;
   cardIndex = 0; cardShowLine = false; cardShowHook = false;
   quizIndex = 0;
+  iniIndex = 0; iniRevealed = new Set(); iniAll = false;
+  if (m === "today") todayQueue = null;
+  runPhase = "ready"; runNotice = ""; runResult = null; runHeard = "";
   renderApp();
 }
 
 function setFilter(f) {
+  stopRun();
   sceneFilter = f;
-  cardIndex = 0; quizIndex = 0;
+  cardIndex = 0; quizIndex = 0; iniIndex = 0; runIndex = 0;
+  iniRevealed = new Set(); iniAll = false;
+  todayQueue = null;
+  runPhase = "ready"; runNotice = ""; runResult = null;
   renderFilters(scriptData.scenes || extractScenes());
   renderMain();
 }
@@ -440,97 +640,233 @@ function renderMain() {
   if (!el) return;
   const lines = filtered();
 
-  if (mode === "breakdown") {
-    el.innerHTML = `<p style="color:var(--text-mid);font-size:13px;margin-bottom:20px;letter-spacing:.03em">${lines.length} line${lines.length!==1?'s':''} — tap any to expand</p>` +
-      lines.map(l => `
-        <div class="line-item ${expandedId===l.id?'open':''}" onclick="toggleExpand(${l.id})">
-          <div class="line-header">
-            <div style="flex:1">
-              <div class="line-label">${esc(l.scene)}</div>
-              <div class="line-preview">"${esc(l.line.split('\\n')[0])}${l.line.includes('\\n')?'...':''}"</div>
-            </div>
-            <span class="line-expand">${expandedId===l.id?'\u2212':'+'}</span>
-          </div>
-          ${expandedId===l.id ? `
-          <div class="line-detail">
-            <div class="detail-label">The Setup</div>
-            <div class="detail-text">${esc(l.beat)}</div>
-            <div class="detail-label">Cue</div>
-            <div class="detail-cue">${esc(l.cue)}</div>
-            <div class="line-box">
-              <div class="line-box-label">${esc(scriptData.character)}'s Line</div>
-              <div class="line-text">${esc(l.line)}</div>
-            </div>
-            <div class="two-col">
-              <div><div class="detail-label">Memory Hook</div><div class="hook-text">${esc(l.hook)}</div></div>
-              <div><div class="detail-label">Play it</div><div class="emotion-text">${esc(l.emotion)}</div></div>
-            </div>
-          </div>` : ''}
-        </div>`).join('');
+  if (mode === "script") return renderScript(el);
+  if (mode === "breakdown") return renderBreakdown(el, lines);
+  if (!lines.length) { el.innerHTML = '<p style="color:var(--text-mid)">No lines in this scene.</p>'; return; }
+  if (mode === "today") return renderToday(el, lines);
+  if (mode === "cards") return renderCards(el, lines);
+  if (mode === "initials") return renderInitials(el, lines);
+  if (mode === "run") return renderRun(el, lines);
+  return renderQuiz(el, lines);
+}
 
-  } else if (mode === "cards") {
-    if (!lines.length) { el.innerHTML = '<p style="color:var(--text-mid)">No lines in this scene.</p>'; return; }
-    const l = lines[cardIndex] || lines[0];
-    el.innerHTML = `
-      <div class="card-counter">${cardIndex+1} / ${lines.length}</div>
-      <div class="card">
-        <div>
-          <div class="line-label">${esc(l.scene)}</div>
-          <div class="card-beat">${esc(l.beat)}</div>
-          <div class="card-cue">${esc(l.cue)}</div>
-          <button class="reveal-btn ${cardShowLine?'shown':''}" onclick="toggleCardLine()">${cardShowLine?'Hide Line':'Reveal Line'}</button>
-          ${cardShowLine ? `<div class="revealed-line">${esc(l.line)}</div>` : ''}
-          ${cardShowLine ? `<button class="hook-btn ${cardShowHook?'shown':''}" onclick="toggleCardHook()">${cardShowHook?'Hide':'Show'} Memory Hook</button>` : ''}
-          ${cardShowLine && cardShowHook ? `<div class="revealed-hook">${esc(l.hook)}</div>` : ''}
-        </div>
-        <div class="nav-row">
-          <button class="nav-btn" onclick="prevCard()">\u2190 PREV</button>
-          <button class="nav-btn" onclick="nextCard()">NEXT \u2192</button>
-        </div>
-      </div>`;
-
-  } else if (mode === "script") {
-    // Full Script mode
-    if (fullScriptLoading) {
-      el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">Loading full script…</p>';
-      return;
-    }
-    if (!fullScriptText) {
-      // Trigger load
-      loadFullScript();
-      el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">Loading full script…</p>';
-      return;
-    }
-    el.innerHTML = `
-      <label class="script-highlight-toggle">
-        <input type="checkbox" ${highlightMyLines ? 'checked' : ''} onchange="toggleHighlight()">
-        Highlight ${esc(scriptData.character)}'s lines
-      </label>
-      <div class="script-view">${formatScreenplay(fullScriptText)}</div>`;
-    return;
-
+/* ─────────────── Today's Lines ─────────────── */
+function buildTodayQueue() {
+  const now = Date.now(), lines = filtered();
+  const rk = l => srs[lineKey(l)];
+  let q;
+  if (todayAll) {
+    q = [...lines].sort((a, b) => (rk(a) ? rk(a).box : -1) - (rk(b) ? rk(b).box : -1));
   } else {
-    if (!lines.length) { el.innerHTML = '<p style="color:var(--text-mid)">No lines in this scene.</p>'; return; }
-    const l = lines[quizIndex] || lines[0];
-    const avg = stats.attempts ? Math.round(stats.totalScore / stats.attempts) : 0;
-    el.innerHTML = `
-      ${stats.attempts ? `
-      <div class="stats-bar">
-        <div class="stat"><div class="stat-num">${stats.attempts}</div><div class="stat-label">Attempts</div></div>
-        <div class="stat"><div class="stat-num">${avg}</div><div class="stat-label">Avg Score</div></div>
-        <div class="stat"><div class="stat-num" style="color:var(--green)">${stats.bestScore}</div><div class="stat-label">Best</div></div>
-      </div>` : ''}
-      <div class="card-counter">Line ${quizIndex+1} / ${lines.length}</div>
-      <div class="card" style="min-height:unset">
-        <div class="line-label">${esc(l.scene)}</div>
-        <div class="card-beat" style="margin-bottom:16px">${esc(l.beat)}</div>
-        <div class="quiz-cue">${esc(l.cue)}</div>
-        <div class="input-label">Your Line \u2014 type it from memory</div>
-        <textarea id="answer" placeholder="Type the line here..." oninput="document.getElementById('checkbtn').disabled=!this.value.trim()"></textarea>
-        <button id="checkbtn" class="check-btn" disabled onclick="checkAnswer()">Check My Line</button>
-        <div id="feedback"></div>
-      </div>`;
+    const due = lines.filter(l => rk(l) && rk(l).due <= now)
+      .sort((a, b) => (rk(a).box - rk(b).box) || (rk(a).due - rk(b).due));
+    const fresh = lines.filter(l => !rk(l)).slice(0, NEW_PER_SESSION);
+    q = [...due, ...fresh];
   }
+  todayQueue = q.map(lineKey);
+  todayPos = 0; todayStage = 0; todayIni = false;
+  todayIniRevealed = new Set(); todayRequeued = {}; todayAll = false;
+}
+
+function startToday(all) { todayAll = !!all; buildTodayQueue(); renderMain(); }
+function todayStep(s) { todayStage = s; renderMain(); }
+function todayToggleIni() { todayIni = !todayIni; renderMain(); }
+function todayWord(i) { todayIniRevealed.has(i) ? todayIniRevealed.delete(i) : todayIniRevealed.add(i); renderMain(); }
+function rateToday(score) {
+  const k = todayQueue[todayPos];
+  recordResult(lineByKey(k), score);
+  // A missed line comes round again at the end of this session (twice at most)
+  if (score < 60 && (todayRequeued[k] || 0) < 2) {
+    todayRequeued[k] = (todayRequeued[k] || 0) + 1;
+    todayQueue.push(k);
+  }
+  todayPos++; todayStage = 0; todayIni = false; todayIniRevealed = new Set();
+  renderMain();
+}
+
+function renderToday(el, lines) {
+  if (!todayQueue) buildTodayQueue();
+  const now = Date.now();
+  let solid = 0, learning = 0, fresh = 0;
+  lines.forEach(l => { const r = srs[lineKey(l)]; if (!r) fresh++; else if (r.box >= 3) solid++; else learning++; });
+  const summary = `<div class="stats-bar">
+      <div class="stat"><div class="stat-num" style="color:var(--accent)">${solid}</div><div class="stat-label">Solid</div></div>
+      <div class="stat"><div class="stat-num">${learning}</div><div class="stat-label">Learning</div></div>
+      <div class="stat"><div class="stat-num">${fresh}</div><div class="stat-label">Not started</div></div>
+    </div>`;
+
+  if (todayPos >= todayQueue.length) {
+    let next = Infinity;
+    lines.forEach(l => { const r = srs[lineKey(l)]; if (r && r.due > now && r.due < next) next = r.due; });
+    const moreNew = fresh > 0;
+    const msg = moreNew
+      ? `Nice work. You still have ${fresh} line${fresh > 1 ? "s" : ""} you haven't started. The next round brings in up to ${NEW_PER_SESSION} more, or take a break first. Short sessions spread through the day stick better than one long one.`
+      : next < Infinity
+        ? `Everything here is done for now. Your next lines come back ${fmtWhen(next - now)}. A night's sleep between sessions really does help them stick.`
+        : `Everything here is done for now.`;
+    el.innerHTML = summary + `
+      <div class="card" style="min-height:unset;text-align:center">
+        <div class="verdict" style="margin-bottom:12px">${todayQueue.length ? "Session done" : "Nothing due right now"}</div>
+        <div class="fb-text">${msg}</div>
+        <button class="check-btn" onclick="startToday(${moreNew ? "false" : "true"})">${moreNew ? "Next round" : "Practise everything anyway"}</button>
+        <div class="quiz-btns">
+          <button class="quiz-btn" onclick="switchMode('run')">Run the scene</button>
+          <button class="quiz-btn" onclick="switchMode('initials')">First letters</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const l = lineByKey(todayQueue[todayPos]);
+  if (!l) { todayPos++; return renderToday(el, lines); }
+  const isNew = !srs[lineKey(l)];
+  let body = whyBox(l);
+
+  if (todayStage === 0) {
+    body += `<div class="why-prompt">Before the words: what does ${esc(scriptData.character)} want in this moment, and why say it now?</div>
+      <div class="ini-tip">Take a few seconds with it. The line is easier to find once you know why it's said.</div>
+      <button class="check-btn" onclick="todayStep(1)">Got the why · show the cue</button>`;
+  } else {
+    body += `<div class="card-cue">${esc(l.cue)}</div>`;
+    if (todayStage === 1) {
+      body += `<div class="ini-tip">${isNew ? "New line. Have a go, then reveal it and read it aloud a few times." : "Say your line out loud before you look."}</div>
+        ${todayIni ? `<div class="ini-line">${initialsHTML(l.line, todayIniRevealed, "todayWord")}</div>` : ""}
+        <button class="reveal-btn" onclick="todayToggleIni()">${todayIni ? "Hide first letters" : "Help: show first letters"}</button>
+        <button class="reveal-btn shown" onclick="todayStep(2)">Reveal line</button>`;
+    } else {
+      body += `<div class="revealed-line">${esc(l.line)}</div>
+        ${l.hook ? `<div class="revealed-hook">${esc(l.hook)}</div>` : ""}
+        <div style="margin-top:20px">${rateRow("rateToday")}</div>`;
+    }
+  }
+
+  el.innerHTML = summary + `
+    <div class="card-counter">${todayPos + 1} of ${todayQueue.length}${isNew ? " · new line" : ""}</div>
+    <div class="card" style="min-height:unset">
+      <div class="line-label">${esc(l.scene)} ${strengthHTML(l)}</div>
+      ${body}
+    </div>`;
+}
+
+/* ─────────────── Scene Breakdown ─────────────── */
+function renderBreakdown(el, lines) {
+  el.innerHTML = `<p style="color:var(--text-mid);font-size:13px;margin-bottom:20px;letter-spacing:.03em">${lines.length} line${lines.length!==1?'s':''} — tap any to expand</p>` +
+    lines.map(l => `
+      <div class="line-item ${expandedId===l.id?'open':''}" onclick="toggleExpand(${l.id})">
+        <div class="line-header">
+          <div style="flex:1">
+            <div class="line-label">${esc(l.scene)} ${strengthHTML(l)}</div>
+            <div class="line-preview">"${esc(l.line.split('\n')[0])}${l.line.includes('\n')?'...':''}"</div>
+          </div>
+          <span class="line-expand">${expandedId===l.id?'\u2212':'+'}</span>
+        </div>
+        ${expandedId===l.id ? `
+        <div class="line-detail">
+          <div class="detail-label">The Setup</div>
+          <div class="detail-text">${esc(l.beat)}</div>
+          <div class="detail-label">Cue</div>
+          <div class="detail-cue">${esc(l.cue)}</div>
+          <div class="line-box">
+            <div class="line-box-label">${esc(scriptData.character)}'s Line</div>
+            <div class="line-text">${esc(l.line)}</div>
+          </div>
+          <div class="two-col">
+            <div><div class="detail-label">Memory Hook</div><div class="hook-text">${esc(l.hook)}</div></div>
+            <div><div class="detail-label">Play it</div><div class="emotion-text">${esc(l.emotion)}</div></div>
+          </div>
+        </div>` : ''}
+      </div>`).join('');
+}
+
+/* ─────────────── Cue Cards ─────────────── */
+function renderCards(el, lines) {
+  const l = lines[cardIndex] || lines[0];
+  el.innerHTML = `
+    <div class="card-counter">${cardIndex+1} / ${lines.length}</div>
+    <div class="card">
+      <div>
+        <div class="line-label">${esc(l.scene)} ${strengthHTML(l)}</div>
+        ${whyBox(l)}
+        <div class="card-cue">${esc(l.cue)}</div>
+        <button class="reveal-btn ${cardShowLine?'shown':''}" onclick="toggleCardLine()">${cardShowLine?'Hide Line':'Reveal Line'}</button>
+        ${cardShowLine ? `<div class="revealed-line">${esc(l.line)}</div>` : ''}
+        ${cardShowLine ? `<button class="hook-btn ${cardShowHook?'shown':''}" onclick="toggleCardHook()">${cardShowHook?'Hide':'Show'} Memory Hook</button>` : ''}
+        ${cardShowLine && cardShowHook ? `<div class="revealed-hook">${esc(l.hook)}</div>` : ''}
+        ${cardShowLine ? `<div style="margin-top:20px">${rateRow('rateCard')}</div>` : ''}
+      </div>
+      <div class="nav-row">
+        <button class="nav-btn" onclick="prevCard()">\u2190 PREV</button>
+        <button class="nav-btn" onclick="nextCard()">NEXT \u2192</button>
+      </div>
+    </div>`;
+}
+
+/* ─────────────── First Letters ─────────────── */
+function renderInitials(el, lines) {
+  const l = lines[iniIndex] || lines[0];
+  el.innerHTML = `
+    <div class="card-counter">${iniIndex+1} / ${lines.length}</div>
+    <div class="card">
+      <div>
+        <div class="line-label">${esc(l.scene)} ${strengthHTML(l)}</div>
+        ${whyBox(l)}
+        <div class="card-cue">${esc(l.cue)}</div>
+        <div class="ini-tip">Say the whole line out loud from the first letters. Tap a letter if you need that word.</div>
+        <div class="ini-line">${initialsHTML(l.line, iniRevealed, 'iniWord', iniAll)}</div>
+        <button class="reveal-btn ${iniAll?'shown':''}" onclick="iniToggleAll()">${iniAll?'Back to first letters':'Reveal whole line'}</button>
+        ${rateRow('rateIni', 'How did it go?')}
+      </div>
+      <div class="nav-row">
+        <button class="nav-btn" onclick="iniMove(-1)">\u2190 PREV</button>
+        <button class="nav-btn" onclick="iniMove(1)">NEXT \u2192</button>
+      </div>
+    </div>`;
+}
+function iniWord(i) { if (iniAll) return; iniRevealed.has(i) ? iniRevealed.delete(i) : iniRevealed.add(i); renderMain(); }
+function iniToggleAll() { iniAll = !iniAll; if (!iniAll) iniRevealed = new Set(); renderMain(); }
+function iniMove(d) { const n = filtered().length; iniIndex = (iniIndex + d + n) % n; iniRevealed = new Set(); iniAll = false; renderMain(); }
+function rateIni(score) { const ls = filtered(); recordResult(ls[iniIndex] || ls[0], score); iniMove(1); }
+
+/* ─────────────── Full Script ─────────────── */
+function renderScript(el) {
+  if (fullScriptLoading) {
+    el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">Loading full script…</p>';
+    return;
+  }
+  if (!fullScriptText) {
+    loadFullScript();
+    el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">Loading full script…</p>';
+    return;
+  }
+  el.innerHTML = `
+    <label class="script-highlight-toggle">
+      <input type="checkbox" ${highlightMyLines ? 'checked' : ''} onchange="toggleHighlight()">
+      Highlight ${esc(scriptData.character)}'s lines
+    </label>
+    <div class="script-view">${formatScreenplay(fullScriptText)}</div>`;
+}
+
+/* ─────────────── Line Quiz ─────────────── */
+function renderQuiz(el, lines) {
+  const l = lines[quizIndex] || lines[0];
+  const avg = stats.attempts ? Math.round(stats.totalScore / stats.attempts) : 0;
+  el.innerHTML = `
+    ${stats.attempts ? `
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num">${stats.attempts}</div><div class="stat-label">Attempts</div></div>
+      <div class="stat"><div class="stat-num">${avg}</div><div class="stat-label">Avg Score</div></div>
+      <div class="stat"><div class="stat-num" style="color:var(--green)">${stats.bestScore}</div><div class="stat-label">Best</div></div>
+    </div>` : ''}
+    <div class="card-counter">Line ${quizIndex+1} / ${lines.length}</div>
+    <div class="card" style="min-height:unset">
+      <div class="line-label">${esc(l.scene)} ${strengthHTML(l)}</div>
+      ${whyBox(l)}
+      <div class="quiz-cue">${esc(l.cue)}</div>
+      <div class="input-label">Your Line \u2014 type it from memory</div>
+      <textarea id="answer" placeholder="Type the line here..." oninput="document.getElementById('checkbtn').disabled=!this.value.trim()"></textarea>
+      <button id="checkbtn" class="check-btn" disabled onclick="checkAnswer()">Check My Line</button>
+      <div id="feedback"></div>
+    </div>`;
 }
 
 function toggleExpand(id) { expandedId = expandedId === id ? null : id; renderMain(); }
@@ -538,6 +874,7 @@ function toggleCardLine() { cardShowLine = !cardShowLine; cardShowHook = false; 
 function toggleCardHook() { cardShowHook = !cardShowHook; renderMain(); }
 function nextCard() { cardShowLine=false; cardShowHook=false; cardIndex=(cardIndex+1)%filtered().length; renderMain(); }
 function prevCard() { cardShowLine=false; cardShowHook=false; cardIndex=(cardIndex-1+filtered().length)%filtered().length; renderMain(); }
+function rateCard(score) { const ls = filtered(); recordResult(ls[cardIndex] || ls[0], score); nextCard(); }
 function nextQuiz() { quizIndex=(quizIndex+1)%filtered().length; renderMain(); }
 
 async function checkAnswer() {
@@ -550,35 +887,12 @@ async function checkAnswer() {
   const l = filtered()[quizIndex] || scriptData.lines[0];
 
   try {
-    const res = await fetch(FUNCTION_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        correctLine: l.line,
-        actorLine: answer,
-        emotion: l.emotion,
-        character: scriptData.character,
-        filmTitle: scriptData.filmTitle
-      })
-    });
-
-    const fb = await res.json().catch(() => ({}));
-    if (!res.ok || fb.error) throw new Error(fb.error || `Server returned ${res.status}`);
-
-    const col = scoreColor(fb.score);
-    stats.attempts++;
-    stats.totalScore += fb.score;
-    if (fb.score > stats.bestScore) stats.bestScore = fb.score;
-    saveStats();
-
+    const fb = await scoreLine(l, answer, false);
+    bumpStats(fb.score);
+    recordResult(l, fb.score);
     document.getElementById('feedback').innerHTML = `
       <div class="feedback-box">
-        <div class="score-row">
-          <div class="score-num" style="color:${col}">${fb.score}</div>
-          <div><div class="verdict" style="color:${col}">${esc(fb.verdict)}</div><div class="score-sub">out of 100</div></div>
-        </div>
-        <div class="fb-text">${esc(fb.feedback)}</div>
-        ${fb.hint ? `<div class="hint-box">Hint: ${esc(fb.hint)}</div>` : ''}
+        ${scoreBlock(fb)}
         <div class="quiz-btns">
           <button class="quiz-btn" onclick="renderMain()">Try Again</button>
           <button class="quiz-btn" onclick="nextQuiz()">Next Line \u2192</button>
@@ -593,8 +907,268 @@ async function checkAnswer() {
   }
 }
 
+/* ─────────────── Run Scene ───────────────
+   The page reads the cue aloud, then listens for your line and has the
+   coach score what it heard. Falls back to typing where the browser
+   can't listen. */
+function currentRunLine() { const ls = filtered(); return ls[runIndex] || ls[0]; }
+
+function stopRun() {
+  runToken++;
+  clearTimeout(runTimer); clearTimeout(silenceTimer);
+  runAutoPending = false;
+  try { if (canSpeak) speechSynthesis.cancel(); } catch(e) {}
+  if (rec) {
+    try { rec.onresult = null; rec.onerror = null; rec.onend = null; rec.abort(); } catch(e) {}
+    rec = null;
+  }
+}
+
+function pickVoice() {
+  const vs = speechSynthesis.getVoices() || [];
+  return vs.find(v => /^en[-_]ZA/i.test(v.lang)) || vs.find(v => /^en[-_]GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+}
+
+function speakCue(text, then) {
+  const t = runToken;
+  let fired = false;
+  const go = () => { if (fired) return; fired = true; clearTimeout(runTimer); if (t === runToken) then(); };
+  const clean = String(text || "").replace(/["\u201C\u201D]/g, "").trim();
+  if (!canSpeak || !clean) { go(); return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    const v = pickVoice();
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = runSlow ? 0.8 : 0.95;
+    u.onend = go; u.onerror = go;
+    // Some browsers never fire onend; move on after a generous estimate.
+    runTimer = setTimeout(go, clean.split(/\s+/).length * 520 / u.rate + 2500);
+    speechSynthesis.speak(u);
+  } catch(e) { go(); }
+}
+
+function micMessage(err) {
+  if (err === "not-allowed" || err === "service-not-allowed") return "The microphone is blocked. Allow microphone access for this site in your browser settings, or type your line instead.";
+  if (err === "no-speech") return "I didn't hear anything. Tap play and say your line.";
+  if (err === "network") return "Listening needs an internet connection. Check your connection and try again.";
+  if (err === "audio-capture") return "No microphone found. Plug one in, or type your line instead.";
+  return "I didn't catch that. Try again.";
+}
+
+function startListening() {
+  const t = runToken;
+  if (!SR || runTyping) { runPhase = "typing"; renderMain(); return; }
+  runTranscript = ""; runError = null; runNotice = "";
+  runPhase = "listening"; renderMain();
+
+  const r = new SR();
+  rec = r;
+  r.lang = srLang;
+  r.interimResults = true;
+  r.continuous = !IS_ANDROID;   // Android repeats text in continuous mode
+  r.maxAlternatives = 1;
+
+  r.onresult = e => {
+    if (t !== runToken) return;
+    let fin = "", interim = "";
+    for (let i = 0; i < e.results.length; i++) {
+      const res = e.results[i];
+      if (res.isFinal) fin += res[0].transcript + " ";
+      else interim += res[0].transcript;
+    }
+    runTranscript = (fin + interim).trim();
+    const el = document.getElementById("heard");
+    if (el) el.textContent = runTranscript || "…";
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => { if (t === runToken) finishListening(); }, SILENCE_MS);
+  };
+  r.onerror = e => {
+    if (t !== runToken) return;
+    runError = e.error;
+    if (e.error === "language-not-supported" && srLang !== "en-US") srLang = "en-US";
+  };
+  r.onend = () => {
+    if (t !== runToken) return;
+    rec = null; clearTimeout(silenceTimer);
+    if (runPhase !== "listening") return;
+    if (runTranscript.trim()) { runCheck(runTranscript, true); return; }
+    runPhase = "ready";
+    runNotice = micMessage(runError);
+    renderMain();
+  };
+
+  try { r.start(); }
+  catch(e) { rec = null; runPhase = "typing"; runNotice = "Couldn't start the microphone, so type your line instead."; renderMain(); }
+}
+
+function finishListening() {
+  clearTimeout(silenceTimer);
+  if (rec) { try { rec.stop(); } catch(e) {} }
+}
+
+async function runCheck(text, spoken) {
+  text = String(text || "").trim();
+  if (!text) return;
+  stopRun();
+  const t = runToken;
+  const l = currentRunLine();
+  runHeard = spoken ? text : "";
+  runPhase = "checking"; renderMain();
+  try {
+    const fb = await scoreLine(l, text, spoken);
+    if (t !== runToken) return;
+    bumpStats(fb.score);
+    recordResult(l, fb.score);
+    runResult = fb; runPhase = "result"; runShowLine = false;
+    if (runAuto && fb.score >= 85) {
+      runAutoPending = true;
+      runTimer = setTimeout(() => { if (t === runToken) runNext(); }, 2200);
+    }
+    renderMain();
+  } catch(e) {
+    if (t !== runToken) return;
+    runResult = { error: e.message }; runPhase = "result"; renderMain();
+  }
+}
+
+function runPlay() {
+  stopRun();
+  runNotice = ""; runResult = null; runHeard = ""; runShowLine = false;
+  runPhase = "cue"; renderMain();
+  speakCue(currentRunLine().cue, startListening);
+}
+function runSpeakNow() { stopRun(); runNotice = ""; runResult = null; runHeard = ""; runShowLine = false; startListening(); }
+function runSkipCue() { stopRun(); startListening(); }
+function runSetTyping(v) { stopRun(); runTyping = v; runNotice = ""; runPhase = "ready"; renderMain(); }
+function runToggleLine() { clearTimeout(runTimer); runAutoPending = false; runShowLine = !runShowLine; renderMain(); }
+function runStuck() {
+  stopRun();
+  recordResult(currentRunLine(), 20);
+  runResult = { stuck: true }; runPhase = "result"; renderMain();
+}
+function runNext() {
+  stopRun();
+  const n = filtered().length;
+  if (runIndex + 1 >= n) { runIndex = 0; runPhase = "done"; renderMain(); return; }
+  runIndex++;
+  runPlay();
+}
+function runJump(d) {
+  stopRun();
+  const n = filtered().length;
+  runIndex = (runIndex + d + n) % n;
+  runPhase = "ready"; runNotice = ""; runResult = null; runHeard = "";
+  renderMain();
+}
+function runRestart() { runIndex = 0; runPlay(); }
+
+function renderRun(el, lines) {
+  if (runPhase === "done") {
+    el.innerHTML = `
+      <div class="card" style="min-height:unset;text-align:center">
+        <div class="verdict" style="margin-bottom:12px">End of the ${sceneFilter === "All" ? "script" : "scene"}</div>
+        <div class="fb-text">Lines you struggled with will come up in Today's Lines.</div>
+        <button class="check-btn" onclick="runRestart()">Run it again</button>
+        <div class="quiz-btns"><button class="quiz-btn" onclick="switchMode('today')">Today's lines</button></div>
+      </div>`;
+    return;
+  }
+
+  const l = lines[runIndex] || lines[0];
+  const notice = runNotice ? `<div class="notice">${esc(runNotice)}</div>` : "";
+  let act = "";
+
+  if (runPhase === "ready") {
+    if (SR && !runTyping) {
+      act = notice + `
+        <button class="check-btn" onclick="runPlay()">\u25B6 Play the cue, then say your line</button>
+        <div class="run-links">
+          <button class="link-btn" onclick="runSpeakNow()">Skip the cue, just speak</button>
+          <button class="link-btn" onclick="runSetTyping(true)">Type instead</button>
+        </div>`;
+    } else {
+      act = notice + `
+        <button class="check-btn" onclick="runPlay()">\u25B6 ${canSpeak ? "Play the cue" : "Start"}</button>
+        ${SR
+          ? `<div class="run-links"><button class="link-btn" onclick="runSetTyping(false)">Use my voice instead</button></div>`
+          : `<div class="ini-tip" style="margin-top:12px">This browser can't listen for your line, so you'll type it. Chrome on Android or on a computer can listen.</div>`}`;
+    }
+  } else if (runPhase === "cue") {
+    act = `<div class="mic">\uD83D\uDD0A Reading the cue\u2026</div>
+      <button class="quiz-btn" style="width:100%" onclick="runSkipCue()">Skip to my line</button>`;
+  } else if (runPhase === "listening") {
+    act = `<div class="mic"><span class="mic-dot"></span> Your line \u2014 speak now</div>
+      <div class="heard" id="heard">${esc(runTranscript) || "\u2026"}</div>
+      <div class="quiz-btns" style="margin-top:0">
+        <button class="quiz-btn" onclick="finishListening()">Done</button>
+        <button class="quiz-btn" onclick="runStuck()">I'm stuck</button>
+      </div>`;
+  } else if (runPhase === "typing") {
+    act = notice + `
+      <div class="input-label">Your line \u2014 type it from memory</div>
+      <textarea id="runanswer" placeholder="Type the line here..." oninput="document.getElementById('runcheck').disabled=!this.value.trim()"></textarea>
+      <button id="runcheck" class="check-btn" disabled onclick="runCheck(document.getElementById('runanswer').value, false)">Check My Line</button>
+      <div class="run-links"><button class="link-btn" onclick="runStuck()">I'm stuck, show me</button></div>`;
+  } else if (runPhase === "checking") {
+    act = (runHeard ? `<div class="input-label">Heard</div><div class="heard">${esc(runHeard)}</div>` : "") +
+      `<div class="loading-text">Coach is reviewing\u2026</div>`;
+  } else if (runPhase === "result") {
+    const r = runResult || {};
+    let out;
+    if (r.stuck) {
+      out = `<div class="verdict" style="color:var(--accent);margin-bottom:6px">Here's the line</div>
+        <div class="revealed-line">${esc(l.line)}</div>
+        ${l.hook ? `<div class="revealed-hook">${esc(l.hook)}</div>` : ""}
+        <div class="fb-text" style="margin-top:14px">Say it aloud a couple of times now. It will come back sooner in Today's Lines.</div>`;
+    } else if (r.error) {
+      out = `<div class="fb-text">Couldn't connect to the coach. ${esc(r.error)}</div>`;
+    } else {
+      out = (runHeard ? `<div class="input-label">Heard</div><div class="heard">${esc(runHeard)}</div>` : "") +
+        scoreBlock(r) +
+        `<button class="hook-btn ${runShowLine ? "shown" : ""}" onclick="runToggleLine()" style="margin-top:14px">${runShowLine ? "Hide" : "Show"} the line</button>
+        ${runShowLine ? `<div class="revealed-line">${esc(l.line)}</div>` : ""}
+        ${runAutoPending ? `<div class="ini-tip" style="margin-top:12px">Next line coming up\u2026</div>` : ""}`;
+    }
+    act = `<div>${out}
+      <div class="quiz-btns">
+        <button class="quiz-btn" onclick="runPlay()">Again</button>
+        <button class="quiz-btn" onclick="runNext()">Next line \u2192</button>
+      </div></div>`;
+  }
+
+  el.innerHTML = `
+    <div class="card-counter">Line ${runIndex + 1} / ${lines.length}</div>
+    <div class="card" style="min-height:unset">
+      <div>
+        <div class="line-label">${esc(l.scene)} ${strengthHTML(l)}</div>
+        ${whyBox(l)}
+        <div class="quiz-cue">${esc(l.cue)}</div>
+        ${act}
+        <div class="opts">
+          <label><input type="checkbox" ${runAuto ? "checked" : ""} onchange="runAuto=this.checked"> Move on by itself after a good line</label>
+          ${canSpeak ? `<label><input type="checkbox" ${runSlow ? "checked" : ""} onchange="runSlow=this.checked"> Slower cue voice</label>` : ""}
+        </div>
+      </div>
+      <div class="nav-row">
+        <button class="nav-btn" onclick="runJump(-1)">\u2190 PREV</button>
+        <button class="nav-btn" onclick="runJump(1)">NEXT \u2192</button>
+      </div>
+    </div>`;
+}
+
+// Stop talking/listening if the actor switches away from the page
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && (runPhase === "cue" || runPhase === "listening")) {
+    stopRun(); runPhase = "ready"; renderMain();
+  }
+});
+
 // ── Boot ──
 (async function boot() {
+  // Warm up the voice list (Chrome loads it lazily)
+  if (canSpeak) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); } catch(e) {} }
+
   const params = new URLSearchParams(location.search);
 
   // Direct Firebase link: ?film=slug&character=slug

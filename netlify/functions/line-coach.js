@@ -56,7 +56,7 @@ exports.handler = async (event) => {
       return { statusCode: 403, headers, body: JSON.stringify({ error: "Not allowed" }) };
     }
 
-    let { correctLine, actorLine, emotion, character, filmTitle } = JSON.parse(event.body || "{}");
+    let { correctLine, actorLine, emotion, character, filmTitle, spoken } = JSON.parse(event.body || "{}");
 
     if (!correctLine || !actorLine) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing correctLine or actorLine" }) };
@@ -67,13 +67,21 @@ exports.handler = async (event) => {
     }
     correctLine = cut(correctLine, 2000); actorLine = cut(actorLine, 2000);
     emotion = cut(emotion, 300); character = cut(character, 120); filmTitle = cut(filmTitle, 120);
+    spoken = spoken === true;
 
     const limited = await withinLimits(event);
     if (limited) return { statusCode: 429, headers, body: JSON.stringify({ error: limited }) };
 
-    const systemPrompt = `You are a drama coach helping an actor learn their lines for the character "${character || "the role"}" in a script called "${filmTitle || "the production"}." Be encouraging, specific, and constructive. Respond in JSON only with keys: score (0-100), verdict (one of: "Nailed it!", "Very close!", "Getting there", "Keep working"), feedback (2-3 sentences of specific coaching), hint (one-sentence nudge toward the correct line without reproducing it in full). Never reproduce the full correct line in your response.`;
+    // Run Scene sends what the browser heard through the microphone. Speech
+    // recognition drops punctuation and mishears the odd word, so the coach is
+    // told to judge the words the actor meant, not the transcription's slips.
+    const spokenNote = spoken
+      ? ` The actor spoke this line aloud and it was transcribed by speech recognition. Ignore punctuation, capitalisation and obvious mis-hearings of words that sound alike; judge whether the actor said the right words in the right order. Do not comment on punctuation or spelling.`
+      : "";
 
-    const userPrompt = `Correct line: "${correctLine}"\nActor said: "${actorLine}"${emotion ? `\nEmotional direction: ${emotion}` : ""}\nScore and give feedback. JSON only.`;
+    const systemPrompt = `You are a drama coach helping an actor learn their lines for the character "${character || "the role"}" in a script called "${filmTitle || "the production"}." Be encouraging, specific, and constructive.${spokenNote} Respond in JSON only with keys: score (0-100), verdict (one of: "Nailed it!", "Very close!", "Getting there", "Keep working"), feedback (2-3 sentences of specific coaching), hint (one-sentence nudge toward the correct line without reproducing it in full). Never reproduce the full correct line in your response.`;
+
+    const userPrompt = `Correct line: "${correctLine}"\nActor ${spoken ? "said (speech transcript)" : "said"}: "${actorLine}"${emotion ? `\nEmotional direction: ${emotion}` : ""}\nScore and give feedback. JSON only.`;
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -96,9 +104,12 @@ exports.handler = async (event) => {
       return { statusCode: 502, headers, body: JSON.stringify({ error: data.error.message || "Anthropic API error" }) };
     }
 
+    // Take the JSON object out of the reply even if the model wraps it in text.
     const text = (data.content || []).map(b => b.text || "").join("");
-    const clean = text.replace(/```json|```/g, "").trim();
-    const feedback = JSON.parse(clean);
+    const start = text.indexOf("{"), end = text.lastIndexOf("}");
+    if (start < 0 || end <= start) throw new Error("Coach reply had no JSON");
+    const feedback = JSON.parse(text.slice(start, end + 1));
+    feedback.score = Math.max(0, Math.min(100, Math.round(Number(feedback.score) || 0)));
 
     return { statusCode: 200, headers, body: JSON.stringify(feedback) };
 
