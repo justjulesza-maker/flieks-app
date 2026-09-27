@@ -159,6 +159,16 @@ exports.handler = async event => {
         bunny_linked_manually: true
       });
 
+      // Assisted upload: the filmmaker registered and sent the film another
+      // way, and we uploaded it to Bunny ourselves. The film now has its file,
+      // so it stops being "trailer only" and can be approved or put live.
+      if (film.awaiting_film) {
+        await dbPatch(`flieks_films/${filmId}`, {
+          awaiting_film: null,
+          ...(film.status === 'soon' ? { film_added_at: Date.now() } : {})
+        });
+      }
+
       console.log(`Linked ${filmId} -> ${bunnyId} (${STATUS[v.status]}, ${
         (v.storageSize / 1048576).toFixed(1)}MB)`);
       return reply(200, {

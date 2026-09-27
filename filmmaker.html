@@ -989,6 +989,11 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.database();
 const storage = firebase.storage();
+// Uploads go up in chunks and retry on their own when the connection drops.
+// Firebase gives up after 10 minutes offline by default, which on SA mobile
+// data (or load shedding) means starting a 2GB film again from zero. Keep
+// retrying for an hour instead, as long as the tab stays open.
+storage.setMaxUploadRetryTime(60 * 60 * 1000);
 
 /* The cast-panel module below has its own copy of this, scoped to itself.
    This one is for the rest of the file — anywhere a filmmaker's own title,
