@@ -284,6 +284,7 @@ body.home .sheet{max-width:1040px}
     <a href="/lab/report" data-k="report">Script Report</a>
     <a href="/script-upload.html" data-k="coach">Script Coach</a>
     <a href="/lab/talent" data-k="talent">Talent</a>
+    <a href="/lab/budget" data-k="budget">Budget</a>
     <a href="/" data-k="watch">Watch films</a>
     <a href="/lab#join" class="acct" id="navAcct">Join free</a>
   </nav>
@@ -1018,11 +1019,12 @@ const TOOLS = [
     text: 'Search actors, directors, DOPs, editors and crew by name or what they do, then by country, language and playing age. See their work and message them without ever seeing their email.' },
   { k: 'talent', name: 'Talent profile', tag: 'For actors and crew', href: '/talent', cta: 'Make my profile',
     text: 'One profile for your credits and the people your cast links brought in. Switch on suggestions and filmmakers casting in the Lab can find you. Your email stays private.' },
+  { k: 'budget', name: 'Budget & call sheets', tag: 'Plan the shoot', href: '/lab/budget', cta: 'Start a budget',
+    text: 'Budget your film in rands from a template, see the cost per minute and what it takes to earn it back on 4flieks. Then schedule scenes into shoot days and share call sheets your crew open on their phones.' },
   { k: 'podcasts', name: 'Podcasts & masterclasses', tag: 'Learn from people who make films', href: '/podcasts', cta: 'Watch and listen',
     text: 'Conversations with African filmmakers, actors and crew, and masterclasses on the craft. Free with your Lab account. Filmmakers can add their own podcast in the Podcast Studio.' }
 ];
 const SOON = [
-  ['Budget builder', 'A production budget built from your script: cast, locations, days.'],
   ['Screenwriting course', 'Learn to write for the screen, with AI feedback on every exercise.']
 ];
 
@@ -1086,6 +1088,7 @@ function showHome(user) {
           <li>A one-page pitch from every report</li>
           <li>Cast suggestions for every role</li>
           <li>5 Script Coach uploads a month</li>
+          <li>Budgets and call sheets for your shoot</li>
           <li>Your writing is never shared or published</li>
         </ul>
       </div>
@@ -1211,12 +1214,14 @@ const post = async (url, body) => {
 };
 async function loadWork() {
   const box = document.getElementById('workbox'); if (!box) return;
-  const [rep, coach, tal] = await Promise.all([
+  const [rep, coach, tal, bud] = await Promise.all([
     call('list'),
     post('/.netlify/functions/script-coach-start', { action: 'list' }).catch(() => ({ ok: false, d: {} })),
-    post('/.netlify/functions/flieks-talent', { action: 'me' }).catch(() => ({ ok: false, d: {} }))
+    post('/.netlify/functions/flieks-talent', { action: 'me' }).catch(() => ({ ok: false, d: {} })),
+    post('/.netlify/functions/flieks-budget', { action: 'list' }).catch(() => ({ ok: false, d: {} }))
   ]);
   const rd = rep.ok ? rep.d : { items: [] }, cd = coach.ok ? coach.d : { items: [] }, td = tal.ok ? tal.d : {};
+  const budgets = ((bud.ok ? bud.d : {}).items || []).slice(0, 5);
   const label = s => ({ queued: 'Starting', working: 'Reading…', done: 'Ready', error: 'Failed' }[s.status] || s.status) + (s.verdict ? ` · ${s.verdict}` : '');
   const left = (d, what) => d.limit ? `${Math.max(0, d.limit - (d.used || 0))} of ${d.limit} ${what} left this month` : 'No monthly limit';
   const reports = (rd.items || []).slice(0, 6);
@@ -1234,6 +1239,10 @@ async function loadWork() {
             <div class="st">${x.characters || 0} characters · ${x.listed ? 'Listed in Script Coach' : 'Private: share the link'}</div></div></div>`).join('')
           : `<p class="small muted" style="margin:10px 0">${pending ? 'Your script is being read. It will appear here when it is ready.' : 'No scripts yet.'}</p>`}
         <div class="actions"><a class="btn ghost" href="/script-upload.html">Upload a script</a></div></div>
+      <div class="box"><h3>Budgets &amp; call sheets</h3>
+        ${budgets.length ? budgets.map(x => `<div class="item"><div><a href="/lab/budget?p=${encodeURIComponent(x.id)}">${esc(x.title)}</a><div class="st">Updated ${esc(dateStr(x.updated_at))}</div></div></div>`).join('')
+          : `<p class="small muted" style="margin:10px 0">Budget a film and share call sheets with your crew.</p>`}
+        <div class="actions"><a class="btn ghost" href="/lab/budget">${budgets.length ? 'Open budgets' : 'Start a budget'}</a></div></div>
       <div class="box"><h3>Talent profile</h3>
         ${tp ? `<p class="small" style="margin:8px 0 4px"><b>${esc(tp.name)}</b></p>
             <p class="small muted">${tp.suggest ? 'Suggestions on: filmmakers can find you.' : 'Suggestions off: your profile is private.'}

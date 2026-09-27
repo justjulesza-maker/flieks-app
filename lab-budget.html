@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Budget &amp; call sheets — 4flieks Lab</title>
+<meta name="description" content="Budget your film, plan your shoot days and share call sheets. Free in 4flieks Lab.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8E2D4;--panel:#FBF8F1;--panel2:#F4F0E6;--line:#D9D1C2;--line2:#C9BFAE;
+  --text:#17110E;--dim:#5E564D;--mute:#8A8177;
+  --acc:#C2501F;--acc-ink:#FFFFFF;--acc-soft:rgba(194,80,31,.09);
+  --good:#2E7D32;--good-soft:rgba(46,125,50,.10);--bad:#B3261E;--bad-soft:rgba(179,38,30,.08);
+  --shadow:0 1px 3px rgba(23,17,14,.08),0 12px 40px rgba(23,17,14,.09);
+  --r:6px;--mono:'JetBrains Mono',ui-monospace,Menlo,monospace;--fb:'Archivo Black',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;padding-bottom:84px;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--acc)}
+.hidden{display:none!important}
+
+/* header: the Lab masthead */
+.top{position:sticky;top:0;z-index:50;background:rgba(244,240,230,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top::before{content:'';display:block;height:5px;background:repeating-linear-gradient(90deg,var(--acc) 0 15px,transparent 15px 24px)}
+.top-in{max-width:1200px;margin:0 auto;padding:10px 16px 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;text-decoration:none;color:var(--text);margin-right:auto}
+.brand .logo{font-family:var(--fb);font-size:15px}
+.brand .logo em{color:var(--acc);font-style:normal}
+.brand .tool{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+.hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sync{font-family:var(--mono);font-size:10.5px;color:var(--mute);min-width:64px;text-align:right}
+.sync.err{color:var(--bad)}
+.labnav{max-width:1200px;margin:0 auto;padding:0 16px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.labnav::-webkit-scrollbar{display:none}
+.labnav a{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-decoration:none;padding:5px 9px;border:1px solid transparent;border-radius:4px;white-space:nowrap}
+.labnav a:hover{color:var(--text);border-color:var(--line)}
+.labnav a.on{color:var(--text);border-color:var(--text)}
+.tabs{max-width:1200px;margin:0 auto;padding:0 16px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;color:var(--dim);cursor:pointer;white-space:nowrap;font-weight:500}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--text);border-bottom-color:var(--acc)}
+
+main{max-width:1200px;margin:0 auto;padding:20px 16px}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--text);background:transparent;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:500;font-size:13px;white-space:nowrap;text-decoration:none;color:var(--text)}
+.btn:hover{border-color:var(--mute)}
+.btn.pri{background:var(--text);border-color:var(--text);color:var(--panel2);font-weight:700}
+.btn.pri:hover{filter:brightness(1.07)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent);background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.icon{background:none;border:0;color:var(--mute);cursor:pointer;padding:4px 6px;border-radius:6px;font-size:14px;line-height:1}
+.icon:hover{color:var(--text);background:var(--panel2)}
+.icon.del:hover{color:var(--bad)}
+input[type=text],input[type=email],input[type=tel],input[type=date],input[type=time],input[type=number],input[type=password],input:not([type]),select,textarea{
+  width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 9px;outline:none;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+input:disabled{opacity:.7;background:transparent;border-style:dashed}
+textarea{resize:vertical;min-height:70px}
+select{cursor:pointer}
+input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px;cursor:pointer}
+.n{text-align:right;font-family:var(--mono);font-size:13px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--dim);font-weight:500}
+label.chk{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.wgrid{grid-template-columns:2fr repeat(5,minmax(0,1fr))}
+@media (max-width:720px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}.g6,.wgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.card h2{font-size:15px;font-weight:700;margin-bottom:4px}
+.card .hint,.hint{font-size:12.5px;color:var(--mute);margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:99px;background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
+.pill.acc{background:var(--acc-soft);color:var(--acc);border-color:transparent}
+.pill.good{background:var(--good-soft);color:var(--good);border-color:transparent}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.toolbar .grow{flex:1}
+h1.page{font-family:var(--fb);font-size:26px;font-weight:400;letter-spacing:-.015em;line-height:1.15}
+.sub{color:var(--dim);font-size:13px}
+
+/* budget */
+.grp{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.grp h3{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.2em;color:var(--acc);font-weight:700}
+.grp .amt{font-family:var(--mono);font-weight:500;color:var(--dim)}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.sec-head{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.sec-head .sec-name{flex:1;font-weight:600;background:transparent;border-color:transparent;font-size:14px}
+.sec-head .sec-name:hover{border-color:var(--line)}
+.sec-head select{width:auto;font-size:12px;padding:4px 6px}
+.sec-total{font-family:var(--mono);font-weight:600;min-width:110px;text-align:right}
+.sec-body{border-top:1px solid var(--line);padding:6px 10px 10px}
+.line,.lh{display:grid;grid-template-columns:minmax(0,1fr) 64px 168px 104px 112px 28px;gap:6px;align-items:center;padding:3px 0}
+.lh{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:600;padding:4px 0}
+.lh span:nth-child(n+2){text-align:right}
+.units{display:grid;grid-template-columns:56px minmax(0,1fr);gap:4px}
+.units select{font-size:12px;padding:6px 4px}
+.tot{font-family:var(--mono);text-align:right;font-size:13px}
+.line .desc{font-size:13.5px}
+.line.linked .units input{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
+@media (max-width:720px){
+  .lh{display:none}
+  .line{grid-template-columns:52px minmax(0,1fr) 88px 28px;grid-template-areas:"desc desc desc x" "qty units rate rate" "tot tot tot tot";padding:8px 0;border-bottom:1px dashed var(--line)}
+  .line .desc{grid-area:desc}.line .qty{grid-area:qty}.line .units{grid-area:units}.line .rate{grid-area:rate}.line .tot{grid-area:tot;color:var(--dim)}.line .x{grid-area:x}
+  .sec-total{min-width:0}
+  .sec-head{flex-wrap:wrap}
+  .sec-head .sec-name{flex:1 1 calc(100% - 44px)}
+  .sec-head .sec-total{margin-left:auto}
+}
+.sumbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.sumbar-in{max-width:1200px;margin:0 auto;padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.sumbar .k{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em}
+.sumbar .v{font-family:var(--mono);font-weight:600;font-size:15px}
+.sumbar .v.big{font-size:18px;color:var(--acc)}
+.sumbar .cell{display:flex;flex-direction:column}
+@media (max-width:720px){.sumbar .opt{display:none}}
+
+/* top sheet */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.kpi .k{font-size:11.5px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.kpi .v{font-family:var(--fb);font-size:22px;font-weight:400;margin-top:4px}
+.kpi .s{font-size:12px;color:var(--dim);margin-top:2px}
+.kpi.hl{border-color:color-mix(in srgb,var(--acc) 50%,transparent);background:linear-gradient(180deg,var(--acc-soft),transparent)}
+table.t{width:100%;border-collapse:collapse}
+table.t th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);text-align:left;font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}
+table.t td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.t .r{text-align:right;font-family:var(--mono)}
+table.t tr.gh td{font-weight:700;background:var(--panel2);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+table.t tr.tt td{font-weight:700}
+table.t tr.grand td{font-weight:800;font-size:15px;border-top:2px solid var(--acc)}
+.bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:var(--acc)}
+.tscroll{overflow-x:auto}
+
+/* people / scenes lists */
+.lrow{display:grid;gap:6px;align-items:center;padding:4px 0}
+.people-row{grid-template-columns:1.2fr 1.1fr 1fr 1fr 1.3fr 28px}
+.loc-row{grid-template-columns:1fr 1.6fr 1fr 1fr 1fr 1.2fr 28px}
+.scene-row{grid-template-columns:52px 92px 92px 1fr 1.6fr 64px 1fr 130px 28px}
+.lrow.head{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:600}
+@media (max-width:860px){
+  .lrow.head{display:none}
+  .people-row,.loc-row,.scene-row{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--panel2)}
+  .lrow>.icon{justify-self:end}
+}
+.empty{text-align:center;padding:36px 16px;color:var(--dim)}
+.empty h2{color:var(--text);font-size:20px;margin-bottom:6px}
+
+/* call sheets */
+.days{display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px}
+.daychip{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap;text-align:left}
+.daychip b{display:block;font-size:13px}
+.daychip small{color:var(--mute);font-size:11.5px}
+.daychip.on{border-color:var(--acc);background:var(--acc-soft)}
+.cs-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.cs-layout{grid-template-columns:minmax(0,1fr)}}
+.cs-preview{position:sticky;top:110px}
+@media (max-width:1000px){.cs-preview{position:static}}
+.mini-row{display:grid;grid-template-columns:90px minmax(0,1fr) minmax(0,1fr) 28px;gap:6px;margin-bottom:6px;align-items:center}
+.dept-row{display:grid;grid-template-columns:minmax(0,1fr) 132px 28px;gap:6px;margin-bottom:6px}
+.cast-row{display:grid;grid-template-columns:24px minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:6px;align-items:center;margin-bottom:6px}
+.cast-row.head{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.crewpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+.crewpick label{font-size:12.5px}
+
+/* printed / shared call sheet ("paper") */
+.cs{background:#fff;color:#111;border-radius:10px;padding:22px;font-size:12.5px;line-height:1.4;box-shadow:var(--shadow)}
+.cs *{color:inherit}
+.cs .cs-top{display:grid;grid-template-columns:1fr auto;gap:14px;border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:12px}
+.cs .cs-title{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.cs .cs-meta{color:#555;font-size:12px}
+.cs .cs-day{text-align:right}
+.cs .cs-day .d{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.cs .cs-day .date{font-size:16px;font-weight:700}
+.cs .calls{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1.5px solid #111;border-radius:6px;overflow:hidden;margin-bottom:12px}
+.cs .calls>div{padding:8px;border-right:1px solid #ccc;text-align:center}
+.cs .calls>div:last-child{border-right:0}
+.cs .calls .k{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#666;font-weight:700}
+.cs .calls .v{font-size:18px;font-weight:800}
+.cs .calls .crew{background:#111;color:#fff}.cs .calls .crew .k{color:#bbb}
+.cs .blocks{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.cs .blk{border:1px solid #ccc;border-radius:6px;padding:10px}
+.cs h4{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#666;margin-bottom:6px;font-weight:800}
+.cs table{width:100%;border-collapse:collapse;margin-bottom:12px}
+.cs th{background:#111;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:5px 6px}
+.cs td{border-bottom:1px solid #ddd;padding:5px 6px;vertical-align:top;overflow-wrap:anywhere}
+.cs .blk,.cs .cs-title,.cs .cs-meta{overflow-wrap:anywhere}
+.cs .dept td{background:#f1f1f1;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em}
+.cs .emerg{border:2px solid #c62828;background:#fff5f5}
+.cs .emerg h4{color:#c62828}
+.cs .foot{font-size:11px;color:#777;border-top:1px solid #ddd;padding-top:8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.cs a{color:#0b57d0}
+@media (max-width:640px){.cs{padding:14px}.cs .blocks{grid-template-columns:1fr}.cs .calls{grid-template-columns:repeat(2,1fr)}.cs .calls>div:nth-child(2){border-right:0}.cs .calls>div:nth-child(-n+2){border-bottom:1px solid #ccc}.cs .cs-top{grid-template-columns:1fr}.cs .cs-day{text-align:left}.cs table{font-size:11.5px}}
+
+/* actuals */
+.var-pos{color:var(--good)}.var-neg{color:var(--bad)}
+.costs{margin:2px 0 6px 12px;font-size:12px;color:var(--dim)}
+.costs div{display:flex;gap:8px;align-items:center}
+.costs .amt{font-family:var(--mono);margin-left:auto}
+
+/* modal / toast */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow:auto}
+.modal{background:var(--panel);border:1px solid var(--line2);border-radius:14px;width:100%;max-width:560px;padding:20px;box-shadow:var(--shadow)}
+.modal.wide{max-width:900px}
+.modal h2{font-size:18px;margin-bottom:4px}
+.modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
+.tpl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+@media (max-width:560px){.tpl-grid{grid-template-columns:1fr}}
+.tpl{border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;background:var(--panel2);text-align:left}
+.tpl b{display:block;margin-bottom:2px}
+.tpl small{color:var(--mute)}
+.tpl.on{border-color:var(--acc);background:var(--acc-soft)}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--text);color:var(--panel2);padding:10px 16px;border-radius:9px;font-weight:600;font-size:13px;z-index:200;transition:.2s;pointer-events:none;max-width:92vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.bad{background:var(--bad);color:#fff}
+.imp-row{display:grid;grid-template-columns:24px minmax(0,1fr) 60px 60px 100px;gap:6px;align-items:center;margin-bottom:4px}
+.banner{display:block;line-height:1.6;padding:10px 14px;border-radius:10px;background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 35%,transparent);margin-bottom:16px;font-size:13px}
+.banner.good{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 35%,transparent)}
+.signin{max-width:420px;margin:8vh auto}
+
+/* shared view */
+body.shared{padding-bottom:24px}
+body.shared .top,body.shared .sumbar{display:none}
+.shared-wrap{max-width:900px;margin:0 auto;padding:16px}
+.ack{margin-top:14px}
+
+/* print */
+#print{display:none}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff!important;color:#111!important;padding:0!important}
+  body.printing > *:not(#print){display:none!important}
+  body.printing #print{display:block!important}
+  body.shared .no-print{display:none!important}
+  .cs{box-shadow:none;padding:0;border-radius:0}
+  .pb{page-break-before:always}
+  .pr table{width:100%;border-collapse:collapse;font-size:10.5px}
+  .pr th,.pr td{border-bottom:1px solid #ccc;padding:4px 5px;text-align:left}
+  .pr .r{text-align:right}
+  .pr h1{font-size:18px;margin-bottom:2px}
+  .pr h3{font-size:12px;margin:12px 0 4px;text-transform:uppercase;letter-spacing:.08em}
+  .pr .gh td{background:#eee;font-weight:700}
+  .pr .tt td{font-weight:700}
+  .pr .grand td{font-weight:800;border-top:2px solid #111;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="/lab"><span class="logo">4<em>flieks</em> Lab</span><span class="tool">Budget &amp; call sheets</span></a>
+    <div class="hdr">
+      <select id="prodSel" aria-label="Production" style="width:auto;max-width:220px"></select>
+      <button class="btn sm pri" id="newProdBtn">+ New</button>
+      <span class="sync" id="sync"></span>
+    </div>
+  </div>
+  <nav class="labnav" id="labnav">
+    <a href="/lab">Lab</a>
+    <a href="/lab/report">Script Report</a>
+    <a href="/script-upload.html">Script Coach</a>
+    <a href="/lab/talent">Talent</a>
+    <a href="/lab/budget" class="on">Budget</a>
+    <a href="/lab#work" id="navAcct">My work</a>
+  </nav>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<main id="view"></main>
+
+<div class="sumbar hidden" id="sumbar"><div class="sumbar-in">
+  <div class="cell"><span class="k">Total budget</span><span class="v big" data-calc="grand"></span></div>
+  <div class="cell"><span class="k">Per finished minute</span><span class="v" data-calc="perMin"></span></div>
+  <div class="cell opt"><span class="k">Per shoot day</span><span class="v" data-calc="perDay"></span></div>
+  <div class="cell"><span class="k">Break-even</span><span class="v" data-calc="beOwn"></span></div>
+</div></div>
+
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+<div id="print"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+/* Sign-in only. This page never talks to the database: everything goes through
+   /.netlify/functions/flieks-budget, which checks who is asking. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+};
+const LAB = { api: '/.netlify/functions/flieks-budget', filmmakerShare: 0.70, priceOwn: 49, priceRent: 25, vatRate: 15 };
+</script>
+
+<script>
+'use strict';
+/* ═════════════ helpers ═════════════ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = p => (p || 'x') + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // quote-safe (audit C2)
+const num = v => { const n = parseFloat(String(v ?? '').replace(/[^\d.\-]/g, '')); return isFinite(n) ? n : 0; };
+const R = n => 'R ' + Math.round(n || 0).toLocaleString('en-ZA');
+const R2 = n => 'R ' + (n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const N = n => Math.round(n || 0).toLocaleString('en-ZA');
+const pct = n => (isFinite(n) ? (Math.round(n * 10) / 10) : 0) + '%';
+const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const fmtShort = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) : 'No date';
+const arr = v => Array.isArray(v) ? v.filter(x => x != null) : (v && typeof v === 'object' ? Object.values(v) : []);
+const clean = o => JSON.parse(JSON.stringify(o, (k, v) => v === undefined ? null : v));
+const today = () => new Date().toISOString().slice(0, 10);
+function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(t._t); t._t = setTimeout(() => t.className = 'toast', 2800); }
+function pagesToEighths(s) { s = String(s || '').trim(); if (!s) return 0; let t = 0; s.split(/\s+/).forEach(p => { if (p.includes('/')) { const [a, b] = p.split('/').map(num); if (b) t += a / b; } else t += num(p); }); return Math.round(t * 8); }
+function eighthsToPages(e) { if (!e) return '0'; const w = Math.floor(e / 8), r = e % 8; return (w ? w : '') + (w && r ? ' ' : '') + (r ? r + '/8' : '') || '0'; }
+
+/* ═════════════ constants ═════════════ */
+const GROUPS = [['atl', 'Above the line'], ['btl', 'Production · below the line'], ['post', 'Post-production'], ['other', 'Marketing, distribution & admin']];
+const GROUP_NAME = Object.fromEntries(GROUPS);
+const UNITS = ['Day', 'Week', 'Hour', 'Flat', 'Item', 'Head', 'KM', 'Episode'];
+const LINKS = { shoot: 'Shoot days', prep: 'Prep days', post: 'Post days' };
+const FORMATS = { short: 'Short film', music: 'Music video', feature: 'Feature film', series: 'Series (per episode)', other: 'Other' };
+const STD_DEPTS = ['Production', 'Camera', 'Lighting & Grip', 'Sound', 'Art Department', 'Wardrobe', 'Hair & Make-up', 'Cast', 'Unit & Locations', 'Catering', 'Post-production'];
+const WMO = { 0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain', 67: 'Freezing rain', 71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 80: 'Showers', 81: 'Showers', 82: 'Heavy showers', 95: 'Thunderstorms', 96: 'Thunderstorms & hail', 99: 'Thunderstorms & hail' };
+
+/* ═════════════ templates ═════════════
+   [group, section, [[desc, rate, unit, qty, units, role]]]
+   unit S/P/O = linked to shoot/prep/post days. Starting rates in ZAR —
+   indicative for SA indie shoots, meant to be edited. */
+const FILM_TPL = [
+  ['atl', 'Story & Rights', [['Writer fee', 5000, 'Flat'], ['Script / story rights', 0, 'Flat']]],
+  ['atl', 'Producers & Director', [['Producer', 10000, 'Flat', 1, 1, 'crew'], ['Director', 10000, 'Flat', 1, 1, 'crew']]],
+  ['atl', 'Cast', [['Lead cast', 2500, 'S', 2, 0, 'cast'], ['Supporting cast', 1500, 'Day', 3, 1, 'cast'], ['Extras / background', 400, 'Day', 10, 1], ['Casting sessions & self-tapes', 2500, 'Flat'], ['Rehearsals / table read', 1500, 'Day', 1, 1]]],
+  ['btl', 'Production Office', [['Production manager', 2000, 'S', 1, 0, 'crew'], ['Production manager — prep', 2000, 'P'], ['1st AD', 2500, 'S', 1, 0, 'crew'], ['Continuity', 1500, 'S', 1, 0, 'crew'], ['Runners', 600, 'S', 2, 0, 'crew']]],
+  ['btl', 'Camera', [['Director of photography', 4000, 'S', 1, 0, 'crew'], ['DOP prep & recce', 2000, 'Day', 1, 1], ['Focus puller', 2200, 'S', 1, 0, 'crew'], ['Camera assistant / DIT', 1500, 'S', 1, 0, 'crew'], ['Camera package', 6000, 'S'], ['Media & backup drives', 3000, 'Flat'], ['Stills & BTS', 1500, 'S', 1, 0, 'crew']]],
+  ['btl', 'Lighting & Grip', [['Gaffer', 2500, 'S', 1, 0, 'crew'], ['Sparks', 1200, 'S', 2, 0, 'crew'], ['Key grip', 2000, 'S', 1, 0, 'crew'], ['Lighting package', 5000, 'S'], ['Grip package', 2500, 'S'], ['Generator & fuel', 2500, 'S']]],
+  ['btl', 'Sound', [['Sound recordist (incl. kit)', 3000, 'S', 1, 0, 'crew'], ['Boom operator', 1200, 'S', 1, 0, 'crew']]],
+  ['btl', 'Art Department', [['Production designer / art director', 6000, 'Flat', 1, 1, 'crew'], ['Props & set dressing (buy / hire)', 5000, 'Flat'], ['Props standby', 1200, 'S', 1, 0, 'crew']]],
+  ['btl', 'Wardrobe, Hair & Make-up', [['Wardrobe stylist', 2000, 'S', 1, 0, 'crew'], ['Wardrobe purchases & hire', 3000, 'Flat'], ['Hair & make-up artist', 1800, 'S', 1, 0, 'crew'], ['Make-up consumables', 800, 'Flat']]],
+  ['btl', 'Locations & Unit', [['Location fees', 3000, 'S'], ['Location recce', 1500, 'Flat'], ['Unit & security', 1200, 'S', 1, 0, 'crew'], ['Permits', 1500, 'Flat']]],
+  ['btl', 'Transport', [['Crew vehicle', 1500, 'S'], ['Gear van', 1500, 'S'], ['Fuel & tolls', 3000, 'Flat']]],
+  ['btl', 'Catering', [['Meals — cast & crew (per head)', 180, 'S', 20, 0], ['Craft table & water', 400, 'S']]],
+  ['btl', 'Insurance & Safety', [['Production insurance', 4000, 'Flat'], ['Medic / first aid', 1200, 'S', 1, 0, 'crew']]],
+  ['post', 'Picture Post', [['Editor', 2500, 'O', 1, 0, 'crew'], ['Colourist', 3500, 'Day', 1, 2], ['Titles & graphics', 3000, 'Flat'], ['Subtitles', 1500, 'Flat']]],
+  ['post', 'Sound Post & Music', [['Sound design & final mix', 3500, 'Day', 1, 3], ['Music — composition / licensing', 5000, 'Flat']]],
+  ['post', 'Deliverables', [['Masters & exports (4flieks, festivals)', 1500, 'Flat'], ['Archive drives', 2500, 'Flat']]],
+  ['other', 'Marketing & Distribution', [['Poster / key art (9:16 + 16:9)', 2500, 'Flat'], ['Trailer cut', 2000, 'Flat'], ['Festival submissions', 3000, 'Flat'], ['Social promotion', 2000, 'Flat'], ['Premiere / screening', 0, 'Flat']]],
+  ['other', 'Admin & Legal', [['Contracts & releases', 2000, 'Flat'], ['Data, airtime & office', 1500, 'Flat'], ['Bank charges', 300, 'Flat']]]
+];
+const MV_TPL = [
+  ['atl', 'Creative', [['Director (treatment & shoot)', 8000, 'Flat', 1, 1, 'crew'], ['Producer', 5000, 'Flat', 1, 1, 'crew']]],
+  ['atl', 'Talent', [['Artist', 0, 'Flat', 1, 1, 'cast'], ['Dancers / featured talent', 1500, 'S', 4, 0, 'cast'], ['Extras', 400, 'S', 10, 0]]],
+  ['btl', 'Crew', [['Director of photography', 4000, 'S', 1, 0, 'crew'], ['Focus puller', 2200, 'S', 1, 0, 'crew'], ['Gaffer', 2500, 'S', 1, 0, 'crew'], ['Grip / spark', 1200, 'S', 2, 0, 'crew'], ['Choreographer', 3000, 'Flat', 1, 1, 'crew'], ['Stylist', 2000, 'S', 1, 0, 'crew'], ['Hair & make-up', 1800, 'S', 1, 0, 'crew'], ['Runner', 600, 'S', 2, 0, 'crew']]],
+  ['btl', 'Equipment', [['Camera package', 6000, 'S'], ['Lighting package', 5000, 'S'], ['Grip package', 2000, 'S'], ['Playback speaker', 800, 'S'], ['Drone & operator', 4500, 'Flat']]],
+  ['btl', 'Location & Art', [['Location fee', 3000, 'S'], ['Art & props', 4000, 'Flat'], ['Wardrobe', 3000, 'Flat']]],
+  ['btl', 'Unit', [['Transport & fuel', 2500, 'S'], ['Catering (per head)', 180, 'S', 20, 0]]],
+  ['post', 'Post', [['Editor', 2500, 'O', 1, 0, 'crew'], ['Colour grade', 3500, 'Day', 1, 1], ['VFX / graphics', 3000, 'Flat']]],
+  ['other', 'Release', [['Cover art & stills', 1500, 'Flat'], ['Social cut-downs', 1500, 'Flat']]]
+];
+const SERIES_ONCEOFF = ['other', 'Series once-off costs', [['Format & script development', 20000, 'Flat'], ['Set build', 40000, 'Flat'], ['Title sequence & brand CI', 15000, 'Flat']]];
+
+function buildSections(tpl, m) {
+  m = m || 1;
+  return tpl.map(([g, name, lines], i) => ({
+    id: uid('s'), name, group: g, open: i < 3, onceOff: name === 'Series once-off costs',
+    lines: lines.map(([desc, rate, u, qty = 1, units = 1, role]) => {
+      const link = { S: 'shoot', P: 'prep', O: 'post' }[u] || null;
+      return { id: uid('l'), desc, qty, units: link ? 0 : (u === 'Day' ? units * m : units), unit: link ? 'Day' : u, link, rate: u === 'Flat' ? Math.round(rate * m) : rate, role: role || null, notes: '' };
+    })
+  }));
+}
+function newProduction(title, type) {
+  const p = { id: uid('p'), title: title || 'Untitled production', type, company: '', director: '', producer: '', runtime: 12, episodes: 1,
+    days: { prep: 5, shoot: 3, post: 8 }, contPct: 10, feePct: 0, vatOn: false, vatRate: LAB.vatRate,
+    sections: [], contacts: [], locations: [], scenes: [], shootDays: [], costs: [], locked: null, createdAt: Date.now(), updatedAt: Date.now() };
+  if (type === 'short') p.sections = buildSections(FILM_TPL, 1);
+  else if (type === 'feature') { p.runtime = 90; p.days = { prep: 20, shoot: 18, post: 40 }; p.sections = buildSections(FILM_TPL, 4); }
+  else if (type === 'music') { p.runtime = 4; p.days = { prep: 3, shoot: 1, post: 4 }; p.sections = buildSections(MV_TPL, 1); }
+  else if (type === 'series') { p.runtime = 24; p.episodes = 13; p.days = { prep: 2, shoot: 2, post: 4 }; p.sections = buildSections(FILM_TPL.concat([SERIES_ONCEOFF]), 1); }
+  else { p.type = type || 'other'; p.sections = GROUPS.map(([g, n]) => ({ id: uid('s'), name: n, group: g, open: true, lines: [] })); }
+  return p;
+}
+function normalize(p) {
+  p.sections = arr(p.sections); p.sections.forEach(s => { s.lines = arr(s.lines); });
+  ['contacts', 'locations', 'scenes', 'shootDays', 'costs'].forEach(k => p[k] = arr(p[k]));
+  p.shootDays.forEach(d => { d.deptCalls = arr(d.deptCalls); d.running = arr(d.running); d.cast = d.cast || {}; d.crewOff = d.crewOff || {}; d.weather = d.weather || {}; });
+  p.days = Object.assign({ prep: 0, shoot: 1, post: 0 }, p.days || {});
+  if (p.locked) { p.locked.lines = p.locked.lines || {}; p.locked.secs = p.locked.secs || {}; }
+  ['contPct', 'feePct', 'runtime', 'episodes'].forEach(k => p[k] = num(p[k]));
+  if (!p.vatRate) p.vatRate = LAB.vatRate;
+  return p;
+}
+
+/* ═════════════ maths ═════════════ */
+const lineUnits = (l, p) => l.link ? num((p || P).days[l.link]) : num(l.units);
+const lineTotal = (l, p) => num(l.qty) * lineUnits(l, p) * num(l.rate);
+const secTotal = (s, p) => s.lines.reduce((a, l) => a + lineTotal(l, p), 0);
+function totals(p) {
+  p = p || P;
+  const series = p.type === 'series';
+  const grp = { atl: 0, btl: 0, post: 0, other: 0 }; const secs = {}; const lines = {};
+  let direct = 0, onceOff = 0;
+  p.sections.forEach(s => {
+    let t = 0; s.lines.forEach(l => { const v = lineTotal(l, p); lines[l.id] = v; t += v; });
+    secs[s.id] = t; grp[s.group] = (grp[s.group] || 0) + t;
+    if (series && s.onceOff) onceOff += t; else direct += t;
+  });
+  const cF = num(p.contPct) / 100, fF = num(p.feePct) / 100;
+  const cont = direct * cF, fee = (direct + cont) * fF;
+  const perEp = direct + cont + fee;
+  const eps = series ? Math.max(1, num(p.episodes)) : 1;
+  const onceOffAll = onceOff * (1 + cF) * (1 + fF);
+  const exVat = perEp * eps + onceOffAll;
+  const vat = p.vatOn ? exVat * num(p.vatRate) / 100 : 0;
+  const grand = exVat + vat;
+  const mins = Math.max(0, num(p.runtime)) * eps;
+  const shootDays = Math.max(0, num(p.days.shoot)) * eps;
+  const share = LAB.filmmakerShare;
+  const perOwn = LAB.priceOwn * share, perRent = LAB.priceRent * share;
+  return { grp, secs, lines, direct, onceOff, cont, fee, perEp, eps, onceOffAll, exVat, vat, grand, mins,
+    perMin: mins ? grand / mins : 0, perDay: shootDays ? grand / shootDays : 0,
+    perOwn, perRent, beOwn: perOwn ? Math.ceil(grand / perOwn) : 0, beRent: perRent ? Math.ceil(grand / perRent) : 0,
+    series };
+}
+
+/* ═════════════ state & API ═════════════ */
+let auth = null, USER = null, ME = { verified: true, role: 'viewer', imports: {} };
+let INDEX = [];            // my productions: { id, title, type, updated_at }
+let P = null; let TAB = 'budget'; let CUR_DAY = null;
+const LS_UI = 'flieks_budget_ui_v1';
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+function saveUI() { lsSet(LS_UI, { tab: TAB, prod: P && P.id }); }
+
+async function call(action, extra, withToken = true) {
+  const body = Object.assign({ action }, extra || {});
+  if (withToken && USER) body.token = await USER.getIdToken();
+  try {
+    const r = await fetch(LAB.api, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, d };
+  } catch (e) { return { ok: false, status: 0, d: { message: 'No connection. Check your internet and try again.' } }; }
+}
+const canEdit = () => ME.verified || ME.role === 'filmmaker' || ME.role === 'admin';
+function withoutId(p) { const c = Object.assign({}, p); delete c.id; return c; }
+async function loadIndex() {
+  const { ok, d } = await call('list');
+  if (!ok) throw new Error(d.message || 'Could not load your productions.');
+  INDEX = d.items || []; ME = { verified: !!d.verified, role: d.role || 'viewer', imports: d.imports || {} };
+}
+async function openProduction(id) {
+  const { ok, d } = await call('get', { id });
+  if (!ok) { toast(d.message || 'Could not open that production', true); return false; }
+  P = normalize(Object.assign(d.production, { id: d.id })); CUR_DAY = null; saveUI(); return true;
+}
+function touchIndex() { if (!P) return; const it = INDEX.find(x => x.id === P.id); if (it) { it.title = P.title; it.type = P.type; it.updated_at = Date.now(); } }
+
+/* One save at a time; changes made while a save is in flight go in the next one. */
+let saveTimer = null, saving = false, again = false;
+function setSync(s, msg) { const el = $('#sync'); if (!el) return; el.className = 'sync' + (s === 'error' ? ' err' : ''); el.textContent = s === 'saving' ? 'Saving…' : s === 'saved' ? '✓ Saved' : s === 'error' ? (msg || 'Not saved') : ''; }
+function markDirty() { if (!P) return; if (!canEdit()) { setSync('error', 'Confirm your email to save'); return; } P.updatedAt = Date.now(); touchIndex(); setSync('saving'); clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = null; saveNow(); }, 800); }
+async function saveNow() {
+  if (!P) return;
+  if (saving) { again = true; return; }
+  saving = true;
+  const { ok, d } = await call('save', { id: P.id, production: withoutId(P) });
+  saving = false;
+  if (ok) setSync('saved'); else { setSync('error', d.message || 'Not saved'); if (d.message) toast(d.message, true); }
+  if (again) { again = false; saveNow(); }
+}
+async function flushSave() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; await saveNow(); } while (saving) await new Promise(r => setTimeout(r, 80)); }
+window.addEventListener('pagehide', () => { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveNow(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveNow(); } });
+
+/* ═════════════ rendering shell ═════════════ */
+const TABS = [['setup', 'Setup'], ['budget', 'Budget'], ['top', 'Top sheet'], ['people', 'Cast & crew'], ['scenes', 'Scenes & locations'], ['calls', 'Call sheets'], ['actuals', 'Actuals']];
+function render() {
+  const list = INDEX.slice().sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+  $('#prodSel').innerHTML = list.length ? list.map(p => `<option value="${p.id}" ${P && P.id === p.id ? 'selected' : ''}>${esc(p.title)}</option>`).join('') : '<option>No productions yet</option>';
+  $('#prodSel').disabled = !list.length;
+  $('#tabs').innerHTML = P ? TABS.map(([k, n]) => `<button class="tab ${TAB === k ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('') : '';
+  $('#sumbar').classList.toggle('hidden', !P || !['budget', 'setup', 'top'].includes(TAB));
+  const v = $('#view');
+  const vb = verifyBanner();
+  if (!P) { v.innerHTML = vb + emptyHTML(); refreshCalc(); return; }
+  const r = { setup: vSetup, budget: vBudget, top: vTop, people: vPeople, scenes: vScenes, calls: vCalls, actuals: vActuals }[TAB] || vBudget;
+  v.innerHTML = vb + r();
+  refreshCalc();
+  if (TAB === 'calls') loadAcks();
+}
+function verifyBanner() {
+  if (canEdit()) return '';
+  return `<div class="banner"><b>One step left: confirm your email.</b> We sent a link to ${esc(USER && USER.email)}. Open it, then come back to save budgets and share call sheets.
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="resendVerify">Send the link again</button><button class="btn sm" data-act="reload">I've confirmed it</button></div></div>`;
+}
+function emptyHTML() {
+  return `<div class="card empty"><h2>Budget your film. Run your shoot.</h2>
+  <p style="max-width:520px;margin:0 auto 18px">Start from a template for a short, music video, feature or series episode, with starting rates in rands. Then build your cast &amp; crew list, schedule scenes into shoot days and share call sheets your crew can open on their phones.</p>
+  <button class="btn pri" data-act="newProd">Start a production</button>
+  <p class="hint" style="margin-top:14px">Saved to your 4flieks account. Only you can see your budgets; call sheets are shared only when you publish a link.</p></div>`;
+}
+function refreshCalc() {
+  if (!P) return;
+  const T = totals();
+  const map = {
+    grand: R(T.grand), perMin: T.mins ? R(T.perMin) : '—', perDay: T.perDay ? R(T.perDay) : '—',
+    beOwn: T.beOwn ? N(T.beOwn) + ' sales' : '—', exVat: R(T.exVat), vat: R(T.vat), cont: R(T.cont), fee: R(T.fee),
+    direct: R(T.direct), perEp: R(T.perEp)
+  };
+  $$('[data-calc]').forEach(el => {
+    const k = el.dataset.calc;
+    if (k in map) el.textContent = map[k];
+    else if (k.startsWith('line:')) el.textContent = R(T.lines[k.slice(5)] || 0);
+    else if (k.startsWith('sec:')) el.textContent = R(T.secs[k.slice(4)] || 0);
+    else if (k.startsWith('grp:')) el.textContent = R(T.grp[k.slice(4)] || 0);
+  });
+}
+
+/* ═════════════ SETUP ═════════════ */
+function vSetup() {
+  const p = P; const series = p.type === 'series';
+  return `
+  <div class="card"><h2>Production</h2><p class="hint">This appears on your budget, top sheet and call sheets.</p>
+    <div class="grid g2">
+      <label class="f">Title<input data-p="title" value="${esc(p.title)}"></label>
+      <label class="f">Production company<input data-p="company" value="${esc(p.company)}"></label>
+      <label class="f">Director<input data-p="director" value="${esc(p.director)}"></label>
+      <label class="f">Producer<input data-p="producer" value="${esc(p.producer)}"></label>
+      <label class="f">Format<select data-p="type" data-rerender>${Object.entries(FORMATS).map(([k, n]) => `<option value="${k}" ${p.type === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <div class="grid ${series ? 'g2' : ''}">
+        <label class="f">Finished runtime (minutes${series ? ' per episode' : ''})<input type="number" min="0" data-p="runtime" data-num value="${p.runtime}"></label>
+        ${series ? `<label class="f">Episodes<input type="number" min="1" data-p="episodes" data-num value="${p.episodes}"></label>` : ''}
+      </div>
+    </div></div>
+  <div class="card"><h2>Schedule days</h2><p class="hint">Budget lines set to <b>Shoot days</b>, <b>Prep days</b> or <b>Post days</b> update automatically when you change these.${series ? ' Days are per episode.' : ''}</p>
+    <div class="grid g3">
+      <label class="f">Prep days<input type="number" min="0" data-p="days.prep" data-num value="${p.days.prep}"></label>
+      <label class="f">Shoot days<input type="number" min="0" data-p="days.shoot" data-num value="${p.days.shoot}"></label>
+      <label class="f">Post days<input type="number" min="0" data-p="days.post" data-num value="${p.days.post}"></label>
+    </div></div>
+  <div class="card"><h2>Markups &amp; VAT</h2><p class="hint">Contingency covers what goes wrong on set. 10% is the usual starting point. Add a production fee if a company is producing and needs an overhead.</p>
+    <div class="grid g4">
+      <label class="f">Contingency %<input type="number" min="0" step="0.5" data-p="contPct" data-num value="${p.contPct}"></label>
+      <label class="f">Production fee %<input type="number" min="0" step="0.5" data-p="feePct" data-num value="${p.feePct}"></label>
+      <label class="f">VAT rate %<input type="number" min="0" step="0.5" data-p="vatRate" data-num value="${p.vatRate}"></label>
+      <label class="chk" style="align-self:end;padding-bottom:8px"><input type="checkbox" data-p="vatOn" ${p.vatOn ? 'checked' : ''}> Add VAT to the total</label>
+    </div></div>
+  <div class="card"><h2>Production file</h2><p class="hint">Saved to your 4flieks account. Last change ${new Date(p.updatedAt || Date.now()).toLocaleString('en-ZA')}.</p>
+    <div class="row"><button class="btn" data-act="dupProd">Duplicate production</button><button class="btn danger" data-act="delProd">Delete production</button></div></div>`;
+}
+
+/* ═════════════ BUDGET ═════════════ */
+function unitSelect(s, l) {
+  const cur = l.link ? 'link:' + l.link : l.unit;
+  return `<select data-s="${s.id}" data-l="${l.id}" data-k="unitSel" data-rerender aria-label="Unit">
+    <optgroup label="Linked to schedule">${Object.entries(LINKS).map(([k, n]) => `<option value="link:${k}" ${cur === 'link:' + k ? 'selected' : ''}>${n}</option>`).join('')}</optgroup>
+    <optgroup label="Unit">${UNITS.map(u => `<option ${cur === u ? 'selected' : ''}>${u}</option>`).join('')}</optgroup></select>`;
+}
+function lineHTML(s, l) {
+  return `<div class="line ${l.link ? 'linked' : ''}">
+    <input class="desc" data-s="${s.id}" data-l="${l.id}" data-k="desc" value="${esc(l.desc)}" placeholder="Description">
+    <input class="n qty" type="number" inputmode="decimal" min="0" data-s="${s.id}" data-l="${l.id}" data-k="qty" data-num value="${l.qty}" aria-label="Quantity" title="Quantity">
+    <div class="units"><input class="n" type="number" inputmode="decimal" min="0" data-s="${s.id}" data-l="${l.id}" data-k="units" data-num value="${lineUnits(l)}" ${l.link ? 'disabled title="Set in Setup → Schedule days"' : ''} aria-label="Units">${unitSelect(s, l)}</div>
+    <input class="n rate" type="number" inputmode="decimal" min="0" step="any" data-s="${s.id}" data-l="${l.id}" data-k="rate" data-num value="${l.rate}" aria-label="Rate" title="Rate (R)">
+    <div class="tot" data-calc="line:${l.id}"></div>
+    <button class="icon del x" data-act="delLine" data-s="${s.id}" data-l="${l.id}" title="Remove line">✕</button>
+  </div>`;
+}
+function vBudget() {
+  const p = P; const series = p.type === 'series';
+  let h = `<div class="toolbar">
+    <div class="grow"><h1 class="page">${esc(p.title)}</h1><div class="sub">${FORMATS[p.type] || ''} · ${p.days.prep} prep · ${p.days.shoot} shoot · ${p.days.post} post days${series ? ' per episode · ' + p.episodes + ' episodes' : ''}</div></div>
+    <button class="btn" data-act="openImport">✦ Import supplier quote</button>
+    ${p.locked ? `<button class="btn" data-act="lock">↻ Re-lock</button>` : `<button class="btn" data-act="lock">🔒 Lock budget</button>`}
+    <button class="btn" data-act="csv">Export CSV</button>
+    <button class="btn" data-act="printBudget">Print / PDF</button>
+  </div>`;
+  if (p.locked) h += `<div class="banner">🔒 Budget locked ${new Date(p.locked.at).toLocaleDateString('en-ZA')} at <b>${R(p.locked.grand)}</b>. You can still edit. The <b>Actuals</b> tab tracks spend against the locked version.</div>`;
+  GROUPS.forEach(([g, gname]) => {
+    const secs = p.sections.filter(s => s.group === g);
+    h += `<div class="grp"><h3>${gname}</h3><span class="amt" data-calc="grp:${g}"></span></div>`;
+    secs.forEach(s => {
+      h += `<div class="sec"><div class="sec-head">
+        <button class="icon" data-act="toggleSec" data-s="${s.id}" title="${s.open ? 'Collapse' : 'Expand'}">${s.open ? '▾' : '▸'}</button>
+        <input class="sec-name" data-s="${s.id}" data-k="name" value="${esc(s.name)}" aria-label="Section name">
+        ${series ? `<label class="chk" style="font-size:12px;color:var(--dim)" title="Once-off costs aren't multiplied by episodes"><input type="checkbox" data-s="${s.id}" data-k="onceOff" ${s.onceOff ? 'checked' : ''}> Once-off</label>` : ''}
+        <select data-s="${s.id}" data-k="group" data-rerender aria-label="Move to group">${GROUPS.map(([k, n]) => `<option value="${k}" ${s.group === k ? 'selected' : ''}>${n.split(' ·')[0].split(',')[0]}</option>`).join('')}</select>
+        <span class="sec-total" data-calc="sec:${s.id}"></span>
+        <button class="icon" data-act="secUp" data-s="${s.id}" title="Move up">↑</button>
+        <button class="icon" data-act="secDown" data-s="${s.id}" title="Move down">↓</button>
+        <button class="icon del" data-act="delSec" data-s="${s.id}" title="Delete section">✕</button>
+      </div>`;
+      if (s.open) {
+        h += `<div class="sec-body"><div class="lh"><span>Description</span><span>Qty</span><span>× Units</span><span>Rate</span><span>Total</span><span></span></div>`;
+        s.lines.forEach(l => h += lineHTML(s, l));
+        h += `<div class="row" style="margin-top:6px"><button class="btn sm ghost" data-act="addLine" data-s="${s.id}">+ Line</button></div></div>`;
+      }
+      h += `</div>`;
+    });
+    h += `<button class="btn sm ghost" data-act="addSec" data-g="${g}">+ Section</button>`;
+  });
+  h += `<div class="card" style="margin-top:22px"><div class="grid g4">
+    <div><div class="sub">Direct costs${series ? ' / episode' : ''}</div><div class="n" style="text-align:left;font-size:16px" data-calc="direct"></div></div>
+    <div><div class="sub">Contingency ${p.contPct}%</div><div class="n" style="text-align:left;font-size:16px" data-calc="cont"></div></div>
+    <div><div class="sub">Production fee ${p.feePct}%</div><div class="n" style="text-align:left;font-size:16px" data-calc="fee"></div></div>
+    <div><div class="sub">${p.vatOn ? 'VAT ' + p.vatRate + '%' : 'VAT (off)'}</div><div class="n" style="text-align:left;font-size:16px" data-calc="vat"></div></div>
+  </div></div>`;
+  return h;
+}
+
+/* ═════════════ TOP SHEET ═════════════ */
+function vTop() {
+  const p = P, T = totals(); const series = T.series;
+  let rows = ''; const maxSec = Math.max(1, ...Object.values(T.secs));
+  GROUPS.forEach(([g, gname]) => {
+    const secs = p.sections.filter(s => s.group === g); if (!secs.length) return;
+    rows += `<tr class="gh"><td colspan="3">${gname}</td><td class="r">${R(T.grp[g])}</td></tr>`;
+    secs.forEach(s => {
+      const v = T.secs[s.id]; const share = T.direct + T.onceOff ? v / (T.direct + T.onceOff) * 100 : 0;
+      rows += `<tr><td>${esc(s.name)}${series && s.onceOff ? ' <span class="pill">once-off</span>' : ''}</td><td style="width:30%"><div class="bar"><i style="width:${Math.min(100, v / maxSec * 100)}%"></i></div></td><td class="r" style="color:var(--mute)">${pct(share)}</td><td class="r">${R(v)}</td></tr>`;
+    });
+  });
+  const extra = series ? `
+    <tr class="tt"><td colspan="3">Direct costs per episode</td><td class="r">${R(T.direct)}</td></tr>
+    <tr><td colspan="3">Contingency ${p.contPct}%</td><td class="r">${R(T.cont)}</td></tr>
+    <tr><td colspan="3">Production fee ${p.feePct}%</td><td class="r">${R(T.fee)}</td></tr>
+    <tr class="tt"><td colspan="3">Per episode</td><td class="r">${R(T.perEp)}</td></tr>
+    <tr><td colspan="3">× ${T.eps} episodes</td><td class="r">${R(T.perEp * T.eps)}</td></tr>
+    <tr><td colspan="3">Once-off costs (incl. contingency &amp; fee)</td><td class="r">${R(T.onceOffAll)}</td></tr>` : `
+    <tr class="tt"><td colspan="3">Direct costs</td><td class="r">${R(T.direct)}</td></tr>
+    <tr><td colspan="3">Contingency ${p.contPct}%</td><td class="r">${R(T.cont)}</td></tr>
+    <tr><td colspan="3">Production fee ${p.feePct}%</td><td class="r">${R(T.fee)}</td></tr>`;
+  return `
+  <div class="toolbar"><div class="grow"><h1 class="page">Top sheet</h1><div class="sub">${esc(p.title)}${p.company ? ' · ' + esc(p.company) : ''}</div></div><button class="btn" data-act="printBudget">Print / PDF</button></div>
+  <div class="kpis">
+    <div class="kpi hl"><div class="k">Total budget</div><div class="v">${R(T.grand)}</div><div class="s">${p.vatOn ? 'incl. VAT' : 'excl. VAT'}</div></div>
+    <div class="kpi"><div class="k">Per finished minute</div><div class="v">${T.mins ? R(T.perMin) : '—'}</div><div class="s">${N(T.mins)} min${series ? ' across ' + T.eps + ' episodes' : ''}</div></div>
+    <div class="kpi"><div class="k">${series ? 'Per episode' : 'Per shoot day'}</div><div class="v">${series ? R(T.perEp) : (T.perDay ? R(T.perDay) : '—')}</div><div class="s">${series ? 'before once-off & VAT' : p.days.shoot + ' shoot days'}</div></div>
+    <div class="kpi"><div class="k">Break-even on 4flieks</div><div class="v">${N(T.beOwn)}</div><div class="s">sales at R${LAB.priceOwn} (you earn ${R2(T.perOwn)} each) · or ${N(T.beRent)} rentals</div></div>
+  </div>
+  <div class="card tscroll"><table class="t">
+    <thead><tr><th>Section</th><th>Share</th><th class="r">%</th><th class="r">Amount</th></tr></thead>
+    <tbody>${rows}${extra}
+      <tr class="tt"><td colspan="3">Total excl. VAT</td><td class="r">${R(T.exVat)}</td></tr>
+      ${p.vatOn ? `<tr><td colspan="3">VAT ${p.vatRate}%</td><td class="r">${R(T.vat)}</td></tr>` : ''}
+      <tr class="grand"><td colspan="3">Total budget</td><td class="r">${R(T.grand)}</td></tr>
+    </tbody></table></div>
+  <div class="card"><h2>What it takes to earn it back</h2><p class="hint">Based on the 4flieks split: filmmakers keep ${Math.round(LAB.filmmakerShare * 100)}% of each sale.</p>
+    <div class="grid g3">
+      <div><div class="sub">Own at R${LAB.priceOwn}</div><div style="font-size:18px;font-weight:700">${N(T.beOwn)} sales</div></div>
+      <div><div class="sub">Rent at R${LAB.priceRent} (48h)</div><div style="font-size:18px;font-weight:700">${N(T.beRent)} rentals</div></div>
+      <div><div class="sub">Half and half</div><div style="font-size:18px;font-weight:700">${N(Math.ceil(T.grand / ((T.perOwn + T.perRent))))} of each</div></div>
+    </div></div>`;
+}
+
+/* ═════════════ CAST & CREW ═════════════ */
+function personRow(c) {
+  const cast = c.kind === 'cast';
+  return `<div class="lrow people-row">
+    <input data-coll="contacts" data-id="${c.id}" data-k="name" value="${esc(c.name)}" placeholder="Name">
+    <input data-coll="contacts" data-id="${c.id}" data-k="${cast ? 'character' : 'role'}" value="${esc(cast ? c.character : c.role)}" placeholder="${cast ? 'Character' : 'Role'}">
+    ${cast ? `<input data-coll="contacts" data-id="${c.id}" data-k="agent" value="${esc(c.agent)}" placeholder="Agent (optional)">` :
+      `<select data-coll="contacts" data-id="${c.id}" data-k="dept">${STD_DEPTS.filter(d => d !== 'Cast').concat(c.dept && !STD_DEPTS.includes(c.dept) ? [c.dept] : []).map(d => `<option ${c.dept === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>`}
+    <input type="tel" inputmode="tel" maxlength="24" data-coll="contacts" data-id="${c.id}" data-k="phone" value="${esc(c.phone)}" placeholder="Phone">
+    <input type="email" data-coll="contacts" data-id="${c.id}" data-k="email" value="${esc(c.email)}" placeholder="Email">
+    <button class="icon del" data-act="delItem" data-coll="contacts" data-id="${c.id}" title="Remove">✕</button></div>`;
+}
+function vPeople() {
+  const crew = P.contacts.filter(c => c.kind !== 'cast'), cast = P.contacts.filter(c => c.kind === 'cast');
+  return `
+  <div class="toolbar"><div class="grow"><h1 class="page">Cast &amp; crew</h1><div class="sub">One list for the whole production. Each call sheet picks from it.</div></div>
+    <button class="btn" data-act="pullRoles">Pull roles from budget</button></div>
+  <div class="card"><div class="spread"><h2>Crew <span class="pill">${crew.length}</span></h2><button class="btn sm" data-act="addPerson" data-kind="crew">+ Crew member</button></div>
+    <div class="lrow people-row head" style="margin-top:10px"><span>Name</span><span>Role</span><span>Department</span><span>Phone</span><span>Email</span><span></span></div>
+    ${crew.map(personRow).join('') || '<p class="hint" style="margin-top:10px">No crew yet. Use <b>Pull roles from budget</b> to add a row for every paid role, then fill in names.</p>'}
+  </div>
+  <div class="card"><div class="spread"><h2>Cast <span class="pill">${cast.length}</span></h2><button class="btn sm" data-act="addPerson" data-kind="cast">+ Cast member</button></div>
+    <div class="lrow people-row head" style="margin-top:10px"><span>Actor</span><span>Character</span><span>Agent</span><span>Phone</span><span>Email</span><span></span></div>
+    ${cast.map(personRow).join('') || '<p class="hint" style="margin-top:10px">No cast yet.</p>'}
+  </div>
+  <p class="hint">Coming next: search the 4flieks talent pool and add people who've opted in to be suggested for roles.</p>`;
+}
+function deptMatch(s) {
+  s = String(s || '').toLowerCase();
+  if (/post|editor|colour|sound design/.test(s)) return 'Post-production';
+  if (/make-up|makeup|hair/.test(s)) return 'Hair & Make-up';
+  if (/camera|photograph|focus|\bdit\b|stills|bts/.test(s)) return 'Camera';
+  if (/light|grip|gaffer|spark/.test(s)) return 'Lighting & Grip';
+  if (/sound|boom/.test(s)) return 'Sound';
+  if (/\bart\b|prop|design/.test(s)) return 'Art Department';
+  if (/wardrobe|stylist/.test(s)) return 'Wardrobe';
+  if (/unit|security|location|medic/.test(s)) return 'Unit & Locations';
+  if (/cater/.test(s)) return 'Catering';
+  return '';
+}
+function deptFor(secName, desc) { return deptMatch(desc) || deptMatch(secName) || 'Production'; }
+
+/* ═════════════ SCENES & LOCATIONS ═════════════ */
+function vScenes() {
+  const dayOpts = sel => `<option value="">Unscheduled</option>` + P.shootDays.map((d, i) => `<option value="${d.id}" ${sel === d.id ? 'selected' : ''}>Day ${i + 1} · ${fmtShort(d.date)}</option>`).join('');
+  const locOpts = sel => `<option value="">—</option>` + P.locations.map(l => `<option value="${l.id}" ${sel === l.id ? 'selected' : ''}>${esc(l.name || 'Location')}</option>`).join('');
+  const totalE = P.scenes.reduce((a, s) => a + pagesToEighths(s.pages), 0);
+  const perDay = P.shootDays.map((d, i) => { const e = P.scenes.filter(s => s.dayId === d.id).reduce((a, s) => a + pagesToEighths(s.pages), 0); return `<span class="pill ${e ? 'acc' : ''}">Day ${i + 1}: ${eighthsToPages(e)} pp</span>`; }).join(' ');
+  return `
+  <div class="toolbar"><div class="grow"><h1 class="page">Scenes &amp; locations</h1><div class="sub">Your breakdown. Scenes assigned to a shoot day show up on that day's call sheet.</div></div></div>
+  <div class="card"><div class="spread"><h2>Locations <span class="pill">${P.locations.length}</span></h2><button class="btn sm" data-act="addLoc">+ Location</button></div>
+    <p class="hint">The <b>Town / suburb</b> is used to look up the weather forecast. Add the nearest hospital for the call sheet's emergency box.</p>
+    <div class="lrow loc-row head"><span>Name</span><span>Address</span><span>Town / suburb</span><span>Parking</span><span>On-site contact</span><span>Nearest hospital</span><span></span></div>
+    ${P.locations.map(l => `<div class="lrow loc-row">
+      <input data-coll="locations" data-id="${l.id}" data-k="name" value="${esc(l.name)}" placeholder="e.g. Studio 2">
+      <input data-coll="locations" data-id="${l.id}" data-k="address" value="${esc(l.address)}" placeholder="Street address">
+      <input data-coll="locations" data-id="${l.id}" data-k="town" value="${esc(l.town)}" placeholder="e.g. Fourways">
+      <input data-coll="locations" data-id="${l.id}" data-k="parking" value="${esc(l.parking)}" placeholder="Parking notes">
+      <input data-coll="locations" data-id="${l.id}" data-k="contact" value="${esc(l.contact)}" placeholder="Name & number">
+      <input data-coll="locations" data-id="${l.id}" data-k="hospital" value="${esc(l.hospital)}" placeholder="Hospital & number">
+      <button class="icon del" data-act="delItem" data-coll="locations" data-id="${l.id}">✕</button></div>`).join('') || '<p class="hint">No locations yet.</p>'}
+  </div>
+  <div class="card"><div class="spread"><h2>Scenes <span class="pill">${P.scenes.length} · ${eighthsToPages(totalE)} pages</span></h2><button class="btn sm" data-act="addScene">+ Scene</button></div>
+    <p class="hint" style="margin-top:6px">Pages in eighths, e.g. <code>1 3/8</code>. ${perDay}</p>
+    <div class="lrow scene-row head"><span>Sc</span><span>Int/Ext</span><span>Day/Night</span><span>Set</span><span>Description</span><span>Pages</span><span>Cast (characters)</span><span>Shoot day</span><span></span></div>
+    ${P.scenes.map(s => `<div class="lrow scene-row">
+      <input data-coll="scenes" data-id="${s.id}" data-k="no" value="${esc(s.no)}" placeholder="#">
+      <select data-coll="scenes" data-id="${s.id}" data-k="ie">${['INT', 'EXT', 'INT/EXT'].map(o => `<option ${s.ie === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+      <select data-coll="scenes" data-id="${s.id}" data-k="dn">${['DAY', 'NIGHT', 'DAWN', 'DUSK'].map(o => `<option ${s.dn === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+      <input data-coll="scenes" data-id="${s.id}" data-k="set" value="${esc(s.set)}" placeholder="Set, e.g. Kitchen">
+      <input data-coll="scenes" data-id="${s.id}" data-k="desc" value="${esc(s.desc)}" placeholder="What happens">
+      <input data-coll="scenes" data-id="${s.id}" data-k="pages" value="${esc(s.pages)}" placeholder="1 2/8">
+      <input data-coll="scenes" data-id="${s.id}" data-k="cast" value="${esc(s.cast)}" placeholder="e.g. Nomalizo, Yasuke">
+      <select data-coll="scenes" data-id="${s.id}" data-k="dayId" data-rerender>${dayOpts(s.dayId)}</select>
+      <button class="icon del" data-act="delItem" data-coll="scenes" data-id="${s.id}">✕</button></div>`).join('') || '<p class="hint">No scenes yet. Add them from your script, or wait for Script Report to break them down automatically (coming next).</p>'}
+    ${P.shootDays.length ? '' : '<p class="hint" style="margin-top:8px">Create shoot days in the <b>Call sheets</b> tab to schedule scenes.</p>'}
+  </div>`;
+}
+
+/* ═════════════ CALL SHEETS ═════════════ */
+function dayById(id) { return P.shootDays.find(d => d.id === id); }
+function curDay() { let d = dayById(CUR_DAY); if (!d && P.shootDays.length) { d = P.shootDays[0]; CUR_DAY = d.id; } return d; }
+function newDay(date) { const off = {}; P.contacts.forEach(c => { if (c.dept === 'Post-production') off[c.id] = true; }); return { id: uid('d'), date: date || '', locationId: P.locations[0] ? P.locations[0].id : '', crewCall: '07:00', shootCall: '08:00', lunch: '13:00', wrap: '18:00', deptCalls: [], cast: {}, crewOff: off, running: [], notes: '', emergency: '112 (mobile) · 10177 (ambulance)', weather: {}, token: '', hidePhones: false }; }
+function vCalls() {
+  if (!P.shootDays.length) return `<div class="card empty"><h2>Shoot days &amp; call sheets</h2><p style="margin-bottom:16px">You've budgeted ${P.days.shoot} shoot day${P.days.shoot == 1 ? '' : 's'}. Create them to start building call sheets.</p>
+    <div class="row" style="justify-content:center"><label class="f" style="width:180px;text-align:left">First shoot day<input type="date" id="firstDate"></label><button class="btn pri" data-act="makeDays" style="align-self:end">Create ${P.days.shoot || 1} shoot day${P.days.shoot == 1 ? '' : 's'}</button></div></div>`;
+  const d = curDay(); const idx = P.shootDays.indexOf(d);
+  const cast = P.contacts.filter(c => c.kind === 'cast'), crew = P.contacts.filter(c => c.kind !== 'cast');
+  const scenes = P.scenes.filter(s => s.dayId === d.id);
+  const shareUrl = d.token ? location.origin + '/call/' + d.token : '';
+  const w = d.weather || {};
+  return `
+  <div class="days">${P.shootDays.map((x, i) => `<button class="daychip ${x.id === d.id ? 'on' : ''}" data-act="pickDay" data-id="${x.id}"><b>Day ${i + 1}</b><small>${fmtShort(x.date)}</small></button>`).join('')}
+    <button class="daychip" data-act="addDay"><b>+ Day</b><small>add</small></button></div>
+  <div class="cs-layout"><div>
+    <div class="card"><div class="spread"><h2>Day ${idx + 1} of ${P.shootDays.length}</h2><button class="btn sm danger" data-act="delDay">Delete day</button></div>
+      <div class="grid g2" style="margin-top:10px">
+        <label class="f">Date<input type="date" data-day="date" data-rerender value="${esc(d.date)}"></label>
+        <label class="f">Location<select data-day="locationId" data-rerender><option value="">—</option>${P.locations.map(l => `<option value="${l.id}" ${d.locationId === l.id ? 'selected' : ''}>${esc(l.name || 'Location')}</option>`).join('')}</select></label>
+      </div>
+      ${P.locations.length ? '' : '<p class="hint" style="margin-top:8px">Add locations in the <b>Scenes &amp; locations</b> tab.</p>'}
+      <div class="grid g4" style="margin-top:12px">
+        <label class="f">Crew call<input type="time" data-day="crewCall" value="${esc(d.crewCall)}"></label>
+        <label class="f">Shooting call<input type="time" data-day="shootCall" value="${esc(d.shootCall)}"></label>
+        <label class="f">Lunch<input type="time" data-day="lunch" value="${esc(d.lunch)}"></label>
+        <label class="f">Est. wrap<input type="time" data-day="wrap" value="${esc(d.wrap)}"></label>
+      </div></div>
+
+    <div class="card"><div class="spread"><h2>Weather</h2><button class="btn sm" data-act="weather">☁ Get forecast</button></div>
+      <p class="hint">Forecasts are available up to 16 days before the shoot, for the location's town. You can also type it in.</p>
+      <div class="grid wgrid">
+        <label class="f">Conditions<input data-w="summary" value="${esc(w.summary)}"></label>
+        <label class="f">High °C<input data-w="high" value="${esc(w.high)}"></label>
+        <label class="f">Low °C<input data-w="low" value="${esc(w.low)}"></label>
+        <label class="f">Rain %<input data-w="rain" value="${esc(w.rain)}"></label>
+        <label class="f">Sunrise<input data-w="sunrise" value="${esc(w.sunrise)}"></label>
+        <label class="f">Sunset<input data-w="sunset" value="${esc(w.sunset)}"></label>
+      </div></div>
+
+    <div class="card"><div class="spread"><h2>Department calls</h2><div class="row"><button class="btn sm ghost" data-act="stdDepts">Add standard</button><button class="btn sm" data-act="addDept">+ Call</button></div></div>
+      <div style="margin-top:10px">${d.deptCalls.map(x => `<div class="dept-row"><input data-dcoll="deptCalls" data-id="${x.id}" data-k="dept" value="${esc(x.dept)}" placeholder="Department"><input type="time" data-dcoll="deptCalls" data-id="${x.id}" data-k="time" value="${esc(x.time)}"><button class="icon del" data-act="delDItem" data-dcoll="deptCalls" data-id="${x.id}">✕</button></div>`).join('') || '<p class="hint">Everyone on the general crew call.</p>'}</div></div>
+
+    <div class="card"><div class="spread"><h2>Cast today</h2><button class="btn sm ghost" data-act="castFromScenes">Tick cast from today's scenes</button></div>
+      ${cast.length ? `<div class="cast-row head" style="margin-top:10px"><span></span><span>Actor / character</span><span>Pick-up</span><span>Hair &amp; MU</span><span>On set</span></div>` + cast.map(c => { const t = d.cast[c.id] || {}; return `<div class="cast-row">
+        <input type="checkbox" data-cast="${c.id}" data-k="on" data-rerender ${t.on ? 'checked' : ''} aria-label="On call">
+        <div><b style="font-size:13px">${esc(c.name || 'Unnamed')}</b><div class="sub" style="font-size:12px">${esc(c.character || '')}</div></div>
+        <input type="time" data-cast="${c.id}" data-k="pickup" value="${esc(t.pickup)}" ${t.on ? '' : 'disabled'}>
+        <input type="time" data-cast="${c.id}" data-k="hmu" value="${esc(t.hmu)}" ${t.on ? '' : 'disabled'}>
+        <input type="time" data-cast="${c.id}" data-k="set" value="${esc(t.set)}" ${t.on ? '' : 'disabled'}></div>`; }).join('') : '<p class="hint" style="margin-top:8px">Add cast in the <b>Cast &amp; crew</b> tab.</p>'}
+    </div>
+
+    <div class="card"><h2>Crew on this call sheet</h2><p class="hint">Untick anyone not working today.</p>
+      ${crew.length ? `<div class="crewpick">${crew.map(c => `<label class="chk"><input type="checkbox" data-crew="${c.id}" ${d.crewOff[c.id] ? '' : 'checked'}> ${c.name ? esc(c.name) + ' <span class="sub">· ' + esc(c.role || '') + '</span>' : esc(c.role || 'Unnamed') + ' <span class="sub">(no name yet)</span>'}</label>`).join('')}</div>` : '<p class="hint">Add crew in the <b>Cast &amp; crew</b> tab.</p>'}
+    </div>
+
+    <div class="card"><h2>Scenes <span class="pill">${scenes.length} · ${eighthsToPages(scenes.reduce((a, s) => a + pagesToEighths(s.pages), 0))} pp</span></h2>
+      <p class="hint">Assign scenes to this day in the <b>Scenes &amp; locations</b> tab.</p>
+      ${scenes.map(s => `<div class="sub" style="padding:3px 0"><b style="color:var(--text)">${esc(s.no)}</b> · ${esc(s.ie)} ${esc(s.set)} · ${esc(s.dn)} · ${esc(s.desc)}</div>`).join('')}</div>
+
+    <div class="card"><div class="spread"><h2>Running order</h2><div class="row"><button class="btn sm ghost" data-act="buildRunning">Build from scenes</button><button class="btn sm" data-act="addRun">+ Row</button></div></div>
+      <div style="margin-top:10px">${d.running.map(x => `<div class="mini-row"><input type="text" data-dcoll="running" data-id="${x.id}" data-k="time" value="${esc(x.time)}" placeholder="08:00–09:00"><input data-dcoll="running" data-id="${x.id}" data-k="item" value="${esc(x.item)}" placeholder="What"><input data-dcoll="running" data-id="${x.id}" data-k="who" value="${esc(x.who)}" placeholder="Who / notes"><button class="icon del" data-act="delDItem" data-dcoll="running" data-id="${x.id}">✕</button></div>`).join('') || '<p class="hint">No running order yet.</p>'}</div></div>
+
+    <div class="card"><h2>Notes &amp; safety</h2>
+      <label class="f">Production notes<textarea data-day="notes" placeholder="Parking, PPE, closed set, what to bring…">${esc(d.notes)}</textarea></label>
+      <label class="f" style="margin-top:10px">Emergency numbers<input data-day="emergency" value="${esc(d.emergency)}"></label></div>
+
+    <div class="card"><h2>Share</h2>
+      <p class="hint">Publish a link your cast and crew can open on their phones, no account needed. Anyone with the link can see it, so hide phone numbers if it may be forwarded. They tap <b>Got it</b> to confirm. Republish after changes.</p>
+      <label class="chk" style="margin-bottom:12px"><input type="checkbox" data-day="hidePhones" ${d.hidePhones ? 'checked' : ''}> Hide phone numbers on the shared link</label>
+      <div class="row">
+        <button class="btn pri" data-act="publish">${d.token ? '↻ Update shared call sheet' : 'Publish share link'}</button>
+        ${d.token ? `<button class="btn" data-act="copyLink">Copy link</button><a class="btn" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=${encodeURIComponent(waText(d, shareUrl))}">WhatsApp</a><a class="btn ghost" target="_blank" rel="noopener" href="${esc(shareUrl)}">Open</a>` : ''}
+        <button class="btn" data-act="printCall">Print / PDF</button>
+        ${d.token ? '<button class="btn danger" data-act="unpublish">Take link down</button>' : ''}
+      </div>
+      ${d.token ? `<div id="acks" class="sub" style="margin-top:12px">Loading confirmations…</div>` : ''}
+    </div>
+  </div>
+  <div class="cs-preview"><div class="sub" style="margin-bottom:8px">Preview</div>${sheetHTML(sheetData(P, d))}</div></div>`;
+}
+function waText(d, url) { const i = P.shootDays.indexOf(d); return `🎬 ${P.title}: call sheet, Day ${i + 1}${d.date ? ' (' + fmtDate(d.date) + ')' : ''}. Crew call ${d.crewCall || 'TBC'}. ${url}`; }
+
+function sheetData(p, d) {
+  const i = p.shootDays.indexOf(d); const loc = p.locations.find(l => l.id === d.locationId) || {};
+  const crew = p.contacts.filter(c => c.kind !== 'cast' && !d.crewOff[c.id]);
+  const byDept = {}; crew.forEach(c => { const k = c.dept || 'Production'; (byDept[k] = byDept[k] || []).push({ name: c.name || '', role: c.role || '', phone: d.hidePhones ? '' : (c.phone || '') }); });
+  const depts = STD_DEPTS.filter(k => byDept[k]).concat(Object.keys(byDept).filter(k => !STD_DEPTS.includes(k)));
+  const cast = p.contacts.filter(c => c.kind === 'cast' && d.cast[c.id] && d.cast[c.id].on).map(c => ({ name: c.name || '', character: c.character || '', pickup: d.cast[c.id].pickup || '', hmu: d.cast[c.id].hmu || '', set: d.cast[c.id].set || '', phone: d.hidePhones ? '' : (c.phone || '') }));
+  const scenes = p.scenes.filter(s => s.dayId === d.id).map(s => ({ no: s.no || '', ie: s.ie || '', dn: s.dn || '', set: s.set || '', desc: s.desc || '', pages: s.pages || '', cast: s.cast || '' }));
+  const next = p.shootDays[i + 1];
+  const nextLoc = next ? (p.locations.find(l => l.id === next.locationId) || {}) : {};
+  return {
+    title: p.title, company: p.company || '', director: p.director || '', producer: p.producer || '',
+    dayNo: i + 1, dayCount: p.shootDays.length, date: d.date || '',
+    calls: { crew: d.crewCall || '', shoot: d.shootCall || '', lunch: d.lunch || '', wrap: d.wrap || '' },
+    loc: { name: loc.name || '', address: loc.address || '', town: loc.town || '', parking: loc.parking || '', contact: loc.contact || '', hospital: loc.hospital || '' },
+    weather: d.weather || {}, deptCalls: d.deptCalls.map(x => ({ dept: x.dept || '', time: x.time || '' })),
+    crew: depts.map(k => ({ dept: k, people: byDept[k] })), cast, scenes,
+    pages: eighthsToPages(p.scenes.filter(s => s.dayId === d.id).reduce((a, s) => a + pagesToEighths(s.pages), 0)),
+    running: d.running.map(x => ({ time: x.time || '', item: x.item || '', who: x.who || '' })),
+    notes: d.notes || '', emergency: d.emergency || '',
+    next: next ? { date: next.date || '', location: nextLoc.name || '', scenes: p.scenes.filter(s => s.dayId === next.id).map(s => s.no).join(', ') } : null,
+    updatedAt: Date.now()
+  };
+}
+/* Phone numbers only become links when they are plainly phone numbers. */
+function telLink(p) { p = String(p || ''); return /^\+?[0-9 ()-]{3,24}$/.test(p) ? `<a href="tel:${esc(p.replace(/[^0-9+]/g, ''))}">${esc(p)}</a>` : esc(p); }
+function mapLink(addr) { return addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : ''; }
+function sheetHTML(s) {
+  const w = s.weather || {};
+  const addr = [s.loc.address, s.loc.town].filter(Boolean).join(', ');
+  const hosp = s.loc.hospital;
+  return `<div class="cs">
+  <div class="cs-top"><div><div class="cs-title">${esc(s.title)}</div><div class="cs-meta">${[s.company, s.director && 'Director: ' + s.director, s.producer && 'Producer: ' + s.producer].filter(Boolean).map(esc).join(' · ')}</div></div>
+    <div class="cs-day"><div class="d">Call sheet · Day ${s.dayNo} of ${s.dayCount}</div><div class="date">${s.date ? fmtDate(s.date) : 'Date TBC'}</div></div></div>
+  <div class="calls"><div class="crew"><div class="k">Crew call</div><div class="v">${esc(s.calls.crew || '—')}</div></div><div><div class="k">Shooting</div><div class="v">${esc(s.calls.shoot || '—')}</div></div><div><div class="k">Lunch</div><div class="v">${esc(s.calls.lunch || '—')}</div></div><div><div class="k">Est. wrap</div><div class="v">${esc(s.calls.wrap || '—')}</div></div></div>
+  <div class="blocks">
+    <div class="blk"><h4>Location</h4><b>${esc(s.loc.name || 'TBC')}</b><br>${addr ? `<a href="${mapLink(addr)}" target="_blank" rel="noopener">${esc(addr)}</a>` : ''}${s.loc.parking ? `<br>Parking: ${esc(s.loc.parking)}` : ''}${s.loc.contact ? `<br>On site: ${esc(s.loc.contact)}` : ''}</div>
+    <div class="blk"><h4>Weather</h4>${w.summary || w.high || w.sunrise ? `<b>${esc(w.summary || '')}</b>${w.high ? ` · ${esc(w.high)}° / ${esc(w.low)}°` : ''}${w.rain !== undefined && w.rain !== '' ? ` · ${esc(w.rain)}% rain` : ''}<br>Sunrise ${esc(w.sunrise || '—')} · Sunset ${esc(w.sunset || '—')}` : 'TBC'}</div>
+  </div>
+  <div class="blocks">
+    <div class="blk emerg"><h4>Emergency</h4>${esc(s.emergency || '112')}${hosp ? `<br>Nearest hospital: <b>${esc(hosp)}</b>` : addr ? `<br><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('hospital near ' + addr)}" target="_blank" rel="noopener">Find nearest hospital</a>` : ''}</div>
+    <div class="blk"><h4>Department calls</h4>${s.deptCalls.length ? s.deptCalls.map(x => `${esc(x.dept)}: <b>${esc(x.time)}</b>`).join('<br>') : 'All crew on general call'}</div>
+  </div>
+  ${s.scenes.length ? `<h4>Scenes · ${esc(s.pages)} pages</h4><table><thead><tr><th>Sc</th><th>Set</th><th>D/N</th><th>Description</th><th>Cast</th><th>Pgs</th></tr></thead><tbody>${s.scenes.map(x => `<tr><td><b>${esc(x.no)}</b></td><td>${esc(x.ie)} ${esc(x.set)}</td><td>${esc(x.dn)}</td><td>${esc(x.desc)}</td><td>${esc(x.cast)}</td><td>${esc(x.pages)}</td></tr>`).join('')}</tbody></table>` : ''}
+  ${s.cast.length ? `<h4>Cast</h4><table><thead><tr><th>Actor</th><th>Character</th><th>Pick-up</th><th>H&amp;MU</th><th>On set</th>${s.cast.some(c => c.phone) ? '<th>Phone</th>' : ''}</tr></thead><tbody>${s.cast.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.character)}</td><td>${esc(c.pickup)}</td><td>${esc(c.hmu)}</td><td>${esc(c.set)}</td>${s.cast.some(x => x.phone) ? `<td>${c.phone ? telLink(c.phone) : ''}</td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
+  ${s.running.length ? `<h4>Running order</h4><table><thead><tr><th style="width:110px">Time</th><th>What</th><th>Who / notes</th></tr></thead><tbody>${s.running.map(r => `<tr><td><b>${esc(r.time)}</b></td><td>${esc(r.item)}</td><td>${esc(r.who)}</td></tr>`).join('')}</tbody></table>` : ''}
+  ${s.crew.length ? `<h4>Crew</h4><table><tbody>${s.crew.map(g => `<tr class="dept"><td colspan="3">${esc(g.dept)}</td></tr>` + g.people.map(c => `<tr><td>${esc(c.role)}</td><td><b>${esc(c.name)}</b></td><td>${c.phone ? telLink(c.phone) : ''}</td></tr>`).join('')).join('')}</tbody></table>` : ''}
+  ${s.notes ? `<div class="blk" style="margin-bottom:12px"><h4>Notes</h4>${esc(s.notes).replace(/\n/g, '<br>')}</div>` : ''}
+  ${s.next ? `<div class="blk" style="margin-bottom:12px"><h4>Next shoot day</h4>${s.next.date ? fmtDate(s.next.date) : 'Date TBC'}${s.next.location ? ' · ' + esc(s.next.location) : ''}${s.next.scenes ? ' · Scenes ' + esc(s.next.scenes) : ''}</div>` : ''}
+  <div class="foot"><span>Made with the 4flieks Lab</span><span>Updated ${new Date(s.updatedAt || Date.now()).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span></div>
+</div>`;
+}
+async function loadAcks() {
+  const el = $('#acks'); const d = curDay(); if (!el || !d || !d.token) return;
+  const { ok, d: r } = await call('acks', { id: P.id, dayId: d.id });
+  if (!ok) { el.textContent = 'Could not load confirmations.'; return; }
+  const a = r.items || [];
+  el.innerHTML = a.length ? `<b style="color:var(--text)">${a.length} confirmed:</b> ` + a.map(x => `<span class="pill good">✓ ${esc(x.name)}</span>`).join(' ') : 'No confirmations yet.';
+}
+async function fetchWeather() {
+  const d = curDay(); const loc = P.locations.find(l => l.id === d.locationId);
+  const place = loc && (loc.town || loc.address);
+  if (!place) return toast('Add a town / suburb to this day\'s location first', true);
+  if (!d.date) return toast('Set the shoot date first', true);
+  toast('Fetching forecast…');
+  const { ok, d: r } = await call('weather', { place, date: d.date });
+  if (!ok || !r.ok) return toast(r.message || 'Weather lookup failed', true);
+  d.weather = r.weather; markDirty(); render(); toast('Forecast added');
+}
+async function publish() {
+  const d = curDay();
+  if (!canEdit()) return toast('Confirm your email first', true);
+  await flushSave();
+  const { ok, d: r } = await call('publish', { id: P.id, dayId: d.id });
+  if (!ok) return toast(r.message || 'Could not publish', true);
+  d.token = r.token; render(); toast('Call sheet published');
+}
+async function unpublish() {
+  const d = curDay();
+  if (!confirm('Take this call sheet link down? Anyone who has it will see "not found".')) return;
+  await flushSave();
+  const { ok, d: r } = await call('unpublish', { id: P.id, dayId: d.id });
+  if (!ok) return toast(r.message || 'Could not take it down', true);
+  d.token = ''; render(); toast('Link taken down');
+}
+
+/* ═════════════ ACTUALS ═════════════ */
+function vActuals() {
+  const p = P;
+  if (!p.locked) return `<div class="card empty"><h2>Track what you spend</h2><p style="max-width:520px;margin:0 auto 16px">Lock your budget before the shoot. Then log every invoice and payment against a line and see where you're over or under.</p><button class="btn pri" data-act="lock">🔒 Lock budget at ${R(totals().grand)}</button></div>`;
+  const L = p.locked; const costs = p.costs;
+  const actualBy = {}, secOther = {};
+  costs.forEach(c => { if (c.lineId) actualBy[c.lineId] = (actualBy[c.lineId] || 0) + num(c.amount); else secOther[c.secId] = (secOther[c.secId] || 0) + num(c.amount); });
+  const spent = costs.reduce((a, c) => a + num(c.amount), 0);
+  const lockedDirect = Object.values(L.lines).reduce((a, v) => a + num(v), 0);
+  const remaining = L.grand - spent;
+  let rows = '';
+  GROUPS.forEach(([g, gname]) => {
+    const secs = p.sections.filter(s => s.group === g); if (!secs.length) return;
+    rows += `<tr class="gh"><td colspan="5">${gname}</td></tr>`;
+    secs.forEach(s => {
+      const sb = s.lines.reduce((a, l) => a + num(L.lines[l.id]), 0);
+      const sa = s.lines.reduce((a, l) => a + (actualBy[l.id] || 0), 0) + (secOther[s.id] || 0);
+      rows += `<tr class="tt"><td>${esc(s.name)}</td><td class="r">${R(sb)}</td><td class="r">${R(sa)}</td><td class="r ${sb - sa >= 0 ? 'var-pos' : 'var-neg'}">${sa ? R(sb - sa) : '—'}</td><td><button class="btn sm ghost" data-act="addCost" data-s="${s.id}" title="Cost for this section, not a specific line">+ Other</button></td></tr>`;
+      s.lines.forEach(l => {
+        const b = num(L.lines[l.id]), a = actualBy[l.id] || 0; const lc = costs.filter(c => c.lineId === l.id);
+        rows += `<tr><td style="padding-left:18px">${esc(l.desc)}${L.lines[l.id] === undefined ? ' <span class="pill acc">added after lock</span>' : ''}${lc.length ? `<div class="costs">${lc.map(c => `<div>· ${esc(c.supplier)} ${c.ref ? '(' + esc(c.ref) + ')' : ''} <span class="sub">${esc(c.date)}</span><span class="amt">${R(c.amount)}</span><button class="icon" data-act="editCost" data-id="${c.id}">✎</button></div>`).join('')}</div>` : ''}</td>
+          <td class="r">${R(b)}</td><td class="r">${a ? R(a) : '—'}</td><td class="r ${b - a >= 0 ? 'var-pos' : 'var-neg'}">${a ? R(b - a) : '—'}</td>
+          <td><button class="btn sm" data-act="addCost" data-s="${s.id}" data-l="${l.id}">+ Cost</button></td></tr>`;
+      });
+      costs.filter(c => !c.lineId && c.secId === s.id).forEach(c => rows += `<tr><td style="padding-left:18px"><div class="costs" style="margin:0"><div>· Other: ${esc(c.supplier)} ${c.ref ? '(' + esc(c.ref) + ')' : ''} <span class="sub">${esc(c.date)}</span><button class="icon" data-act="editCost" data-id="${c.id}">✎</button></div></div></td><td></td><td class="r">${R(c.amount)}</td><td></td><td></td></tr>`);
+    });
+  });
+  return `
+  <div class="toolbar"><div class="grow"><h1 class="page">Actuals</h1><div class="sub">Against the budget locked on ${new Date(L.at).toLocaleDateString('en-ZA')}</div></div><button class="btn" data-act="costCsv">Export costs CSV</button></div>
+  <div class="kpis">
+    <div class="kpi"><div class="k">Locked budget</div><div class="v">${R(L.grand)}</div><div class="s">${R(lockedDirect)} direct + contingency, fees${p.vatOn ? ', VAT' : ''}</div></div>
+    <div class="kpi"><div class="k">Spent</div><div class="v">${R(spent)}</div><div class="s">${costs.length} cost${costs.length === 1 ? '' : 's'} logged</div></div>
+    <div class="kpi ${remaining < 0 ? '' : 'hl'}"><div class="k">Remaining</div><div class="v ${remaining < 0 ? 'var-neg' : ''}">${R(remaining)}</div><div class="s">${pct(L.grand ? spent / L.grand * 100 : 0)} used</div></div>
+    <div class="kpi"><div class="k">Direct lines</div><div class="v ${lockedDirect - spent < 0 ? 'var-neg' : ''}">${R(lockedDirect - spent)}</div><div class="s">left before touching contingency</div></div>
+  </div>
+  <div class="card tscroll"><table class="t"><thead><tr><th>Line</th><th class="r">Budget</th><th class="r">Actual</th><th class="r">Variance</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function costModal(ctx) {
+  const c = ctx.id ? P.costs.find(x => x.id === ctx.id) : { supplier: '', amount: '', date: today(), ref: '', notes: '', secId: ctx.s, lineId: ctx.l || null };
+  const sec = P.sections.find(s => s.id === c.secId); const line = sec && sec.lines.find(l => l.id === c.lineId);
+  const suppliers = [...new Set(P.costs.map(x => x.supplier).filter(Boolean))];
+  modal(`<h2>${ctx.id ? 'Edit cost' : 'Log a cost'}</h2><p class="hint">${esc(sec ? sec.name : '')}${line ? ' → ' + esc(line.desc) : ' → other costs in this section'}</p>
+    <div class="grid g2">
+      <label class="f">Paid to (supplier / crew)<input id="cSup" list="supList" value="${esc(c.supplier)}"><datalist id="supList">${suppliers.map(s => `<option value="${esc(s)}">`).join('')}</datalist></label>
+      <label class="f">Amount (R)<input id="cAmt" type="number" step="any" min="0" inputmode="decimal" value="${esc(c.amount)}"></label>
+      <label class="f">Date paid<input id="cDate" type="date" value="${esc(c.date)}"></label>
+      <label class="f">Invoice / ref<input id="cRef" value="${esc(c.ref)}"></label>
+    </div>
+    <label class="f" style="margin-top:10px">Notes<textarea id="cNotes">${esc(c.notes)}</textarea></label>
+    <div class="actions">${ctx.id ? '<button class="btn danger" data-act="delCost" data-id="' + c.id + '" style="margin-right:auto">Delete</button>' : ''}<button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="saveCost" data-id="${ctx.id || ''}" data-s="${esc(c.secId)}" data-l="${esc(c.lineId || '')}">Save</button></div>`);
+  setTimeout(() => $('#cSup') && $('#cSup').focus(), 30);
+}
+
+/* ═════════════ AI supplier-quote import ═════════════ */
+let IMPORT = null;
+function importModal() {
+  const opts = P.sections.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  modal(`<h2>✦ Import a supplier quote</h2><p class="hint">Upload a rental house or supplier quote as a PDF. The Lab reads every line item (qty, days, rate excl. VAT) so you can check them and add them to your budget. ${ME.imports && ME.imports.limit != null ? `${Math.max(0, ME.imports.limit - ME.imports.used)} of ${ME.imports.limit} imports left this month.` : ''}</p>
+    <label class="f">Quote PDF<input type="file" id="impFile" accept="application/pdf"></label>
+    <label class="f" style="margin-top:10px">Add to section<select id="impSec"><option value="__new">New section…</option>${opts}</select></label>
+    <label class="f" style="margin-top:10px" id="impNewWrap">New section name<input id="impNew" placeholder="e.g. Camera rental (Media Film Service)"></label>
+    <div id="impStatus" class="hint" style="margin-top:10px"></div>
+    <div class="actions"><button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="runImport" id="impGo">Read quote</button></div>`);
+  $('#impSec').addEventListener('change', e => $('#impNewWrap').classList.toggle('hidden', e.target.value !== '__new'));
+}
+async function runImport() {
+  if (!canEdit()) return toast('Confirm your email first', true);
+  const f = $('#impFile').files[0]; if (!f) return toast('Choose a PDF first', true);
+  if (!/\.pdf$/i.test(f.name)) return toast('Choose a PDF file', true);
+  if (f.size > 4 * 1024 * 1024) return toast('PDF too large. Keep it under 4 MB or split it', true);
+  const st = $('#impStatus'); const go = $('#impGo'); go.disabled = true; st.textContent = 'Uploading…';
+  const secId = $('#impSec').value, newName = $('#impNew').value.trim() || f.name.replace(/\.pdf$/i, '');
+  try {
+    const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
+    const { ok, d } = await call('import-start', { fileBase64: b64, fileName: f.name });
+    if (!ok) throw new Error(d.message || 'Could not start');
+    st.textContent = 'Reading your quote… this can take a minute.';
+    const until = Date.now() + 5 * 60e3;
+    for (;;) {
+      await new Promise(r => setTimeout(r, 3000));
+      const { ok: ok2, d: s2 } = await call('import-status', { jobId: d.jobId });
+      if (!ok2) throw new Error(s2.message || 'Lost track of the import');
+      if (s2.status === 'error') throw new Error(s2.error);
+      if (s2.status === 'done') { IMPORT = { items: s2.items.map(it => ({ ...it, on: true })), secId, newName, remaining: null }; break; }
+      if (Date.now() > until) throw new Error('This is taking too long. Try a smaller PDF.');
+    }
+    const { d: L } = await call('list'); ME.imports = L.imports || ME.imports;
+    if (ME.imports && ME.imports.limit != null) IMPORT.remaining = Math.max(0, ME.imports.limit - ME.imports.used);
+    importPreview();
+  } catch (e) { if ($('#impGo')) { go.disabled = false; st.innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; } }
+}
+function importPreview() {
+  const I = IMPORT; const total = I.items.filter(i => i.on).reduce((a, i) => a + num(i.qty) * num(i.days) * num(i.rate), 0);
+  modal(`<h2>Found ${I.items.length} line${I.items.length === 1 ? '' : 's'}</h2><p class="hint">Untick anything you don't want. Check the rates against the PDF before adding.${I.remaining != null ? ' ' + I.remaining + ' free import' + (I.remaining === 1 ? '' : 's') + ' left this month.' : ''}</p>
+    <div class="imp-row sub" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em"><span></span><span>Item</span><span>Qty</span><span>Days</span><span>Rate</span></div>
+    <div style="max-height:50vh;overflow:auto">${I.items.map((it, k) => `<div class="imp-row"><input type="checkbox" data-imp="${k}" data-k="on" ${it.on ? 'checked' : ''}><input data-imp="${k}" data-k="name" value="${esc(it.name)}"><input class="n" data-imp="${k}" data-k="qty" value="${it.qty}"><input class="n" data-imp="${k}" data-k="days" value="${it.days}"><input class="n" data-imp="${k}" data-k="rate" value="${it.rate}"></div>`).join('')}</div>
+    <div class="actions"><span class="sub" style="margin-right:auto;align-self:center">Selected: <b id="impTotal">${R(total)}</b></span><button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="confirmImport">Add to budget</button></div>`, true);
+}
+function confirmImport() {
+  const I = IMPORT; let sec = P.sections.find(s => s.id === I.secId);
+  if (!sec) { sec = { id: uid('s'), name: I.newName || 'Supplier quote', group: 'btl', open: true, lines: [] }; P.sections.push(sec); }
+  const add = I.items.filter(i => i.on);
+  add.forEach(i => sec.lines.push({ id: uid('l'), desc: i.name, qty: num(i.qty) || 1, units: num(i.days) || 1, unit: 'Day', link: null, rate: num(i.rate), role: null, notes: 'Imported' }));
+  sec.open = true; closeModal(); markDirty(); TAB = 'budget'; render(); toast(add.length + ' lines added to ' + sec.name);
+}
+
+/* ═════════════ print & export ═════════════ */
+function doPrint(html) { $('#print').innerHTML = html; document.body.classList.add('printing'); setTimeout(() => { window.print(); }, 50); }
+window.addEventListener('afterprint', () => document.body.classList.remove('printing'));
+function printBudget() {
+  const p = P, T = totals();
+  let top = '', det = '';
+  GROUPS.forEach(([g, gname]) => {
+    const secs = p.sections.filter(s => s.group === g); if (!secs.length) return;
+    top += `<tr class="gh"><td>${gname}</td><td class="r">${R(T.grp[g])}</td></tr>` + secs.map(s => `<tr><td>&nbsp;&nbsp;${esc(s.name)}</td><td class="r">${R(T.secs[s.id])}</td></tr>`).join('');
+    det += `<h3>${gname}</h3><table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Units</th><th class="r">Rate</th><th class="r">Total</th></tr></thead><tbody>` +
+      secs.map(s => `<tr class="gh"><td colspan="4">${esc(s.name)}</td><td class="r">${R(T.secs[s.id])}</td></tr>` + s.lines.map(l => `<tr><td>${esc(l.desc)}</td><td class="r">${l.qty}</td><td class="r">${lineUnits(l)} ${l.link ? LINKS[l.link].toLowerCase() : esc(l.unit)}</td><td class="r">${R2(num(l.rate))}</td><td class="r">${R(T.lines[l.id])}</td></tr>`).join('')).join('') + `</tbody></table>`;
+  });
+  const hdr = `<h1>${esc(p.title)}: budget</h1><div>${[FORMATS[p.type], p.company, p.director && 'Dir. ' + p.director, p.producer && 'Prod. ' + p.producer].filter(Boolean).map(esc).join(' · ')}</div><div>${p.days.prep} prep · ${p.days.shoot} shoot · ${p.days.post} post days${T.series ? ' per episode · ' + T.eps + ' episodes' : ''} · runtime ${p.runtime} min · printed ${new Date().toLocaleDateString('en-ZA')}</div>`;
+  doPrint(`<div class="pr">${hdr}<h3>Top sheet</h3><table><tbody>${top}
+    <tr class="tt"><td>Direct costs${T.series ? ' per episode' : ''}</td><td class="r">${R(T.direct)}</td></tr><tr><td>Contingency ${p.contPct}%</td><td class="r">${R(T.cont)}</td></tr><tr><td>Production fee ${p.feePct}%</td><td class="r">${R(T.fee)}</td></tr>
+    ${T.series ? `<tr><td>× ${T.eps} episodes + once-off</td><td class="r">${R(T.exVat)}</td></tr>` : ''}
+    ${p.vatOn ? `<tr><td>VAT ${p.vatRate}%</td><td class="r">${R(T.vat)}</td></tr>` : ''}<tr class="grand"><td>Total budget</td><td class="r">${R(T.grand)}</td></tr></tbody></table>
+    <p style="margin-top:6px">Per finished minute: <b>${R(T.perMin)}</b> · Break-even on 4flieks: <b>${N(T.beOwn)}</b> sales at R${LAB.priceOwn} or ${N(T.beRent)} rentals</p>
+    <div class="pb"></div>${hdr}${det}</div>`);
+}
+function download(name, text) { const b = new Blob([text], { type: 'text/csv;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+const csvCell = v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+function exportCsv() {
+  const T = totals(); const rows = [['Group', 'Section', 'Description', 'Qty', 'Units', 'Unit', 'Rate', 'Total']];
+  P.sections.forEach(s => s.lines.forEach(l => rows.push([GROUP_NAME[s.group], s.name, l.desc, l.qty, lineUnits(l), l.link ? LINKS[l.link] : l.unit, num(l.rate), Math.round(T.lines[l.id] * 100) / 100])));
+  rows.push([], ['', '', 'Direct costs', '', '', '', '', T.direct], ['', '', 'Contingency ' + P.contPct + '%', '', '', '', '', T.cont], ['', '', 'Production fee ' + P.feePct + '%', '', '', '', '', T.fee], ['', '', 'VAT', '', '', '', '', T.vat], ['', '', 'Total', '', '', '', '', T.grand]);
+  download((P.title || 'budget').replace(/[^\w\- ]+/g, '') + ' - budget.csv', '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\n'));
+}
+function exportCostCsv() {
+  const rows = [['Date', 'Paid to', 'Section', 'Line', 'Ref', 'Amount', 'Notes']];
+  P.costs.forEach(c => { const s = P.sections.find(x => x.id === c.secId); const l = s && s.lines.find(x => x.id === c.lineId); rows.push([c.date, c.supplier, s ? s.name : '', l ? l.desc : 'Other', c.ref, num(c.amount), c.notes]); });
+  download((P.title || 'costs').replace(/[^\w\- ]+/g, '') + ' - costs.csv', '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\n'));
+}
+
+/* ═════════════ modal ═════════════ */
+function modal(html, wide) { $('#modalRoot').innerHTML = `<div class="modal-bg" data-act="bgClose"><div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div></div>`; }
+function closeModal() { $('#modalRoot').innerHTML = ''; }
+let NEW_TYPE = 'short';
+function newProdModal() {
+  const tpls = [['short', 'Short film', '10–15 min, 3 shoot days, full crew'], ['music', 'Music video', '1 shoot day, lean crew'], ['feature', 'Feature film', '90 min, 18 shoot days'], ['series', 'Series episode', 'Per-episode budget + once-off costs'], ['other', 'Blank', 'Empty sections, build your own']];
+  modal(`<h2>New production</h2><p class="hint">Templates come with starting rates in rands. Every number is editable.</p>
+    <label class="f">Title<input id="npTitle" placeholder="e.g. The Nothing Mirror"></label>
+    <div class="tpl-grid">${tpls.map(([k, n, d]) => `<button class="tpl ${NEW_TYPE === k ? 'on' : ''}" data-act="pickTpl" data-k="${k}"><b>${n}</b><small>${d}</small></button>`).join('')}</div>
+    <div class="actions"><button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="createProd">Create</button></div>`);
+  setTimeout(() => $('#npTitle') && $('#npTitle').focus(), 30);
+}
+
+/* ═════════════ events ═════════════ */
+function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; ks.slice(0, -1).forEach(k => o = o[k] = o[k] || {}); o[ks[ks.length - 1]] = val; }
+function onField(e) {
+  const el = e.target; if (!P && !el.dataset.imp) return;
+  const ds = el.dataset;
+  const val = el.type === 'checkbox' ? el.checked : (ds.num !== undefined ? num(el.value) : el.value);
+  let handled = true;
+  if (ds.imp !== undefined) { const it = IMPORT.items[+ds.imp]; it[ds.k] = el.type === 'checkbox' ? el.checked : (ds.k === 'name' ? el.value : num(el.value)); const t = $('#impTotal'); if (t) t.textContent = R(IMPORT.items.filter(i => i.on).reduce((a, i) => a + num(i.qty) * num(i.days) * num(i.rate), 0)); return; }
+  else if (ds.p) { setPath(P, ds.p, val); if (ds.p === 'title') { const o = $('#prodSel').selectedOptions[0]; if (o) o.textContent = val || 'Untitled'; } }
+  else if (ds.s && ds.l) {
+    const s = P.sections.find(x => x.id === ds.s), l = s && s.lines.find(x => x.id === ds.l); if (!l) return;
+    if (ds.k === 'unitSel') { if (val.startsWith('link:')) { l.link = val.slice(5); l.unit = 'Day'; } else { l.link = null; l.unit = val; if (!num(l.units)) l.units = 1; } }
+    else l[ds.k] = val;
+  }
+  else if (ds.s) { const s = P.sections.find(x => x.id === ds.s); if (s) s[ds.k] = val; }
+  else if (ds.coll) { const it = P[ds.coll].find(x => x.id === ds.id); if (it) it[ds.k] = val; }
+  else if (ds.day) { curDay()[ds.day] = val; }
+  else if (ds.w) { const d = curDay(); d.weather = d.weather || {}; d.weather[ds.w] = val; }
+  else if (ds.dcoll) { const it = curDay()[ds.dcoll].find(x => x.id === ds.id); if (it) it[ds.k] = val; }
+  else if (ds.cast) { const d = curDay(); d.cast[ds.cast] = d.cast[ds.cast] || {}; d.cast[ds.cast][ds.k] = val; }
+  else if (ds.crew) { const d = curDay(); if (el.checked) delete d.crewOff[ds.crew]; else d.crewOff[ds.crew] = true; }
+  else handled = false;
+  if (!handled) return;
+  markDirty();
+  if (ds.rerender !== undefined && e.type === 'change') render();
+  else { refreshCalc(); if (TAB === 'calls') refreshPreview(); }
+}
+let prevT = null;
+function refreshPreview() { clearTimeout(prevT); prevT = setTimeout(() => { const pv = $('.cs-preview'); const d = curDay(); if (pv && d) pv.innerHTML = `<div class="sub" style="margin-bottom:8px">Preview</div>` + sheetHTML(sheetData(P, d)); }, 250); }
+document.addEventListener('input', e => { if (e.target.matches('select,input[type=checkbox]')) return; onField(e); });
+document.addEventListener('change', e => { if (e.target.matches('select,input[type=checkbox],input[type=date]')) onField(e); });
+
+const ACT = {
+  newProd: newProdModal, closeModal, bgClose: (el, e) => { if (e.target === el) closeModal(); },
+  pickTpl: el => { NEW_TYPE = el.dataset.k; $$('.tpl').forEach(t => t.classList.toggle('on', t.dataset.k === NEW_TYPE)); },
+  createProd: async () => {
+    if (!canEdit()) return toast('Confirm your email first', true);
+    const t = $('#npTitle').value.trim(); const p = newProduction(t, NEW_TYPE); if (!p.type) p.type = NEW_TYPE;
+    const { ok, d } = await call('create', { production: withoutId(p) });
+    if (!ok) return toast(d.message || 'Could not create it', true);
+    P = normalize(Object.assign(d.production, { id: d.id })); INDEX.push({ id: d.id, title: P.title, type: P.type, updated_at: Date.now() });
+    TAB = 'budget'; CUR_DAY = null; closeModal(); saveUI(); render(); toast('Production created');
+  },
+  dupProd: async () => {
+    await flushSave();
+    const c = JSON.parse(JSON.stringify(withoutId(P))); c.title = (P.title + ' (copy)').slice(0, 120); c.locked = null; c.costs = [];
+    const { ok, d } = await call('create', { production: c });
+    if (!ok) return toast(d.message || 'Could not duplicate', true);
+    P = normalize(Object.assign(d.production, { id: d.id })); INDEX.push({ id: d.id, title: P.title, type: P.type, updated_at: Date.now() });
+    CUR_DAY = null; saveUI(); render(); toast('Duplicated');
+  },
+  delProd: async () => {
+    if (!confirm('Delete "' + P.title + '"? Its call sheet links stop working too. This can\'t be undone.')) return;
+    clearTimeout(saveTimer); saveTimer = null;
+    const { ok, d } = await call('delete', { id: P.id });
+    if (!ok) return toast(d.message || 'Could not delete', true);
+    INDEX = INDEX.filter(x => x.id !== P.id); P = null;
+    const next = INDEX.slice().sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))[0];
+    if (next) await openProduction(next.id);
+    saveUI(); render(); toast('Deleted');
+  },
+  resendVerify: async el => { el.disabled = true; try { await USER.sendEmailVerification({ url: 'https://4flieks.com/lab/budget' }); el.textContent = 'Sent. Check your inbox (and spam).'; } catch (e) { el.textContent = 'Could not send. Try again in a minute.'; } },
+  reload: () => location.reload(),
+  unpublish,
+  toggleSec: el => { const s = P.sections.find(x => x.id === el.dataset.s); s.open = !s.open; markDirty(); render(); },
+  addLine: el => { const s = P.sections.find(x => x.id === el.dataset.s); s.lines.push({ id: uid('l'), desc: '', qty: 1, units: 1, unit: 'Day', link: null, rate: 0, role: null, notes: '' }); markDirty(); render(); const ins = $$(`input.desc[data-s="${s.id}"]`); ins.length && ins[ins.length - 1].focus(); },
+  delLine: el => { const s = P.sections.find(x => x.id === el.dataset.s); const l = s.lines.find(x => x.id === el.dataset.l); if (P.costs.some(c => c.lineId === l.id) && !confirm('This line has logged costs. Delete anyway? The costs move to "other" for this section.')) return; P.costs.forEach(c => { if (c.lineId === l.id) c.lineId = null; }); s.lines = s.lines.filter(x => x !== l); markDirty(); render(); },
+  addSec: el => { P.sections.push({ id: uid('s'), name: 'New section', group: el.dataset.g, open: true, lines: [{ id: uid('l'), desc: '', qty: 1, units: 1, unit: 'Day', link: null, rate: 0, notes: '' }] }); markDirty(); render(); },
+  delSec: el => { const s = P.sections.find(x => x.id === el.dataset.s); if ((s.lines.length || P.costs.some(c => c.secId === s.id)) && !confirm('Delete section "' + s.name + '" and its ' + s.lines.length + ' lines?')) return; P.sections = P.sections.filter(x => x !== s); P.costs = P.costs.filter(c => c.secId !== s.id); markDirty(); render(); },
+  secUp: el => moveSec(el.dataset.s, -1), secDown: el => moveSec(el.dataset.s, 1),
+  lock: () => { const T = totals(); if (P.locked && !confirm('Re-lock at the current budget of ' + R(T.grand) + '? Actuals will be compared to the new version.')) return; P.locked = { at: Date.now(), grand: T.grand, lines: { ...T.lines }, secs: { ...T.secs } }; markDirty(); render(); toast('Budget locked at ' + R(T.grand)); },
+  csv: exportCsv, costCsv: exportCostCsv, printBudget,
+  openImport: () => { if (!canEdit()) return toast('Confirm your email first', true); importModal(); },
+  runImport, confirmImport,
+  addPerson: el => { P.contacts.push({ id: uid('c'), kind: el.dataset.kind, name: '', role: '', dept: el.dataset.kind === 'cast' ? 'Cast' : 'Production', character: '', phone: '', email: '', agent: '' }); markDirty(); render(); },
+  pullRoles: () => {
+    let n = 0; const have = new Set(P.contacts.map(c => (c.kind + '|' + (c.role || c.character || '')).toLowerCase()));
+    P.sections.forEach(s => s.lines.forEach(l => {
+      if (!l.role) return; const count = Math.max(1, Math.min(20, Math.round(num(l.qty)) || 1));
+      for (let i = 1; i <= count; i++) {
+        const label = l.desc.replace(/\s*\(.*?\)\s*/g, '').replace(/ — prep$/, '') + (count > 1 ? ' ' + i : '');
+        const key = (l.role + '|' + label).toLowerCase(); if (have.has(key)) continue; have.add(key);
+        if (l.role === 'cast') P.contacts.push({ id: uid('c'), kind: 'cast', name: '', character: label, dept: 'Cast', phone: '', email: '', agent: '' });
+        else P.contacts.push({ id: uid('c'), kind: 'crew', name: '', role: label, dept: deptFor(s.name, l.desc), phone: '', email: '' });
+        n++;
+      }
+    }));
+    markDirty(); render(); toast(n ? n + ' roles added. Fill in the names' : 'All budget roles are already listed');
+  },
+  delItem: el => { P[el.dataset.coll] = P[el.dataset.coll].filter(x => x.id !== el.dataset.id); markDirty(); render(); },
+  addLoc: () => { P.locations.push({ id: uid('o'), name: '', address: '', town: '', parking: '', contact: '', hospital: '' }); markDirty(); render(); },
+  addScene: () => { const last = P.scenes[P.scenes.length - 1]; P.scenes.push({ id: uid('sc'), no: String((num(last && last.no) || P.scenes.length) + 1), ie: 'INT', dn: 'DAY', set: '', desc: '', pages: '', cast: '', dayId: '' }); markDirty(); render(); },
+  makeDays: () => { const start = ($('#firstDate') || {}).value; const n = Math.max(1, num(P.days.shoot)); for (let i = 0; i < n; i++) { let dt = ''; if (start) { const x = new Date(start + 'T12:00:00'); x.setDate(x.getDate() + i); dt = x.toISOString().slice(0, 10); } P.shootDays.push(newDay(dt)); } CUR_DAY = P.shootDays[0].id; markDirty(); render(); },
+  addDay: () => { const last = P.shootDays[P.shootDays.length - 1]; let dt = ''; if (last && last.date) { const x = new Date(last.date + 'T12:00:00'); x.setDate(x.getDate() + 1); dt = x.toISOString().slice(0, 10); } const d = newDay(dt); if (last) { d.locationId = last.locationId; d.crewCall = last.crewCall; d.shootCall = last.shootCall; d.lunch = last.lunch; d.wrap = last.wrap; } P.shootDays.push(d); CUR_DAY = d.id; markDirty(); render(); },
+  pickDay: el => { CUR_DAY = el.dataset.id; render(); },
+  delDay: () => { const d = curDay(); if (!confirm('Delete this shoot day? Its scenes become unscheduled.')) return; P.scenes.forEach(s => { if (s.dayId === d.id) s.dayId = ''; }); P.shootDays = P.shootDays.filter(x => x !== d); CUR_DAY = null; markDirty(); render(); },
+  weather: fetchWeather,
+  addDept: () => { curDay().deptCalls.push({ id: uid('dc'), dept: '', time: '' }); markDirty(); render(); },
+  stdDepts: () => { const d = curDay(); const have = new Set(d.deptCalls.map(x => x.dept)); STD_DEPTS.filter(x => !have.has(x) && x !== 'Cast' && x !== 'Post-production').forEach(x => d.deptCalls.push({ id: uid('dc'), dept: x, time: d.crewCall })); markDirty(); render(); },
+  delDItem: el => { const d = curDay(); d[el.dataset.dcoll] = d[el.dataset.dcoll].filter(x => x.id !== el.dataset.id); markDirty(); render(); },
+  addRun: () => { curDay().running.push({ id: uid('r'), time: '', item: '', who: '' }); markDirty(); render(); },
+  buildRunning: () => {
+    const d = curDay(); const sc = P.scenes.filter(s => s.dayId === d.id);
+    if (!sc.length) return toast('Assign scenes to this day first', true);
+    if (d.running.length && !confirm('Replace the current running order?')) return;
+    d.running = [{ id: uid('r'), time: d.crewCall, item: 'Crew call · set up', who: 'All crew' }];
+    sc.forEach((s, i) => { d.running.push({ id: uid('r'), time: i === 0 ? d.shootCall : '', item: `Sc ${s.no}: ${s.ie} ${s.set} (${s.dn})${s.desc ? ', ' + s.desc : ''}`, who: s.cast || '' }); if (i === Math.floor(sc.length / 2) - 1 || (sc.length === 1 && i === 0)) d.running.push({ id: uid('r'), time: d.lunch, item: 'Lunch', who: '' }); });
+    d.running.push({ id: uid('r'), time: d.wrap, item: 'Wrap & strike', who: 'All crew' });
+    markDirty(); render();
+  },
+  castFromScenes: () => {
+    const d = curDay(); const text = P.scenes.filter(s => s.dayId === d.id).map(s => (s.cast || '').toLowerCase()).join(' | ');
+    if (!text.trim()) return toast('No cast listed in today\'s scenes', true);
+    let n = 0; P.contacts.filter(c => c.kind === 'cast').forEach(c => { const hit = [c.character, c.name].filter(Boolean).some(x => text.includes(x.toLowerCase())); if (hit) { d.cast[c.id] = Object.assign({ pickup: '', hmu: '', set: d.shootCall }, d.cast[c.id] || {}, { on: true }); n++; } });
+    markDirty(); render(); toast(n + ' cast ticked');
+  },
+  publish, copyLink: async () => { const d = curDay(); const url = location.origin + '/call/' + d.token; try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch (e) { prompt('Copy this link', url); } },
+  printCall: () => doPrint(sheetHTML(sheetData(P, curDay()))),
+  addCost: el => costModal({ s: el.dataset.s, l: el.dataset.l }), editCost: el => costModal({ id: el.dataset.id }),
+  saveCost: el => {
+    const sup = $('#cSup').value.trim(), amt = num($('#cAmt').value);
+    if (!sup) return toast('Who was it paid to?', true); if (!amt) return toast('Enter an amount', true);
+    const id = el.dataset.id; const c = id ? P.costs.find(x => x.id === id) : { id: uid('k'), secId: el.dataset.s, lineId: el.dataset.l || null, loggedAt: Date.now() };
+    Object.assign(c, { supplier: sup, amount: amt, date: $('#cDate').value || today(), ref: $('#cRef').value.trim(), notes: $('#cNotes').value.trim() });
+    if (!id) P.costs.push(c); closeModal(); markDirty(); render(); toast('Cost saved');
+  },
+  delCost: el => { if (!confirm('Delete this cost?')) return; P.costs = P.costs.filter(c => c.id !== el.dataset.id); closeModal(); markDirty(); render(); }
+};
+function moveSec(id, dir) {
+  const s = P.sections.find(x => x.id === id); const same = P.sections.filter(x => x.group === s.group); const i = same.indexOf(s); const j = i + dir;
+  if (j < 0 || j >= same.length) return; const a = P.sections.indexOf(s), b = P.sections.indexOf(same[j]); [P.sections[a], P.sections[b]] = [P.sections[b], P.sections[a]]; markDirty(); render();
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab]'); if (t) { TAB = t.dataset.tab; saveUI(); render(); window.scrollTo(0, 0); return; }
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  if (a.tagName === 'A' && a.getAttribute('href') === '#') e.preventDefault();
+  const fn = ACT[a.dataset.act]; if (fn) { if (a.dataset.act !== 'bgClose') e.preventDefault(); fn(a, e); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+$('#prodSel').addEventListener('change', async e => { await flushSave(); if (await openProduction(e.target.value)) render(); });
+$('#newProdBtn').addEventListener('click', newProdModal);
+
+/* ═════════════ auth & boot ═════════════ */
+function gate(html) { $('#tabs').innerHTML = ''; $('#sumbar').classList.add('hidden'); $('#view').innerHTML = `<div class="card empty">${html}</div>`; }
+async function start() {
+  try { await loadIndex(); } catch (e) { gate(`<h2>Couldn't load your productions</h2><p>${esc(e.message)}</p>`); return; }
+  const ui = lsGet(LS_UI, {});
+  TAB = ui.tab && TABS.some(t => t[0] === ui.tab) ? ui.tab : 'budget';
+  const want = new URLSearchParams(location.search).get('p');
+  const pick = INDEX.find(x => x.id === want) || INDEX.find(x => x.id === ui.prod) || INDEX.slice().sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))[0];
+  P = null; if (pick) await openProduction(pick.id);
+  render();
+}
+function boot() {
+  const m = location.pathname.match(/^\/call\/([a-z0-9]{20,40})\/?$/);
+  if (m) return sharedView(m[1]);
+  if (/^\/call\//.test(location.pathname)) return sharedView('');
+  if (typeof firebase === 'undefined') { gate('<h2>Could not load sign-in</h2><p>Check your connection and refresh.</p>'); return; }
+  firebase.initializeApp(FIREBASE_CONFIG);
+  auth = firebase.auth();
+  $('#view').innerHTML = '<div class="empty">Loading…</div>';
+  auth.onAuthStateChanged(async u => {
+    USER = u || null;
+    if (!u) { P = null; INDEX = []; $('#prodSel').innerHTML = ''; gate(`<h2>Budget &amp; call sheets</h2><p style="max-width:520px;margin:0 auto 16px">Budget your film in rands, plan your shoot days and share call sheets your crew can open on their phones. Free in 4flieks Lab.</p><a class="btn pri" href="/lab#join">Join or sign in</a>`); return; }
+    await start();
+  });
+}
+
+/* ═════════════ shared call sheet (/call/<token>) ═════════════ */
+async function sharedView(token) {
+  document.body.classList.add('shared');
+  const root = $('#view'); root.className = 'shared-wrap';
+  if (!/^[a-z0-9]{20,40}$/.test(token)) { root.innerHTML = '<div class="card empty"><h2>Call sheet not found</h2></div>'; return; }
+  root.innerHTML = '<div class="empty">Loading call sheet…</div>';
+  const { ok, status, d } = await call('sheet', { t: token }, false);
+  if (!ok || !d.sheet) { root.innerHTML = status === 404 ? '<div class="card empty"><h2>Call sheet not found</h2><p>The link may be wrong, or production took it down.</p></div>' : '<div class="card empty"><h2>Couldn\'t load the call sheet</h2><p>Check your connection and refresh.</p></div>'; return; }
+  const s = d.sheet; s.scenes = arr(s.scenes); s.cast = arr(s.cast); s.running = arr(s.running); s.deptCalls = arr(s.deptCalls); s.crew = arr(s.crew).map(g => ({ ...g, people: arr(g.people) }));
+  s.loc = s.loc || {}; s.calls = s.calls || {};
+  document.title = `${s.title}: call sheet, day ${s.dayNo}`;
+  let acked = false; try { acked = !!localStorage.getItem('ack_' + token); } catch (e) { }
+  root.innerHTML = `${sheetHTML(s)}
+    <div class="card ack no-print" id="ackBox">${acked ? '<b>✓ Thanks. You confirmed you\'ve received this call sheet.</b>' : `<h2>Got it?</h2><p class="hint">Let production know you've received this call sheet.</p><div class="row"><input id="ackName" maxlength="80" placeholder="Your name &amp; role" style="flex:1;min-width:180px"><button class="btn pri" id="ackGo">Got it ✓</button></div>`}</div>
+    <div class="row no-print" style="justify-content:center"><button class="btn" data-act="printPage">Print / save PDF</button><a class="btn ghost" href="/lab">Made with 4flieks Lab</a></div>`;
+  const go = $('#ackGo');
+  if (go) go.addEventListener('click', async () => {
+    const name = $('#ackName').value.trim().slice(0, 80); if (name.length < 2) return toast('Add your name', true);
+    go.disabled = true;
+    const { ok: ok2, d: r } = await call('ack', { t: token, name }, false);
+    if (!ok2) { go.disabled = false; return toast(r.message || 'Could not send. Check your connection', true); }
+    try { localStorage.setItem('ack_' + token, '1'); } catch (e) { }
+    $('#ackBox').innerHTML = '<b>✓ Thanks, ' + esc(name) + '. Production can see you\'ve got it.</b>';
+  });
+}
+ACT.printPage = () => window.print();
+
+boot();
+</script>
+</body>
+</html>

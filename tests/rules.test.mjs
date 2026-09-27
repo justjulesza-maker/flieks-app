@@ -8,7 +8,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { ref, set, update, remove } from 'firebase/database';
+import { ref, set, update, remove, get } from 'firebase/database';
 
 const env = await initializeTestEnvironment({
   projectId: 'demo-flieks',
@@ -54,6 +54,13 @@ await check('C2 cast slugs must be safe characters', assertFails(set(ref(as('fm'
 await check('L4 a stranger cannot delete another film\'s results link', assertFails(remove(ref(as('fm'), 'flieks_result_keys/key1'))));
 await check('L4 the film\'s owner can delete it', assertSucceeds(remove(ref(as('fm2'), 'flieks_result_keys/key1'))));
 await check('roles: a viewer cannot make themselves admin', assertFails(update(ref(as('v'), 'flieks_users/v'), { role: 'admin' })));
+
+// Budget & call sheets: server-only, the page goes through flieks-budget
+for (const node of ['flieks_budgets/v/p1', 'flieks_budget_index/v/p1', 'flieks_callsheets/abc', 'flieks_callsheet_acks/abc/x', 'flieks_budget_jobs/j1']) {
+  await check(`budget: the browser cannot write ${node.split('/')[0]}`, assertFails(set(ref(as('v'), node), { title: 'x' })));
+  await check(`budget: the browser cannot read ${node.split('/')[0]}`, assertFails(get(ref(as('v'), node))));
+}
+await check('budget: the browser cannot touch its own usage ledger', assertFails(remove(ref(as('v'), 'flieks_lab_usage/v/budget_imports'))));
 
 await env.cleanup();
 console.log(failed ? `\n${failed} FAILED` : '\nALL PASSED');

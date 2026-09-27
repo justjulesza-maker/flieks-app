@@ -25,6 +25,9 @@
 [functions."backup-background"]
   timeout = 900
 
+[functions."budget-import-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 

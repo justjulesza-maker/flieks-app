@@ -234,6 +234,11 @@
     "script_coach": {
       ".read": true,
       ".write": false
-    }
+    },
+    "flieks_budgets":        { ".read": false, ".write": false },
+    "flieks_budget_index":   { ".read": false, ".write": false },
+    "flieks_callsheets":     { ".read": false, ".write": false },
+    "flieks_callsheet_acks": { ".read": false, ".write": false },
+    "flieks_budget_jobs":    { ".read": false, ".write": false }
   }
 }
