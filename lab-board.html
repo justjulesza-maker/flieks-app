@@ -71,6 +71,14 @@ textarea{min-height:90px;resize:vertical}
 .filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;background:var(--card);border:1px solid var(--rule);padding:14px;margin:18px 0 16px;align-items:end}
 @media (max-width:760px){.filters{grid-template-columns:1fr 1fr}.filters .q{grid-column:1/-1}}
 .segs{display:flex;gap:6px;flex-wrap:wrap;margin-top:18px}
+.industry{margin-top:34px;border-top:1px solid var(--rule);padding-top:18px}
+.industry h2{font-family:var(--fm);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--sunset);margin-bottom:4px}
+.industry ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px}
+.industry li{border:1px solid var(--rule);border-radius:6px;padding:12px 14px;background:var(--card);display:flex;flex-direction:column;gap:6px}
+.industry li a{color:var(--ink);text-decoration:none;font-weight:600;font-size:14.5px;line-height:1.4}
+.industry li a:hover{text-decoration:underline;text-decoration-color:var(--sunset)}
+.industry li a::after{content:' ↗';color:var(--sunset);font-weight:400}
+.industry .src{font-size:12px;color:var(--ink-3)}
 .segs button{background:transparent;color:var(--ink);border-color:var(--rule);font-weight:500}
 .segs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
@@ -217,13 +225,30 @@ async function showBoard() {
       <label class="f">Pay<select id="fp"><option value="">Any</option>${Object.entries(PAY).map(([k, n]) => `<option value="${k}" ${FILTER.pay === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <button data-act="search">Search</button>
     </div>
-    <div id="posts"><div class="center"><div class="spin"></div></div></div>`;
+    <div id="posts"><div class="center"><div class="spin"></div></div></div>
+    <div id="industry"></div>`;
+  loadIndustry();
   $('#fq').addEventListener('keydown', e => { if (e.key === 'Enter') ACT.search(); });
   const { ok, d } = await call('list', FILTER, false);
   const box = $('#posts'); if (!box) return;
   if (!ok) { box.innerHTML = `<div class="banner">${esc(d.message || 'Could not load the board.')}</div>`; return; }
   box.innerHTML = d.items.length ? `<div class="posts">${d.items.map(postCard).join('')}</div>`
     : `<div class="empty"><p><b>Nothing here yet${FILTER.kind || FILTER.q || FILTER.country || FILTER.pay ? ' for that search' : ''}.</b></p><p class="small" style="margin-top:6px">Making something? Post the first one.</p></div>`;
+}
+/* Funding and open calls from the wider industry (flieks-news): links out to the original. */
+async function loadIndustry() {
+  try {
+    const r = await fetch('/.netlify/functions/flieks-news', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'list', tag: 'opps', limit: 6 }) });
+    const d = await r.json().catch(() => ({}));
+    const items = (Array.isArray(d.items) ? d.items : []).filter(it => it && /^https:\/\//.test(it.link));
+    const box = $('#industry'); if (!r.ok || !items.length || !box) return;
+    box.innerHTML = `<div class="industry"><h2>Funding and open calls from the industry</h2>
+      <p class="small muted">Not posted on 4flieks. Each link opens the original on the organiser's site.</p>
+      <ul>${items.map(it => `<li><span class="chips"><span class="chip ${it.tag === 'funding' ? 'green' : 'sun'}">${it.tag === 'funding' ? 'Funding' : 'Open call'}</span></span>
+        <a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer nofollow">${esc(it.title)}</a>
+        <span class="src">${esc(it.source)} · ${esc(new Date(it.at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }))}</span></li>`).join('')}</ul>
+      <p class="small" style="margin-top:10px"><a href="/lab#news" style="color:var(--ink-2)">More SA film and TV news</a></p></div>`;
+  } catch (e) { }
 }
 function postCard(p) {
   const left = daysLeft(p.closes);
