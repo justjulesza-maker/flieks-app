@@ -271,25 +271,37 @@ body.home .sheet{max-width:1040px}
 .podrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
 .podc{text-decoration:none;color:var(--ink);display:flex;flex-direction:column;gap:3px}
 .podimg{aspect-ratio:1/1;border-radius:8px;background:#2A1A12 center/cover no-repeat;display:flex;align-items:flex-end;padding:10px;color:#F4F0E6;font-weight:700;font-size:14px;margin-bottom:4px}
-/* Industry news */
-.newshead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-.newshead h2{margin-bottom:6px}
-.nsegs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+/* Industry news: its own pod near the top of the Lab */
+.pod{position:relative;background:var(--card);border:1px solid var(--rule);border-top:4px solid var(--sunset);padding:20px 22px 18px;margin:30px 0 6px}
+@media (max-width:560px){.pod{padding:16px 14px 14px;margin-left:-6px;margin-right:-6px}}
+.podtop{display:flex;justify-content:space-between;align-items:baseline;gap:6px 14px;flex-wrap:wrap}
+.podtop h2{margin:0;font-size:11px}
+.podtop .upd{font-family:var(--fm);font-size:10.5px;letter-spacing:.06em;color:var(--ink-3)}
+.podtop .upd b{color:var(--sunset)}
+.nsegs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 14px}
 .nsegs button{font:500 12.5px var(--fn);background:transparent;color:var(--ink);border:1px solid var(--rule);border-radius:999px;padding:5px 12px;cursor:pointer}
 .nsegs button.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-.news{list-style:none;border-top:1px solid var(--rule)}
-.news li{display:grid;grid-template-columns:84px 1fr auto;gap:4px 12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--rule)}
-.news .nk{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap;justify-self:start;text-align:center}
-.news .nk.funding{background:var(--green);border-color:var(--green);color:#fff}
-.news .nk.call{background:var(--sunset);border-color:var(--sunset);color:#fff}
-.news a.nt{color:var(--ink);text-decoration:none;font-size:15px;line-height:1.4;font-weight:600}
-.news a.nt:hover{text-decoration:underline;text-decoration-color:var(--sunset)}
-.news a.nt::after{content:' ↗';color:var(--sunset);font-weight:400}
-.news .ns{grid-column:2;font-size:12px;color:var(--ink-3)}
-.news .nh{grid-row:1/span 2;grid-column:3;font-size:11.5px;padding:3px 8px;background:transparent;color:var(--ink-2);border:1px solid var(--rule);border-radius:4px;cursor:pointer}
-@media (max-width:560px){.news li{grid-template-columns:1fr auto}.news .nk{grid-column:1}.news a.nt,.news .ns{grid-column:1}.news .nh{grid-row:1/span 3;grid-column:2}}
-.newsadmin{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px;font-size:12.5px}
-.newsadmin input,.newsadmin select{font:13px var(--fn);padding:6px 8px;border:1px solid var(--rule);border-radius:4px;background:var(--card);color:var(--ink)}
+.nk{display:inline-block;font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap}
+.nk.funding{background:var(--green);border-color:var(--green);color:#fff}
+.nk.call{background:var(--sunset);border-color:var(--sunset);color:#fff}
+.nnew{font-family:var(--fm);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sunset);margin-left:6px}
+a.nt{color:var(--ink);text-decoration:none}
+a.nt:hover{text-decoration:underline;text-decoration-color:var(--sunset)}
+a.nt::after{content:' ↗';color:var(--sunset);font-weight:400}
+.ns{font-size:12px;color:var(--ink-3)}
+.nlead{display:flex;flex-direction:column;gap:8px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.nlead a.nt{font-family:var(--fb);font-size:24px;line-height:1.2;letter-spacing:-.01em}
+@media (max-width:560px){.nlead a.nt{font-size:20px}}
+.ngrid{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+@media (max-width:640px){.ngrid{grid-template-columns:1fr}}
+.ngrid .ni{display:flex;flex-direction:column;gap:6px;padding:13px 0;border-bottom:1px solid var(--rule)}
+.ngrid a.nt{font-size:15px;line-height:1.4;font-weight:600}
+.nrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.nh{font:11.5px var(--fn);padding:2px 8px;background:transparent;color:var(--ink-2);border:1px solid var(--rule);border-radius:4px;cursor:pointer}
+.podfoot{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;margin-top:12px}
+.podfoot a{color:var(--ink);font-weight:600;font-size:13.5px}
+.newsadmin{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule);font-size:12.5px}
+.newsadmin input,.newsadmin select{font:13px var(--fn);padding:6px 8px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink)}
 .newsadmin button{font:600 12.5px var(--fn);padding:6px 12px;border-radius:4px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer}
 .newsadmin button.ghost{background:transparent;color:var(--ink)}
 </style>
@@ -1082,6 +1094,8 @@ function showHome(user) {
       <p class="proof"><span><b>Free</b> to join</span><span>Built for <b>African</b> film</span><span>Your writing stays <b>private</b></span></p>
     </section>
 
+    <div id="news"></div>
+
     ${user ? `<h2 id="work">Your work</h2><div id="workbox"><p class="tiny">Loading…</p></div>` : ''}
 
     <h2 id="tools">The tools</h2>
@@ -1091,8 +1105,6 @@ function showHome(user) {
         <a class="btn go${t.lead ? '' : ' ghost'}" href="${user ? t.href : '#join'}" ${user ? '' : 'onclick="focusJoin();return false"'}>${esc(t.cta)}</a></div>`).join('')}
       ${SOON.map(([name, text]) => `<div class="tool soon"><p class="num">SOON</p><h3>${esc(name)}</h3><p class="tag">Coming to the Lab</p><p class="desc">${esc(text)}</p></div>`).join('')}
     </div>
-
-    <div id="news"></div>
 
     <div id="labpods"></div>
 
@@ -1152,12 +1164,17 @@ async function loadLabPods() {
   } catch {}
 }
 
-/* What's happening: SA film and TV headlines, read from industry sites on the server (flieks-news). */
+/* What's happening: SA film and TV headlines, read from industry sites on the server (flieks-news).
+   Its own pod under the hero, so it is the first thing a returning visitor sees. "New" marks stories
+   since this browser's last visit (remembered on this device only; the page works without it). */
 const NEWS_TAG = { funding: 'Funding', call: 'Open call', news: 'News' };
-let NEWS = { items: [], admin: false, tag: '', more: false, user: null };
+let NEWS = { items: [], admin: false, tag: '', more: false, user: null, updated: 0, seen: 0 };
+const NEWS_SEEN_KEY = 'flieks_lab_news_seen';
+function newsSeen() { try { return Number(localStorage.getItem(NEWS_SEEN_KEY)) || 0; } catch { return 0; } }
+function newsMarkSeen() { try { localStorage.setItem(NEWS_SEEN_KEY, String(Date.now())); } catch {} }
 function agoDays(t) {
   const d = Math.floor((Date.now() - t) / 864e5);
-  if (d <= 0) { const h = Math.floor((Date.now() - t) / 36e5); return h <= 1 ? 'Just now' : h + ' hours ago'; }
+  if (d <= 0) { const h = Math.floor((Date.now() - t) / 36e5); return h < 1 ? 'Just now' : h === 1 ? '1 hour ago' : h + ' hours ago'; }
   return d === 1 ? 'Yesterday' : d < 14 ? d + ' days ago' : new Date(t).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
 }
 async function newsCall(body) {
@@ -1165,39 +1182,50 @@ async function newsCall(body) {
   const r = await fetch('/.netlify/functions/flieks-news', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   return { ok: r.ok, d: await r.json().catch(() => ({})) };
 }
-async function loadNews(user) {
+async function loadNews(user, keepSeen) {
   const box = document.getElementById('news'); if (!box) return;
   NEWS.user = user || null;
   try {
     const { ok, d } = await newsCall({ action: 'list', limit: 40 });
     if (!ok) return;
-    NEWS.items = (Array.isArray(d.items) ? d.items : []).filter(it => it && /^https:\/\//.test(it.link)); NEWS.admin = !!d.admin;
-    if (!NEWS.items.length && !NEWS.admin) return;
+    NEWS.items = (Array.isArray(d.items) ? d.items : []).filter(it => it && /^https:\/\//.test(it.link));
+    NEWS.admin = !!d.admin; NEWS.updated = Number(d.updated) || 0;
+    if (!keepSeen) { NEWS.seen = newsSeen(); newsMarkSeen(); }
+    if (!NEWS.items.length && !NEWS.admin) { box.innerHTML = ''; return; }
     drawNews();
   } catch {}
 }
 function drawNews() {
   const box = document.getElementById('news'); if (!box) return;
   const list = NEWS.items.filter(it => !NEWS.tag || (NEWS.tag === 'opps' ? it.tag !== 'news' : it.tag === NEWS.tag));
-  const shown = list.slice(0, NEWS.more ? 20 : 6);
+  const isNew = it => NEWS.seen && it.at > NEWS.seen;
+  const fresh = NEWS.items.filter(isNew).length;
+  const tag = it => `<span class="nk ${esc(it.tag)}">${esc(NEWS_TAG[it.tag] || 'News')}</span>${isNew(it) ? '<span class="nnew">New</span>' : ''}`;
+  const hide = it => NEWS.admin ? `<button type="button" class="nh" data-nact="hide" data-id="${esc(it.id)}">Hide</button>` : '';
+  const link = it => `<a class="nt" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer nofollow">${esc(it.title)}</a>`;
+  const meta = it => `<span class="ns">${esc(it.source)} · ${esc(agoDays(it.at))}</span>`;
+  const [lead, ...rest] = list;
+  const grid = rest.slice(0, NEWS.more ? 19 : 4);
   const seg = (k, n) => `<button type="button" data-nact="tag" data-tag="${k}" class="${NEWS.tag === k ? 'on' : ''}">${n}</button>`;
-  box.innerHTML = `<div class="newshead"><h2>What's happening in SA film and TV</h2></div>
+  box.innerHTML = `<section class="pod" aria-labelledby="newsh">
+    <div class="podtop"><h2 id="newsh">Today in SA film and TV</h2>
+      <span class="upd">${fresh ? `<b>${fresh} new since your last visit</b> · ` : ''}${NEWS.updated ? 'Updated ' + esc(agoDays(NEWS.updated).toLowerCase()) : ''}</span></div>
     <div class="nsegs">${seg('', 'Everything')}${seg('opps', 'Funding and open calls')}${seg('news', 'News')}</div>
-    ${shown.length ? `<ul class="news">${shown.map(it => `<li>
-      <span class="nk ${esc(it.tag)}">${esc(NEWS_TAG[it.tag] || 'News')}</span>
-      <a class="nt" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer nofollow">${esc(it.title)}</a>
-      ${NEWS.admin ? `<button type="button" class="nh" data-nact="hide" data-id="${esc(it.id)}">Hide</button>` : ''}
-      <span class="ns">${esc(it.source)} · ${esc(agoDays(it.at))}</span></li>`).join('')}</ul>`
+    ${lead ? `<div class="nlead"><div class="nrow"><span>${tag(lead)}</span>${hide(lead)}</div>${link(lead)}${meta(lead)}</div>
+      ${grid.length ? `<div class="ngrid">${grid.map(it => `<div class="ni"><div class="nrow"><span>${tag(it)}</span>${hide(it)}</div>${link(it)}${meta(it)}</div>`).join('')}</div>` : ''}`
       : `<p class="tiny">Nothing here right now.</p>`}
-    ${list.length > 6 ? `<p class="tiny" style="margin-top:8px"><a href="#news" data-nact="more" style="color:var(--ink-2)">${NEWS.more ? 'Show fewer' : `Show more (${Math.min(list.length, 20) - 6})`}</a></p>` : ''}
-    <p class="tiny" style="margin-top:8px">Headlines from The Callsheet, the NFVF, Durban FilmMart and the KZN Film Commission, updated through the day. Each link opens the original story on their site.</p>
+    <div class="podfoot">
+      ${list.length > 5 ? `<a href="#news" data-nact="more">${NEWS.more ? 'Show fewer' : `See all ${Math.min(list.length, 20)} stories`}</a>` : '<span></span>'}
+      <span class="tiny">From The Callsheet, NFVF, Durban FilmMart and the KZN Film Commission. Links open the original.</span>
+    </div>
     ${NEWS.admin ? `<div class="newsadmin" id="newsadmin">
       <b style="width:100%">Team: add a story</b>
       <input id="nat" maxlength="220" placeholder="Headline" style="flex:2;min-width:200px">
       <input id="nal" maxlength="500" placeholder="https://…" style="flex:2;min-width:180px">
       <select id="nag"><option value="">Tag it for me</option><option value="funding">Funding</option><option value="call">Open call</option><option value="news">News</option></select>
       <button type="button" data-nact="add">Add</button><button type="button" class="ghost" data-nact="refresh">Read the feeds now</button>
-      <span id="namsg" class="tiny" style="width:100%"></span></div>` : ''}`;
+      <span id="namsg" class="tiny" style="width:100%"></span></div>` : ''}
+  </section>`;
 }
 document.addEventListener('click', async e => {
   const el = e.target.closest('[data-nact]'); if (!el || !document.getElementById('news')) return;
@@ -1216,7 +1244,7 @@ document.addEventListener('click', async e => {
     if (act === 'add') {
       const { ok, d } = await newsCall({ action: 'add', title: document.getElementById('nat').value, link: document.getElementById('nal').value, tag: document.getElementById('nag').value });
       if (!ok) { msg(d.message || 'Could not add it.'); el.disabled = false; return; }
-      await loadNews(NEWS.user); msg('Added.');
+      await loadNews(NEWS.user, true); msg('Added.');
       return;
     }
     if (act === 'refresh') {
@@ -1224,7 +1252,7 @@ document.addEventListener('click', async e => {
       const { ok, d } = await newsCall({ action: 'refresh' });
       if (!ok) { msg(d.message || 'Could not read the feeds.'); el.disabled = false; return; }
       const bad = Object.entries(d.meta.sources || {}).filter(([, s]) => !s.ok).map(([k, s]) => `${k} (${s.error})`);
-      await loadNews(NEWS.user);
+      await loadNews(NEWS.user, true);
       msg(`${d.count} stories.${bad.length ? ' Not read: ' + bad.join(', ') : ' Every feed read.'}`);
     }
   } catch { msg('No connection. Try again.'); el.disabled = false; }

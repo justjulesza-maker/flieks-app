@@ -2,7 +2,7 @@
  * flieks-news — industry headlines for the Lab (front page and opportunities board).
  *
  * Anyone:
- *   list { limit?, tag?, token? }   newest first; tag: funding | call | news | opps (funding + calls); a team member's token also returns admin: true
+ *   list { limit?, tag?, token? }   newest first, with updated (when the feeds were last read); tag: funding | call | news | opps (funding + calls); a team member's token also returns admin: true
  * Admin (role 'admin'):
  *   hide    { id }                  take a story off the Lab; refreshes never bring it back
  *   add     { title, link, tag? }   add a story by hand (any https link)
@@ -27,12 +27,13 @@ const str = (v, n) => typeof v === 'string' ? v.replace(/[\u0000-\u001F\u007F\u2
 let CACHE = null;
 const CACHE_MS = 5 * 60e3;
 async function allItems() {
-  if (CACHE && Date.now() - CACHE.at < CACHE_MS) return CACHE.items;
-  const raw = await ops.dbGet('flieks_news/items') || {};
+  if (CACHE && Date.now() - CACHE.at < CACHE_MS) return CACHE;
+  const [raw0, meta] = await Promise.all([ops.dbGet('flieks_news/items'), ops.dbGet('flieks_news/meta')]);
+  const raw = raw0 || {};
   const items = Object.entries(raw).filter(([id]) => news.ID.test(id)).map(([id, it]) => news.publicItem(id, it)).filter(Boolean)
     .sort((a, b) => b.at - a.at);
-  CACHE = { at: Date.now(), items };
-  return items;
+  CACHE = { at: Date.now(), items, updated: Number(meta && meta.at) || 0 };
+  return CACHE;
 }
 
 async function isAdmin(token) {
@@ -59,9 +60,9 @@ exports.handler = async event => {
       const limit = Math.max(1, Math.min(40, parseInt(b.limit, 10) || 12));
       const tag = news.TAGS.concat('opps').includes(b.tag) ? b.tag : '';   // opps = funding and open calls
       const admin = b.token ? await isAdmin(b.token).catch(() => false) : false;
-      const all = await allItems();
+      const { items: all, updated } = await allItems();
       const items = (tag ? all.filter(it => tag === 'opps' ? it.tag !== 'news' : it.tag === tag) : all).slice(0, limit);
-      return reply(200, { items, admin });
+      return reply(200, { items, admin, updated });
     }
 
     if (!['hide', 'add', 'refresh', 'status'].includes(a)) return reply(400, { message: 'Unknown action.' });

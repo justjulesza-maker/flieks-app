@@ -96,6 +96,7 @@ check('meta: broken feeds reported, not fatal', meta.sources.callsheet.ok && met
 const l = await api({ action: 'list' });
 check('list: anyone can read', l.status === 200 && l.d.items.length === 4 && l.d.admin === false);
 check('list: only public fields', l.d.items.every(i => Object.keys(i).sort().join() === 'at,id,link,source,tag,title'));
+check('list: says when the feeds were last read', l.d.updated > 0 && l.d.updated <= Date.now());
 check('list: newest first', l.d.items.every((x, i, a) => !i || a[i - 1].at >= x.at));
 check('list: source names, not ids', l.d.items.every(i => ['The Callsheet', 'NFVF'].includes(i.source)));
 const opps = await api({ action: 'list', tag: 'opps' });
