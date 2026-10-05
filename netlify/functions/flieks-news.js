@@ -92,9 +92,9 @@ exports.handler = async event => {
 
     if (a === 'refresh') {
       if (!(await slot(`flieks_ops/news_rate/${hour()}`, 10))) return reply(429, { message: 'Read the feeds a lot this hour already. Try again later.' });
-      const { items, meta } = await news.refresh(ops);
+      const { items, meta } = await news.refresh(ops, { by: 'team' });
       CACHE = null;
-      return reply(200, { ok: true, count: Object.keys(items).length, meta });
+      return reply(200, { ok: true, count: Object.keys(items).length, meta, names: Object.fromEntries(news.SOURCES.map(x => [x.id, x.name])) });
     }
 
     if (a === 'status') {

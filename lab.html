@@ -1251,9 +1251,13 @@ document.addEventListener('click', async e => {
       msg('Reading the feeds…');
       const { ok, d } = await newsCall({ action: 'refresh' });
       if (!ok) { msg(d.message || 'Could not read the feeds.'); el.disabled = false; return; }
-      const bad = Object.entries(d.meta.sources || {}).filter(([, s]) => !s.ok).map(([k, s]) => `${k} (${s.error})`);
+      const why = e => /HTTP 403/.test(e) ? 'their site is blocking our server' : /HTTP 404/.test(e) ? 'the feed has moved' : /timed out/.test(e) ? 'too slow to answer' : e;
+      const names = d.names || {};
+      const bad = Object.entries(d.meta.sources || {}).filter(([, s]) => !s.ok)
+        .map(([k, s]) => `${names[k] || k}: ${why(s.error || '')}${s.fails > 1 ? `, ${s.fails} times in a row` : ''}${s.last_ok_at ? `; last read ${agoDays(s.last_ok_at).toLowerCase()}` : ''}`);
+      const auto = Math.max(Number(d.meta.schedule_at) || 0, Number(d.meta.watch_at) || 0);
       await loadNews(NEWS.user, true);
-      msg(`${d.count} stories.${bad.length ? ' Not read: ' + bad.join(', ') : ' Every feed read.'}`);
+      msg(`${d.count} stories. ${bad.length ? 'Not read: ' + bad.join(' · ') + '.' : 'Every feed read.'} Last automatic read: ${auto ? agoDays(auto).toLowerCase() : 'not yet'}${d.meta.schedule_at ? '' : ' (the three-hourly schedule hasn’t run yet; the 15-minute check covers it)'}.`);
     }
   } catch { msg('No connection. Try again.'); el.disabled = false; }
 });

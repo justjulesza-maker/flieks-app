@@ -12,7 +12,11 @@
  * Data (server-only in the rules):
  *   flieks_news/items/<id>    { title, link, source, at, tag, manual? }
  *   flieks_news/hidden/<id>   true   hidden by the team; a refresh never brings it back
- *   flieks_news/meta          { at, sources: { <sourceId>: { ok, count, error? } } }
+ *   flieks_news/meta          { at, by, schedule_at?, watch_at?, sources: { <sourceId>: { ok, count, error?, fails, last_ok_at? } } }
+ *
+ * Who reads the feeds (meta.by): 'schedule' (flieks-news-refresh, every three hours),
+ * 'watch' (flieks-ops-watch, as a backup when the feeds are more than 3½ hours old)
+ * or 'team' (Read the feeds now).
  */
 const crypto = require('crypto');
 
@@ -20,7 +24,7 @@ const crypto = require('crypto');
 const SOURCES = [
   { id: 'callsheet', name: 'The Callsheet', feed: 'https://www.thecallsheet.co.za/feed/', hosts: ['thecallsheet.co.za', 'www.thecallsheet.co.za'] },
   { id: 'nfvf', name: 'NFVF', feed: 'https://www.nfvf.co.za/feed/', hosts: ['nfvf.co.za', 'www.nfvf.co.za'] },
-  { id: 'dfm', name: 'Durban FilmMart', feed: 'https://www.durbanfilmmart.co.za/feed/', hosts: ['durbanfilmmart.co.za', 'www.durbanfilmmart.co.za'] },
+  { id: 'dfm', name: 'Durban FilmMart', feed: 'https://durbanfilmmart.co.za/feed/', hosts: ['durbanfilmmart.co.za', 'www.durbanfilmmart.co.za'] },
   { id: 'kznfilm', name: 'KZN Film Commission', feed: 'https://visitkzn-sa.com/film/feed/', hosts: ['visitkzn-sa.com', 'www.visitkzn-sa.com'] }
 ];
 const SOURCE_IDS = SOURCES.map(s => s.id).concat('team');
@@ -105,16 +109,24 @@ function parseFeed(xml, source, now = Date.now()) {
 }
 
 /* Fetch every source and merge into what is stored. Returns { items, meta }. */
-async function refresh(ops, { fetchImpl = fetch, now = Date.now() } = {}) {
-  const [stored, hidden] = await Promise.all([ops.dbGet('flieks_news/items'), ops.dbGet('flieks_news/hidden')]);
+const STALE_MS = 3.5 * 36e5;
+const isStale = (meta, now = Date.now()) => !meta || !(Number(meta.at) > now - STALE_MS);
+const BY = ['schedule', 'watch', 'team'];
+
+async function refresh(ops, { fetchImpl = fetch, now = Date.now(), by = 'team', timeoutMs = 9000 } = {}) {
+  const [stored, hidden, prevMeta] = await Promise.all([ops.dbGet('flieks_news/items'), ops.dbGet('flieks_news/hidden'), ops.dbGet('flieks_news/meta')]);
+  const prev = (prevMeta && prevMeta.sources) || {};
+  if (!BY.includes(by)) by = 'team';
   const items = {};
   for (const [id, it] of Object.entries(stored || {})) {
     if (ID.test(id) && it && it.at >= now - KEEP_DAYS * 864e5 && !blocked(it.title || '', it.link || '')) items[id] = { ...it, id };
   }
-  const meta = { at: now, sources: {} };
+  const meta = { at: now, by, sources: {} };
+  for (const k of ['schedule_at', 'watch_at']) if (prevMeta && Number(prevMeta[k]) > 0) meta[k] = Number(prevMeta[k]);
+  if (by !== 'team') meta[by + '_at'] = now;
   await Promise.all(SOURCES.map(async s => {
     try {
-      const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 9000);
+      const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs);
       let r;
       try { r = await fetchImpl(s.feed, { headers: { 'User-Agent': '4flieks-news/1.0 (+https://4flieks.com/lab)', Accept: 'application/rss+xml, application/xml, text/xml' }, signal: ctl.signal, redirect: 'follow' }); }
       finally { clearTimeout(timer); }
@@ -123,9 +135,11 @@ async function refresh(ops, { fetchImpl = fetch, now = Date.now() } = {}) {
       if (len > MAX_FEED_BYTES) throw new Error('feed too big');
       const got = parseFeed(await r.text(), s, now);
       for (const it of got) if (!items[it.id] || !items[it.id].manual) items[it.id] = it;
-      meta.sources[s.id] = { ok: true, count: got.length };
+      meta.sources[s.id] = { ok: true, count: got.length, fails: 0, last_ok_at: now };
     } catch (e) {
-      meta.sources[s.id] = { ok: false, count: 0, error: String(e.name === 'AbortError' ? 'timed out' : e.message).slice(0, 120) };
+      const p = prev[s.id] || {};
+      meta.sources[s.id] = { ok: false, count: 0, error: String(e.name === 'AbortError' ? 'timed out' : e.message).slice(0, 120),
+        fails: (Number(p.fails) || 0) + 1, ...(Number(p.last_ok_at) > 0 ? { last_ok_at: Number(p.last_ok_at) } : {}) };
     }
   }));
   for (const id of Object.keys(hidden || {})) delete items[id];
@@ -144,4 +158,4 @@ function publicItem(id, it) {
     at: Number(it.at) || 0, tag: TAGS.includes(it.tag) ? it.tag : 'news' };
 }
 
-module.exports = { SOURCES, SOURCE_IDS, BLOCKED, ID, TAGS, KEEP_DAYS, idFor, decode, tidyTitle, safeLink, tagFor, blocked, parseFeed, refresh, publicItem };
+module.exports = { STALE_MS, isStale, SOURCES, SOURCE_IDS, BLOCKED, ID, TAGS, KEEP_DAYS, idFor, decode, tidyTitle, safeLink, tagFor, blocked, parseFeed, refresh, publicItem };

@@ -8,7 +8,7 @@ const news = require('../lib/news-core');
 
 exports.handler = async () => {
   try {
-    const { items, meta } = await news.refresh(ops);
+    const { items, meta } = await news.refresh(ops, { by: 'schedule' });
     console.log('[news-refresh]', Object.keys(items).length, 'stories', JSON.stringify(meta.sources));
     return { statusCode: 200, body: 'ok' };
   } catch (e) {

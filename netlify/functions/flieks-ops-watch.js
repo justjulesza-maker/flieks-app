@@ -7,12 +7,22 @@
  *   - someone applies to be a filmmaker
  *   - a filmmaker requests a payout
  *   - a support ticket comes in
- * It also sends trailer-premiere reminders when a premiere time passes.
+ * It also sends trailer-premiere reminders when a premiere time passes, and reads
+ * the Lab news feeds if the three-hourly read has not happened.
  * Abandoned checkouts never alert. Several things at once go out as one
  * message. What has been alerted on is remembered in flieks_ops/seen.
  */
 const ops = require('../lib/ops-core');
 const { startNotify } = require('../lib/watchlist');
+const news = require('../lib/news-core');
+
+/* Backup for the Lab news: if the three-hourly read (flieks-news-refresh) has not
+   happened, read the feeds here. Shorter timeout, so this run stays well inside its time. */
+async function newsBackup() {
+  if (!news.isStale(await ops.dbGet('flieks_news/meta'))) return;
+  const { items, meta } = await news.refresh(ops, { by: 'watch', timeoutMs: 6000 });
+  console.log('[ops-watch] news was stale, read the feeds:', Object.keys(items).length, 'stories', JSON.stringify(meta.sources));
+}
 
 /* Trailer premieres: once the premiere time passes, email everyone who asked
    for a reminder. Once per film (flieks_ops/premiere_kicked); the email itself
@@ -39,6 +49,7 @@ const LABEL = {
 
 exports.handler = async () => {
   await premiereReminders().catch(e => console.error('[ops-watch] premiere reminders', e));
+  await newsBackup().catch(e => console.error('[ops-watch] news backup', e));
   try {
     const [facts, seenRaw] = await Promise.all([
       ops.buildFacts(),

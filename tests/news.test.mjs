@@ -40,7 +40,7 @@ const FEEDS = {
     item('CALL FOR THE SEVENTH PRESIDENTIAL EMPLOYMENT STIMULUS PROGRAMME (PESP 7) IS OPEN', 'https://www.nfvf.co.za/call-for-pesp-7/'),
     item('NFVF Sediba creative enterprise programme call for applications', 'https://www.nfvf.co.za/sediba/')
   ]),
-  'https://www.durbanfilmmart.co.za/feed/': '<html>not a feed</html>',
+  'https://durbanfilmmart.co.za/feed/': '<html>not a feed</html>',
   'https://visitkzn-sa.com/film/feed/': null   // network failure
 };
 const realFetch = global.fetch;
@@ -151,6 +151,41 @@ T.setFailCounters(true);
 check('refresh: limit fails closed', (await api({ action: 'refresh', token: 'tM' })).status === 429);
 T.setFailCounters(false);
 void fresh;
+
+
+/* ---------- who read the feeds, failures in a row, the 15-minute backup ---------- */
+{
+  const m1 = get('flieks_news/meta');
+  check('schedule run is recorded', m1.schedule_at > 0, m1);
+  const before = m1.schedule_at;
+  const t = await api({ action: 'refresh', token: 'tM' }).catch(() => null);
+  void t;   // may be rate limited above; read meta from the database instead
+  put('flieks_news/meta', { ...get('flieks_news/meta'), at: Date.now() - 4 * 36e5 });   // pretend it went stale
+  const { refresh } = news;
+  const mT = (await refresh(T.ops, { by: 'team' })).meta;
+  check('team read: by team, keeps the schedule time', mT.by === 'team' && mT.schedule_at === before && !mT.team_at);
+  check('failing source counts reads in a row', mT.sources.kznfilm.fails >= 2 && !mT.sources.kznfilm.ok, mT.sources.kznfilm);
+  FEEDS['https://visitkzn-sa.com/film/feed/'] = rss([item('DIFF 2027 film submissions now open', 'https://visitkzn-sa.com/film/diff-2027/')]);
+  const mOk = (await refresh(T.ops, { by: 'team' })).meta;
+  check('source back: count reset, last good read kept', mOk.sources.kznfilm.ok && mOk.sources.kznfilm.fails === 0 && mOk.sources.kznfilm.last_ok_at > 0);
+  FEEDS['https://visitkzn-sa.com/film/feed/'] = null;
+  const mBad = (await refresh(T.ops, { by: 'bogus' })).meta;
+  check('unknown "by" treated as team', mBad.by === 'team');
+  check('failed source remembers its last good read', mBad.sources.kznfilm.fails === 1 && mBad.sources.kznfilm.last_ok_at === mOk.sources.kznfilm.last_ok_at);
+  check('Durban FilmMart read from its main address', news.SOURCES.find(x => x.id === 'dfm').feed === 'https://durbanfilmmart.co.za/feed/');
+  check('stale check', news.isStale(null) && news.isStale({ at: Date.now() - 4 * 36e5 }) && !news.isStale({ at: Date.now() - 36e5 }));
+
+  // The 15-minute watch reads the feeds only when they are stale.
+  const watch = require('../netlify/functions/flieks-ops-watch.js');
+  put('flieks_news/meta', { ...get('flieks_news/meta'), at: Date.now() - 36e5 });
+  const fresh1 = get('flieks_news/meta').at;
+  await watch.handler({}).catch(() => {});
+  check('watch: leaves fresh news alone', get('flieks_news/meta').at === fresh1);
+  put('flieks_news/meta', { ...get('flieks_news/meta'), at: Date.now() - 5 * 36e5 });
+  await watch.handler({}).catch(() => {});
+  const mW = get('flieks_news/meta');
+  check('watch: reads stale news as a backup', mW.by === 'watch' && mW.watch_at > Date.now() - 60e3 && mW.at > Date.now() - 60e3, mW);
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
