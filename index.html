@@ -136,9 +136,10 @@ input,textarea{font-family:var(--fb)}
 
 /* ===================== BOTTOM NAV ===================== */
 .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:68px;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:50}
-.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 16px;cursor:pointer}
-.bnav-btn svg{width:22px;height:22px;stroke:var(--dim);fill:none;stroke-width:1.8;transition:stroke .2s}
-.bnav-btn span{font-size:10px;color:var(--dim);letter-spacing:.5px;transition:color .2s}
+.bnav-btn{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;cursor:pointer;background:none;border:0}
+.bnav-btn svg{width:22px;height:22px;flex:none;stroke:var(--dim);fill:none;stroke-width:1.8;transition:stroke .2s}
+.bnav-btn span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--dim);letter-spacing:.3px;transition:color .2s}
+@media (max-width:360px){.bnav-btn span{font-size:9px;letter-spacing:0}}
 .bnav-btn.on svg{stroke:var(--amber)}
 .bnav-btn.on span{color:var(--amber)}
 
