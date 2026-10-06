@@ -84,6 +84,19 @@ textarea.input{resize:vertical;min-height:90px;line-height:1.5}
 .input-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
 select.input option{background:#1A1A1A;color:var(--text)}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+.lab-card{border:1px solid var(--border);border-top:3px solid var(--amber);border-radius:14px;padding:16px;margin-bottom:16px;background:var(--card)}
+.lab-card h3{font-family:var(--fb);font-size:20px;line-height:1.15;color:var(--text);margin:2px 0 6px;font-weight:400}
+.lab-card .lab-sub{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+.lab-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.lab-tool{display:block;text-decoration:none;border:1px solid var(--border);border-radius:10px;padding:10px 11px;background:var(--surface);min-width:0}
+.lab-tool b{display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.lab-tool span{display:block;font-size:11.5px;color:var(--muted);line-height:1.4}
+.lab-tool i{font-style:normal;font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--amber);border:1px solid var(--amber);border-radius:99px;padding:1px 6px;margin-left:4px;vertical-align:1px}
+.lab-go{display:block;text-decoration:none;background:var(--amber);color:#fff;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:700}
+html:not([data-mode="light"]) .lab-go{color:#0A0A0A}
+.lab-go small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:1px}
+.lab-news{display:block;text-decoration:none;font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}
+.lab-news b{color:var(--amber)}
 .info-box{border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
 .info-box svg{width:18px;height:18px;fill:none;stroke-width:2;flex-shrink:0;margin-top:1px}
 .info-box.green{background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.3)}
@@ -201,15 +214,25 @@ select.input option{background:#1A1A1A;color:var(--text)}
     </div>
     <div id="msg-card"></div>
     <div id="my-page-card"></div>
+    <div class="lab-card">
+      <p class="section-label" style="margin-bottom:2px;color:var(--amber)">4FLIEKS LAB · FREE</p>
+      <h3>Make your next film here</h3>
+      <p class="lab-sub">Everything from first draft to the shoot, free for filmmakers. Start with whichever you need.</p>
+      <div class="lab-tools">
+        <a class="lab-tool" href="/lab/report"><b>Script Report</b><span>Coverage, scores and notes in minutes</span></a>
+        <a class="lab-tool" href="/lab/budget"><b>Schedule<i>NEW</i></b><span>Upload a script, get a shooting schedule you can move</span></a>
+        <a class="lab-tool" href="/lab/budget"><b>Budget &amp; call sheets</b><span>Budget in rands, call sheets on every phone</span></a>
+        <a class="lab-tool" href="/lab/board"><b>Casting &amp; crew calls</b><span>Post a call, shortlist and hire</span></a>
+        <a class="lab-tool" href="/lab/talent"><b>Talent search</b><span>Find actors and crew by city and language</span></a>
+        <a class="lab-tool" href="/script-upload.html"><b>Script Coach</b><span>Cue cards and line quizzes for your cast</span></a>
+      </div>
+      <a class="lab-go" href="/lab">Open the Lab →<small>Pitch, cast match, funding &amp; more</small></a>
+      <a class="lab-news" href="/lab#news"><b>Industry news</b> · funding, open calls and SA film and TV headlines, updated through the day →</a>
+    </div>
     <a href="/studio" style="display:block;text-decoration:none;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--card)">
       <p class="section-label" style="margin-bottom:4px;color:var(--amber)">NEW · PODCAST STUDIO</p>
       <p style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px">Add your podcast →</p>
       <p style="font-size:13px;color:var(--muted);line-height:1.5">Link episodes from YouTube, Spotify and more, or upload video and audio. Free for viewers with an account; charge for a masterclass if you want to.</p>
-    </a>
-    <a href="/lab" style="display:block;text-decoration:none;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;background:var(--card)">
-      <p class="section-label" style="margin-bottom:4px;color:var(--amber)">NEW · 4FLIEKS LAB</p>
-      <p style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px">Script Report →</p>
-      <p style="font-size:13px;color:var(--muted);line-height:1.5">Upload a screenplay and get AI coverage: verdict, emotion arc, characters, audience and development notes.</p>
     </a>
     <div class="divider" style="margin:0 0 16px"></div>
     <p class="section-label">RECENT FILMS</p>
