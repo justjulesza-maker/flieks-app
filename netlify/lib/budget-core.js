@@ -22,7 +22,7 @@ const LINKS = ['shoot', 'prep', 'post'];
 const DEPTS = ['Production', 'Camera', 'Lighting & Grip', 'Sound', 'Art Department', 'Wardrobe', 'Hair & Make-up', 'Cast', 'Unit & Locations', 'Catering', 'Post-production'];
 
 const LIMITS = { sections: 60, lines: 200, allLines: 1500, contacts: 300, locations: 50, scenes: 500, days: 120,
-  deptCalls: 30, running: 60, costs: 2000, productions: 50 };
+  deptCalls: 30, running: 60, costs: 2000, productions: 50, unavail: 120, sceneCast: 40, versions: 5 };
 
 /* Plain text: no control characters, trimmed, capped. */
 const str = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max);
@@ -82,8 +82,11 @@ function cleanProduction(p, prev) {
 
   const contacts = items(p.contacts, LIMITS.contacts, (c, cid) => {
     const kind = oneOf(c.kind, ['crew', 'cast'], 'crew');
-    return { id: cid, kind, name: str(c.name, 80), role: str(c.role, 80), character: str(c.character, 80), agent: str(c.agent, 80),
+    const out = { id: cid, kind, name: str(c.name, 80), role: str(c.role, 80), character: str(c.character, 80), agent: str(c.agent, 80),
       dept: kind === 'cast' ? 'Cast' : (str(c.dept, 40) || 'Production'), phone: phone(c.phone), email: email(c.email) };
+    // Dates an actor can't work (scheduler): unique, sorted, capped.
+    if (kind === 'cast') out.unavail = [...new Set(list(c.unavail).map(date).filter(Boolean))].sort().slice(0, LIMITS.unavail);
+    return out;
   });
   const locations = items(p.locations, LIMITS.locations, (l, lid) => ({
     id: lid, name: str(l.name, 80), address: str(l.address, 200), town: str(l.town, 80), parking: str(l.parking, 200),
@@ -94,18 +97,25 @@ function cleanProduction(p, prev) {
     crewCall: time(d.crewCall), shootCall: time(d.shootCall), lunch: time(d.lunch), wrap: time(d.wrap),
     deptCalls: items(d.deptCalls, LIMITS.deptCalls, (x, xid) => ({ id: xid, dept: str(x.dept, 40), time: time(x.time) })),
     cast: idMap(d.cast, LIMITS.contacts, x => x && typeof x === 'object'
-      ? { on: bool(x.on), pickup: time(x.pickup), hmu: time(x.hmu), set: time(x.set) } : undefined),
+      ? { on: bool(x.on), pickup: time(x.pickup), hmu: time(x.hmu), set: time(x.set), auto: bool(x.auto) } : undefined),
     crewOff: idMap(d.crewOff, LIMITS.contacts, x => x === true ? true : undefined),
     running: items(d.running, LIMITS.running, (x, xid) => ({ id: xid, time: str(x.time, 20), item: str(x.item, 200), who: str(x.who, 120) })),
     notes: str(d.notes, 2000), emergency: str(d.emergency, 160) || '112 (mobile) · 10177 (ambulance)',
-    weather: cleanWeather(d.weather), hidePhones: bool(d.hidePhones),
+    weather: cleanWeather(d.weather), hidePhones: bool(d.hidePhones), locked: bool(d.locked),
     token: prevTokens[did] || ''
   }));
   const dayIds = new Set(shootDays.map(d => d.id));
+  const locIds = new Set(locations.map(l => l.id));
+  const castIds = new Set(contacts.filter(c => c.kind === 'cast').map(c => c.id));
   const scenes = items(p.scenes, LIMITS.scenes, (s, sid) => ({
     id: sid, no: str(s.no, 10), ie: oneOf(s.ie, ['INT', 'EXT', 'INT/EXT'], 'INT'), dn: oneOf(s.dn, ['DAY', 'NIGHT', 'DAWN', 'DUSK'], 'DAY'),
     set: str(s.set, 80), desc: str(s.desc, 300), pages: pages(s.pages), cast: str(s.cast, 200),
-    dayId: dayIds.has(s.dayId) ? s.dayId : ''
+    dayId: dayIds.has(s.dayId) ? s.dayId : '',
+    // Scheduler fields
+    locationId: locIds.has(s.locationId) ? s.locationId : '',
+    castIds: [...new Set(list(s.castIds).filter(x => typeof x === 'string' && castIds.has(x)))].slice(0, LIMITS.sceneCast),
+    extras: str(s.extras, 160), props: str(s.props, 600), notes: str(s.notes, 600),
+    effort: int(s.effort, 1, 4, 2), sday: str(s.sday, 30), pos: int(s.pos, 0, 10000, 0), page: int(s.page, 0, 999, 0)
   }));
   const secIds = new Set(sections.map(s => s.id));
   const costs = items(p.costs, LIMITS.costs, (c, cid) => ({
@@ -125,8 +135,15 @@ function cleanProduction(p, prev) {
     runtime: num(p.runtime, 0, 100000), episodes: int(p.episodes, 1, 500, 1),
     days: { prep: int(days.prep, 0, 1000), shoot: int(days.shoot, 0, 1000), post: int(days.post, 0, 1000) },
     contPct: num(p.contPct, 0, 100), feePct: num(p.feePct, 0, 100), vatOn: bool(p.vatOn), vatRate: num(p.vatRate, 0, 50, 15),
-    sections, contacts, locations, scenes, shootDays, costs, locked
+    sections, contacts, locations, scenes, shootDays, costs, locked,
+    sched: cleanSched(p.sched)
   };
+}
+/* Scheduler settings: first shoot day, weekdays off (0 = Sunday), pages per day for plain dialogue. */
+function cleanSched(v) {
+  v = v && typeof v === 'object' ? v : {};
+  return { start: date(v.start), off: [...new Set(list(v.off).map(x => int(x, 0, 6, -1)).filter(x => x >= 0))].sort(),
+    pace: num(v.pace, 2, 12, 4.25), maxLocs: int(v.maxLocs, 1, 4, 2) };
 }
 function cleanWeather(w) {
   w = w && typeof w === 'object' ? w : {};
@@ -153,7 +170,7 @@ function sheetFrom(p, dayId) {
   const cast = (p.contacts || []).filter(c => c.kind === 'cast' && d.cast[c.id] && d.cast[c.id].on).map(c => ({
     name: c.name, character: c.character, pickup: d.cast[c.id].pickup, hmu: d.cast[c.id].hmu, set: d.cast[c.id].set,
     phone: d.hidePhones ? '' : c.phone }));
-  const sc = (p.scenes || []).filter(s => s.dayId === d.id);
+  const sc = (p.scenes || []).filter(s => s.dayId === d.id).sort((a, b) => (a.pos || 0) - (b.pos || 0));
   const next = days[i + 1];
   const nextLoc = next ? ((p.locations || []).find(l => l.id === next.locationId) || {}) : {};
   return {
@@ -167,7 +184,7 @@ function sheetFrom(p, dayId) {
     pages: pagesText(sc.reduce((a, s) => a + eighths(s.pages), 0)),
     running: d.running.map(x => ({ time: x.time, item: x.item, who: x.who })),
     notes: d.notes, emergency: d.emergency,
-    next: next ? { date: next.date, location: nextLoc.name || '', scenes: (p.scenes || []).filter(s => s.dayId === next.id).map(s => s.no).join(', ') } : null,
+    next: next ? { date: next.date, location: nextLoc.name || '', scenes: (p.scenes || []).filter(s => s.dayId === next.id).sort((a, b) => (a.pos || 0) - (b.pos || 0)).map(s => s.no).join(', ') } : null,
     updatedAt: Date.now()
   };
 }

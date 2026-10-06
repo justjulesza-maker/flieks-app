@@ -231,6 +231,83 @@ table.t tr.grand td{font-weight:800;font-size:15px;border-top:2px solid var(--ac
 .banner{display:block;line-height:1.6;padding:10px 14px;border-radius:10px;background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 35%,transparent);margin-bottom:16px;font-size:13px}
 .banner.good{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 35%,transparent)}
 .signin{max-width:420px;margin:8vh auto}
+/* schedule (strip board) */
+.segs{display:flex;gap:4px;margin:0 0 14px;flex-wrap:wrap}
+.seg{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:6px 13px;cursor:pointer;font-weight:500;font-size:13px;color:var(--dim)}
+.seg.on{background:var(--text);border-color:var(--text);color:var(--panel2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--dim);margin:0 0 12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:13px;height:13px;border:1px solid var(--line2);border-radius:3px;vertical-align:-2px}
+.int-day{--strip:#FFFFFF}.ext-day{--strip:#F6E58D}.int-night{--strip:#A9CBEA}.ext-night{--strip:#B5DCA9}
+.sw.int-day,.sw.ext-day,.sw.int-night,.sw.ext-night{background:var(--strip)}
+.sday{padding:0;overflow:visible}
+.sday.locked{border-color:var(--text);box-shadow:inset 4px 0 0 var(--text)}
+.sday.has-clash{border-color:var(--bad);box-shadow:inset 4px 0 0 var(--bad)}
+.sday.flash{animation:flash 1.6s}
+@keyframes flash{0%,60%{background:var(--acc-soft)}100%{background:var(--panel)}}
+@media (prefers-reduced-motion:reduce){.sday.flash{animation:none;background:var(--acc-soft)}}
+.sday.tray{border-style:dashed}
+.sday.drop-day{outline:2px dashed var(--acc);outline-offset:2px}
+.dayhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
+.dayhead b{font-family:var(--fb);font-weight:400;font-size:15px}
+.dayhead input[type=date]{width:150px}
+.dayhead select{width:auto;max-width:200px}
+.dayhead .grow{flex:1}
+.load{width:70px;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.load i{display:block;height:100%;background:var(--good)}
+.load.over i{background:var(--bad)}
+.dayx{position:relative}
+.dayx summary{list-style:none;cursor:pointer}
+.dayx summary::-webkit-details-marker{display:none}
+.dayx-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--shadow);padding:8px;display:flex;flex-direction:column;gap:6px;min-width:250px}
+.dayx-menu .btn{justify-content:flex-start}
+.dayclash{background:var(--bad-soft);color:var(--bad);font-size:12.5px;padding:6px 12px;border-bottom:1px solid var(--line)}
+.strips{display:flex;flex-direction:column}
+.strip{display:grid;grid-template-columns:18px 44px 58px minmax(0,1fr) 40px 50px minmax(0,1.1fr) 44px;gap:8px;align-items:center;padding:7px 12px;background:var(--strip);color:#17110E;
+  border-top:1px solid rgba(0,0,0,.08);font:13px/1.3 var(--mono);cursor:pointer;user-select:none}
+.strip:first-child{border-top:0}
+.strip:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.strip.open{box-shadow:inset 3px 0 0 var(--acc)}
+.strip .grip{color:rgba(0,0,0,.35);cursor:grab;font-size:12px}
+.strip .set{text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.strip .set small{display:block;text-transform:none;font:11px 'DM Sans',sans-serif;color:rgba(0,0,0,.55);overflow:hidden;text-overflow:ellipsis}
+.strip .pp{text-align:right}
+.strip .who{font:12px 'DM Sans',sans-serif;color:rgba(0,0,0,.7);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.strip .eff{font-size:8px;letter-spacing:1px;color:rgba(0,0,0,.55);text-align:right}
+.strip .eff.e4{color:#B3261E}
+.strip.dragging{opacity:.4}
+.strip.drop-before{box-shadow:inset 0 3px 0 var(--acc)}
+body.dragging-on .sday{transition:outline .1s}
+@media (max-width:720px){.strip{grid-template-columns:40px minmax(0,1fr) 34px 44px;row-gap:2px}.strip .grip,.strip .ie,.strip .eff{display:none}.strip .who{grid-column:2/-1;grid-row:2}
+  .dayhead input[type=date]{width:140px}.desk-only{display:none!important}}
+.sceneed{background:var(--panel2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px}
+.castpick{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px}
+label.chk.sm{font-size:12.5px;gap:5px}
+.clash{border-color:var(--bad);background:var(--bad-soft)}
+.clash h2{color:var(--bad)}
+.clash-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;border-top:1px solid color-mix(in srgb,var(--bad) 20%,transparent);font-size:13px}
+.bdwrap{overflow-x:auto}
+.bd-row{display:grid;grid-template-columns:44px 18px minmax(180px,2fr) 60px 56px minmax(140px,1.4fr) 80px 96px;gap:8px;align-items:start;padding:7px 4px;border-top:1px solid var(--line);font-size:13px;cursor:pointer;min-width:720px}
+.bd-row.head{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:600;cursor:default;border-top:0}
+.bd-row.open{background:var(--acc-soft)}
+.bd-row small{display:block}
+.warn{color:var(--bad);font-size:11.5px}
+.bdwrap .sceneed{min-width:720px}
+.rv-row{display:grid;grid-template-columns:20px 50px 84px 84px minmax(120px,1.3fr) minmax(120px,1.2fr) 100px 64px minmax(140px,1.4fr) 100px;gap:5px;align-items:center;padding:5px 0;border-top:1px solid var(--line);min-width:980px}
+.rv-row.head{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:600;border-top:0}
+.rv-row.off{opacity:.45}
+.rv-row input,.rv-row select{padding:4px 6px;font-size:12.5px}
+.rv-notes{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--dim)}
+.review{max-height:55vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:0 8px}
+.av-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(120px,1fr) minmax(220px,1.6fr);gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.av-row.bad{background:var(--bad-soft);margin:0 -10px;padding:10px}
+.av-row .who{display:flex;flex-direction:column;gap:4px}
+.av-row .unav{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.av-row .unav input[type=date]{width:150px}
+.pill .x{background:none;border:0;color:inherit;cursor:pointer;margin-left:2px;font-size:11px}
+@media (max-width:720px){.av-row{grid-template-columns:1fr}}
+.msg{font-size:13px;color:var(--dim);margin-top:8px;min-height:18px}
+
 
 /* shared view */
 body.shared{padding-bottom:24px}
@@ -296,6 +373,7 @@ body.shared .top,body.shared .sumbar{display:none}
 
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="/lab-schedule.js"></script>
 <script>
 /* Sign-in only. This page never talks to the database: everything goes through
    /.netlify/functions/flieks-budget, which checks who is asking. */
@@ -401,7 +479,10 @@ function newProduction(title, type) {
 function normalize(p) {
   p.sections = arr(p.sections); p.sections.forEach(s => { s.lines = arr(s.lines); });
   ['contacts', 'locations', 'scenes', 'shootDays', 'costs'].forEach(k => p[k] = arr(p[k]));
-  p.shootDays.forEach(d => { d.deptCalls = arr(d.deptCalls); d.running = arr(d.running); d.cast = d.cast || {}; d.crewOff = d.crewOff || {}; d.weather = d.weather || {}; });
+  p.shootDays.forEach(d => { d.deptCalls = arr(d.deptCalls); d.running = arr(d.running); d.cast = d.cast || {}; d.crewOff = d.crewOff || {}; d.weather = d.weather || {}; d.locked = !!d.locked; });
+  p.scenes.forEach(s => { s.castIds = arr(s.castIds); ['extras', 'props', 'notes', 'sday', 'locationId'].forEach(k => { if (s[k] == null) s[k] = ''; }); s.effort = num(s.effort) || 2; s.pos = num(s.pos); });
+  p.contacts.forEach(c => { if (c.kind === 'cast') c.unavail = arr(c.unavail); });
+  p.sched = Object.assign({ start: '', off: [], pace: 4.25, maxLocs: 2 }, p.sched || {}); p.sched.off = arr(p.sched.off).map(Number);
   p.days = Object.assign({ prep: 0, shoot: 1, post: 0 }, p.days || {});
   if (p.locked) { p.locked.lines = p.locked.lines || {}; p.locked.secs = p.locked.secs || {}; }
   ['contPct', 'feePct', 'runtime', 'episodes'].forEach(k => p[k] = num(p[k]));
@@ -464,12 +545,12 @@ function withoutId(p) { const c = Object.assign({}, p); delete c.id; return c; }
 async function loadIndex() {
   const { ok, d } = await call('list');
   if (!ok) throw new Error(d.message || 'Could not load your productions.');
-  INDEX = d.items || []; ME = { verified: !!d.verified, role: d.role || 'viewer', imports: d.imports || {} };
+  INDEX = d.items || []; ME = { verified: !!d.verified, role: d.role || 'viewer', imports: d.imports || {}, breakdowns: d.breakdowns || {} };
 }
 async function openProduction(id) {
   const { ok, d } = await call('get', { id });
   if (!ok) { toast(d.message || 'Could not open that production', true); return false; }
-  P = normalize(Object.assign(d.production, { id: d.id })); CUR_DAY = null; saveUI(); return true;
+  P = normalize(Object.assign(d.production, { id: d.id })); CUR_DAY = null; UNDO = []; REDO = []; OPEN_SCENE = null; saveUI(); return true;
 }
 function touchIndex() { if (!P) return; const it = INDEX.find(x => x.id === P.id); if (it) { it.title = P.title; it.type = P.type; it.updated_at = Date.now(); } }
 
@@ -481,7 +562,8 @@ async function saveNow() {
   if (!P) return;
   if (saving) { again = true; return; }
   saving = true;
-  const { ok, d } = await call('save', { id: P.id, production: withoutId(P) });
+  const cp = CHECKPOINT; CHECKPOINT = '';
+  const { ok, d } = await call('save', Object.assign({ id: P.id, production: withoutId(P) }, cp ? { checkpoint: cp } : {}));
   saving = false;
   if (ok) setSync('saved'); else { setSync('error', d.message || 'Not saved'); if (d.message) toast(d.message, true); }
   if (again) { again = false; saveNow(); }
@@ -491,7 +573,7 @@ window.addEventListener('pagehide', () => { if (saveTimer) { clearTimeout(saveTi
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveNow(); } });
 
 /* ═════════════ rendering shell ═════════════ */
-const TABS = [['setup', 'Setup'], ['budget', 'Budget'], ['top', 'Top sheet'], ['people', 'Cast & crew'], ['scenes', 'Scenes & locations'], ['calls', 'Call sheets'], ['actuals', 'Actuals']];
+const TABS = [['setup', 'Setup'], ['budget', 'Budget'], ['top', 'Top sheet'], ['people', 'Cast & crew'], ['schedule', 'Schedule'], ['scenes', 'Scenes & locations'], ['calls', 'Call sheets'], ['actuals', 'Actuals']];
 function render() {
   const list = INDEX.slice().sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
   $('#prodSel').innerHTML = list.length ? list.map(p => `<option value="${p.id}" ${P && P.id === p.id ? 'selected' : ''}>${esc(p.title)}</option>`).join('') : '<option>No productions yet</option>';
@@ -501,7 +583,7 @@ function render() {
   const v = $('#view');
   const vb = verifyBanner();
   if (!P) { v.innerHTML = vb + emptyHTML(); refreshCalc(); return; }
-  const r = { setup: vSetup, budget: vBudget, top: vTop, people: vPeople, scenes: vScenes, calls: vCalls, actuals: vActuals }[TAB] || vBudget;
+  const r = { setup: vSetup, budget: vBudget, top: vTop, people: vPeople, schedule: vSchedule, scenes: vScenes, calls: vCalls, actuals: vActuals }[TAB] || vBudget;
   v.innerHTML = vb + r();
   refreshCalc();
   if (TAB === 'calls') loadAcks();
@@ -720,7 +802,7 @@ function vScenes() {
   const totalE = P.scenes.reduce((a, s) => a + pagesToEighths(s.pages), 0);
   const perDay = P.shootDays.map((d, i) => { const e = P.scenes.filter(s => s.dayId === d.id).reduce((a, s) => a + pagesToEighths(s.pages), 0); return `<span class="pill ${e ? 'acc' : ''}">Day ${i + 1}: ${eighthsToPages(e)} pp</span>`; }).join(' ');
   return `
-  <div class="toolbar"><div class="grow"><h1 class="page">Scenes &amp; locations</h1><div class="sub">Your breakdown. Scenes assigned to a shoot day show up on that day's call sheet.</div></div></div>
+  <div class="toolbar"><div class="grow"><h1 class="page">Scenes &amp; locations</h1><div class="sub">Your locations, and a quick list of scenes. Plan and move them in the <b>Schedule</b> tab; scenes on a shoot day show on its call sheet.</div></div></div>
   <div class="card"><div class="spread"><h2>Locations <span class="pill">${P.locations.length}</span></h2><button class="btn sm" data-act="addLoc">+ Location</button></div>
     <p class="hint">The <b>Town / suburb</b> is used to look up the weather forecast. Add the nearest hospital for the call sheet's emergency box.</p>
     <div class="lrow loc-row head"><span>Name</span><span>Address</span><span>Town / suburb</span><span>Parking</span><span>On-site contact</span><span>Nearest hospital</span><span></span></div>
@@ -745,8 +827,8 @@ function vScenes() {
       <input data-coll="scenes" data-id="${s.id}" data-k="pages" value="${esc(s.pages)}" placeholder="1 2/8">
       <input data-coll="scenes" data-id="${s.id}" data-k="cast" value="${esc(s.cast)}" placeholder="e.g. Nomalizo, Yasuke">
       <select data-coll="scenes" data-id="${s.id}" data-k="dayId" data-rerender>${dayOpts(s.dayId)}</select>
-      <button class="icon del" data-act="delItem" data-coll="scenes" data-id="${s.id}">✕</button></div>`).join('') || '<p class="hint">No scenes yet. Add them from your script, or wait for Script Report to break them down automatically (coming next).</p>'}
-    ${P.shootDays.length ? '' : '<p class="hint" style="margin-top:8px">Create shoot days in the <b>Call sheets</b> tab to schedule scenes.</p>'}
+      <button class="icon del" data-act="delItem" data-coll="scenes" data-id="${s.id}">✕</button></div>`).join('') || '<p class="hint">No scenes yet. Add them here, or use <b>Read a script</b> in the Schedule tab to break your screenplay down automatically.</p>'}
+    ${P.shootDays.length ? '' : '<p class="hint" style="margin-top:8px">Plan shoot days in the <b>Schedule</b> tab.</p>'}
   </div>`;
 }
 
@@ -759,7 +841,7 @@ function vCalls() {
     <div class="row" style="justify-content:center"><label class="f" style="width:180px;text-align:left">First shoot day<input type="date" id="firstDate"></label><button class="btn pri" data-act="makeDays" style="align-self:end">Create ${P.days.shoot || 1} shoot day${P.days.shoot == 1 ? '' : 's'}</button></div></div>`;
   const d = curDay(); const idx = P.shootDays.indexOf(d);
   const cast = P.contacts.filter(c => c.kind === 'cast'), crew = P.contacts.filter(c => c.kind !== 'cast');
-  const scenes = P.scenes.filter(s => s.dayId === d.id);
+  const scenes = P.scenes.filter(s => s.dayId === d.id).sort((a, b) => (a.pos || 0) - (b.pos || 0));
   const shareUrl = d.token ? location.origin + '/call/' + d.token : '';
   const w = d.weather || {};
   return `
@@ -807,7 +889,7 @@ function vCalls() {
     </div>
 
     <div class="card"><h2>Scenes <span class="pill">${scenes.length} · ${eighthsToPages(scenes.reduce((a, s) => a + pagesToEighths(s.pages), 0))} pp</span></h2>
-      <p class="hint">Assign scenes to this day in the <b>Scenes &amp; locations</b> tab.</p>
+      <p class="hint">Plan and move scenes in the <b>Schedule</b> tab.</p>
       ${scenes.map(s => `<div class="sub" style="padding:3px 0"><b style="color:var(--text)">${esc(s.no)}</b> · ${esc(s.ie)} ${esc(s.set)} · ${esc(s.dn)} · ${esc(s.desc)}</div>`).join('')}</div>
 
     <div class="card"><div class="spread"><h2>Running order</h2><div class="row"><button class="btn sm ghost" data-act="buildRunning">Build from scenes</button><button class="btn sm" data-act="addRun">+ Row</button></div></div>
@@ -839,7 +921,7 @@ function sheetData(p, d) {
   const byDept = {}; crew.forEach(c => { const k = c.dept || 'Production'; (byDept[k] = byDept[k] || []).push({ name: c.name || '', role: c.role || '', phone: d.hidePhones ? '' : (c.phone || '') }); });
   const depts = STD_DEPTS.filter(k => byDept[k]).concat(Object.keys(byDept).filter(k => !STD_DEPTS.includes(k)));
   const cast = p.contacts.filter(c => c.kind === 'cast' && d.cast[c.id] && d.cast[c.id].on).map(c => ({ name: c.name || '', character: c.character || '', pickup: d.cast[c.id].pickup || '', hmu: d.cast[c.id].hmu || '', set: d.cast[c.id].set || '', phone: d.hidePhones ? '' : (c.phone || '') }));
-  const scenes = p.scenes.filter(s => s.dayId === d.id).map(s => ({ no: s.no || '', ie: s.ie || '', dn: s.dn || '', set: s.set || '', desc: s.desc || '', pages: s.pages || '', cast: s.cast || '' }));
+  const scenes = p.scenes.filter(s => s.dayId === d.id).sort((a, b) => (a.pos || 0) - (b.pos || 0)).map(s => ({ no: s.no || '', ie: s.ie || '', dn: s.dn || '', set: s.set || '', desc: s.desc || '', pages: s.pages || '', cast: s.cast || '' }));
   const next = p.shootDays[i + 1];
   const nextLoc = next ? (p.locations.find(l => l.id === next.locationId) || {}) : {};
   return {
@@ -852,7 +934,7 @@ function sheetData(p, d) {
     pages: eighthsToPages(p.scenes.filter(s => s.dayId === d.id).reduce((a, s) => a + pagesToEighths(s.pages), 0)),
     running: d.running.map(x => ({ time: x.time || '', item: x.item || '', who: x.who || '' })),
     notes: d.notes || '', emergency: d.emergency || '',
-    next: next ? { date: next.date || '', location: nextLoc.name || '', scenes: p.scenes.filter(s => s.dayId === next.id).map(s => s.no).join(', ') } : null,
+    next: next ? { date: next.date || '', location: nextLoc.name || '', scenes: p.scenes.filter(s => s.dayId === next.id).sort((a, b) => (a.pos || 0) - (b.pos || 0)).map(s => s.no).join(', ') } : null,
     updatedAt: Date.now()
   };
 }
@@ -1173,7 +1255,7 @@ const ACT = {
   delDItem: el => { const d = curDay(); d[el.dataset.dcoll] = d[el.dataset.dcoll].filter(x => x.id !== el.dataset.id); markDirty(); render(); },
   addRun: () => { curDay().running.push({ id: uid('r'), time: '', item: '', who: '' }); markDirty(); render(); },
   buildRunning: () => {
-    const d = curDay(); const sc = P.scenes.filter(s => s.dayId === d.id);
+    const d = curDay(); const sc = P.scenes.filter(s => s.dayId === d.id).sort((a, b) => (a.pos || 0) - (b.pos || 0));
     if (!sc.length) return toast('Assign scenes to this day first', true);
     if (d.running.length && !confirm('Replace the current running order?')) return;
     d.running = [{ id: uid('r'), time: d.crewCall, item: 'Crew call · set up', who: 'All crew' }];
@@ -1199,6 +1281,406 @@ const ACT = {
   },
   delCost: el => { if (!confirm('Delete this cost?')) return; P.costs = P.costs.filter(c => c.id !== el.dataset.id); closeModal(); markDirty(); render(); }
 };
+/* ═════════════ SCHEDULE ═════════════
+   The AI reads the script once; after that every scene, day, date and actor is the filmmaker's to change.
+   The rules live in /lab-schedule.js (SCHED), shared with the tests. */
+let SVIEW = 'board', OPEN_SCENE = null, SHOW_SET = false, DRAG = null;
+let UNDO = [], REDO = [], PENDING = null, CHECKPOINT = '';
+const EFF = { 1: 'Simple', 2: 'Normal', 3: 'Complex', 4: 'Very heavy' };
+const EFF_HINT = { 1: 'Dialogue in one place', 2: 'A normal scene', 3: 'Driving, crowds, night exteriors, rain, children, weapons', 4: 'Stunts, fights, big crowd action, montages' };
+const stripCls = s => (s.ie === 'EXT' ? 'ext' : 'int') + '-' + (SCHED.isNight(s) ? 'night' : 'day');
+function snap() { return JSON.stringify({ scenes: P.scenes, shootDays: P.shootDays, contacts: P.contacts, locations: P.locations, sched: P.sched, days: P.days }); }
+function restore(j) { const o = JSON.parse(j); Object.assign(P, o); normalize(P); }
+function pushUndo() { UNDO.push(snap()); if (UNDO.length > 60) UNDO.shift(); REDO = []; }
+/* Every schedule change goes through here: undo point, the change, save, redraw. */
+function change(fn, opts) { pushUndo(); const r = fn(); markDirty(); render(); if (opts && opts.toast) toast(opts.toast); return r; }
+function castOf(id) { return P.contacts.find(c => c.id === id && c.kind === 'cast'); }
+const castLabel = c => c ? (c.character || c.name || 'Unnamed') : '';
+const locName = id => { const l = P.locations.find(x => x.id === id); return l ? (l.name || 'Location') : ''; };
+function sceneCastText(s) { return (s.castIds || []).map(id => castLabel(castOf(id))).filter(Boolean).join(', '); }
+function syncCastText(s) { s.cast = sceneCastText(s).slice(0, 200); }
+
+function vSchedule() {
+  if (typeof SCHED === 'undefined') return '<div class="card empty"><h2>The scheduler didn\'t load</h2><p>Refresh the page.</p></div>';
+  const st = SCHED.settings(P); P.sched = st;
+  const unsched = P.scenes.filter(s => !s.dayId);
+  const scheduledE = P.scenes.filter(s => s.dayId).reduce((a, s) => a + SCHED.eighths(s.pages), 0);
+  const clashes = SCHED.conflicts(P);
+  const locked = P.shootDays.some(d => d.locked);
+  const budgetNote = P.shootDays.length && Math.round(num(P.days.shoot)) !== P.shootDays.length
+    ? `<div class="banner"><b>Your budget counts ${N(P.days.shoot)} shoot day${P.days.shoot == 1 ? '' : 's'}; the schedule has ${P.shootDays.length}.</b> Day-rate lines in the budget follow the budget's number.
+        <div class="row" style="margin-top:8px"><button class="btn sm" data-act="schBudgetDays">Use ${P.shootDays.length} days in the budget</button></div></div>` : '';
+  return `
+  <div class="toolbar"><div class="grow"><h1 class="page">Schedule</h1>
+    <div class="sub">${P.shootDays.length} shoot day${P.shootDays.length === 1 ? '' : 's'} · ${SCHED.pagesText(scheduledE)} pages scheduled${unsched.length ? ` · <b style="color:var(--acc)">${unsched.length} unscheduled</b>` : ''}</div></div>
+    <button class="btn" data-act="schScript">Read a script</button>
+    <button class="btn pri" data-act="schPlan" ${P.scenes.length ? '' : 'disabled'}>${P.shootDays.length ? (locked ? 'Re-plan (keeps locked days)' : 'Re-plan the shoot') : 'Plan the shoot'}</button>
+    ${unsched.length && P.shootDays.length ? '<button class="btn" data-act="schFit">Fit unscheduled scenes</button>' : ''}
+    <button class="btn sm ghost" data-act="schUndo" ${UNDO.length ? '' : 'disabled'} title="Undo">↶ Undo</button>
+    <button class="btn sm ghost" data-act="schRedo" ${REDO.length ? '' : 'disabled'} title="Redo">↷ Redo</button>
+    <button class="btn sm ghost" data-act="schVersions">Versions</button>
+    <button class="btn sm ghost" data-act="schSettings">${SHOW_SET ? 'Hide settings' : 'Settings'}</button>
+  </div>
+  ${SHOW_SET ? schSettingsHTML(st) : ''}
+  ${budgetNote}
+  ${clashes.length ? `<div class="card clash"><h2>${clashes.length} thing${clashes.length === 1 ? '' : 's'} to sort out</h2>${clashes.map(c => `<div class="clash-row"><span>${esc(c.text)}</span><button class="btn sm ghost" data-act="schGo" data-day="${esc(c.dayId)}">Show</button></div>`).join('')}</div>` : ''}
+  <div class="segs" role="tablist">${[['board', 'Strip board'], ['breakdown', 'Breakdown'], ['cast', 'Cast availability']].map(([k, n]) => `<button class="seg ${SVIEW === k ? 'on' : ''}" data-act="schView" data-k="${k}" role="tab" aria-selected="${SVIEW === k}">${n}</button>`).join('')}</div>
+  ${P.scenes.length ? (SVIEW === 'breakdown' ? schBreakdownHTML() : SVIEW === 'cast' ? schCastHTML(clashes) : schBoardHTML(unsched, clashes))
+    : `<div class="card empty"><h2>Start from your script</h2><p style="max-width:520px;margin:0 auto 16px">Upload your screenplay and the scheduler breaks it down: every scene's set, cast, page length, props and how hard it is to shoot. Then it proposes shoot days. You check and change everything.</p>
+       <button class="btn pri" data-act="schScript">Read a script</button><p class="hint" style="margin-top:12px">Or add scenes by hand in <b>Scenes &amp; locations</b>.</p></div>`}`;
+}
+
+function schSettingsHTML(st) {
+  return `<div class="card"><h2>Schedule settings</h2><p class="hint">Used the next time you press Plan. Nothing already planned changes until you do.</p>
+    <div class="grid g4">
+      <label class="f">First shoot day<input type="date" data-sched="start" value="${esc(st.start)}"></label>
+      <label class="f">Pages a day <small class="sub">(simple dialogue)</small><select data-sched="pace">${[3, 3.5, 4, 4.25, 5, 5.5, 6, 7, 8].map(v => `<option value="${v}" ${num(st.pace) === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label class="f">Locations a day, at most<select data-sched="maxLocs">${[1, 2, 3].map(v => `<option value="${v}" ${st.maxLocs === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <div class="f"><span>Days off</span><div class="row" style="gap:4px;margin-top:4px">${SCHED.WEEKDAY.map((w, i) => `<label class="chk sm"><input type="checkbox" data-schedoff="${i}" ${st.off.includes(i) ? 'checked' : ''}> ${w}</label>`).join('')}</div></div>
+    </div></div>`;
+}
+
+function stripHTML(s) {
+  const cast = (s.castIds || []).map(id => castLabel(castOf(id))).filter(Boolean);
+  return `<div class="strip ${stripCls(s)} ${OPEN_SCENE === s.id ? 'open' : ''}" draggable="true" data-scene="${esc(s.id)}" data-act="schOpen" data-id="${esc(s.id)}" tabindex="0" aria-label="Scene ${esc(s.no)}, ${esc(s.set)}">
+    <span class="grip" aria-hidden="true">⋮⋮</span><b class="no">${esc(s.no)}</b><span class="ie">${esc(s.ie)}</span>
+    <span class="set">${esc(s.set || 'Untitled set')}${s.locationId ? `<small>${esc(locName(s.locationId))}</small>` : ''}</span>
+    <span class="dn">${esc(s.dn === 'DAY' ? 'D' : s.dn === 'NIGHT' ? 'N' : s.dn.slice(0, 4))}</span><span class="pp">${esc(SCHED.pagesText(SCHED.eighths(s.pages)))}</span>
+    <span class="who" title="${esc(cast.join(', '))}">${esc(cast.slice(0, 4).join(', '))}${cast.length > 4 ? ' +' + (cast.length - 4) : ''}</span>
+    <span class="eff e${s.effort || 2}" title="${esc(EFF[s.effort || 2])}">${'●'.repeat(s.effort || 2)}</span></div>`;
+}
+function editorHTML(s) {
+  const cast = P.contacts.filter(c => c.kind === 'cast');
+  const dayOpts = `<option value="">Unscheduled</option>` + P.shootDays.map((d, i) => `<option value="${esc(d.id)}" ${s.dayId === d.id ? 'selected' : ''}>Day ${i + 1} · ${esc(SCHED.dayLabel(d.date))}</option>`).join('');
+  return `<div class="sceneed" data-ed="${esc(s.id)}">
+    <div class="grid g6">
+      <label class="f">Scene<input data-sc="${esc(s.id)}" data-k="no" value="${esc(s.no)}" maxlength="10"></label>
+      <label class="f">Int / Ext<select data-sc="${esc(s.id)}" data-k="ie" data-rerender>${['INT', 'EXT', 'INT/EXT'].map(o => `<option ${s.ie === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
+      <label class="f">Day / Night<select data-sc="${esc(s.id)}" data-k="dn" data-rerender>${['DAY', 'NIGHT', 'DAWN', 'DUSK'].map(o => `<option ${s.dn === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>
+      <label class="f">Pages<input data-sc="${esc(s.id)}" data-k="pages" value="${esc(s.pages)}" placeholder="1 3/8" maxlength="12"></label>
+      <label class="f">How hard<select data-sc="${esc(s.id)}" data-k="effort" data-num data-rerender>${[1, 2, 3, 4].map(v => `<option value="${v}" ${(s.effort || 2) === v ? 'selected' : ''}>${EFF[v]}</option>`).join('')}</select></label>
+      <label class="f">Story day<input data-sc="${esc(s.id)}" data-k="sday" value="${esc(s.sday)}" placeholder="Day 1" maxlength="30"></label>
+    </div>
+    <p class="hint" style="margin:6px 0 0">${esc(EFF_HINT[s.effort || 2])}.</p>
+    <div class="grid g2" style="margin-top:10px">
+      <label class="f">Set<input data-sc="${esc(s.id)}" data-k="set" value="${esc(s.set)}" maxlength="80"></label>
+      <label class="f">Location<select data-sc="${esc(s.id)}" data-k="locationId" data-rerender><option value="">—</option>${P.locations.map(l => `<option value="${esc(l.id)}" ${s.locationId === l.id ? 'selected' : ''}>${esc(l.name || 'Location')}${l.town ? ' · ' + esc(l.town) : ''}</option>`).join('')}</select></label>
+    </div>
+    <div class="f" style="margin-top:10px"><span>Cast in this scene</span>
+      <div class="castpick">${cast.map(c => `<label class="chk sm"><input type="checkbox" data-sccast="${esc(c.id)}" data-scid="${esc(s.id)}" ${(s.castIds || []).includes(c.id) ? 'checked' : ''}> ${esc(castLabel(c))}${c.name && c.character ? ` <span class="sub">(${esc(c.name)})</span>` : ''}</label>`).join('') || '<span class="hint">No cast yet.</span>'}</div>
+      <div class="row" style="margin-top:6px"><input id="newChar-${esc(s.id)}" placeholder="Add a character" maxlength="80" style="max-width:220px"><button class="btn sm" data-act="schAddChar" data-id="${esc(s.id)}">Add</button></div></div>
+    <div class="grid g2" style="margin-top:10px">
+      <label class="f">Extras<input data-sc="${esc(s.id)}" data-k="extras" value="${esc(s.extras)}" maxlength="160" placeholder="e.g. 20 diners"></label>
+      <label class="f">What happens<input data-sc="${esc(s.id)}" data-k="desc" value="${esc(s.desc)}" maxlength="300" placeholder="One line for the call sheet"></label>
+      <label class="f">Props, vehicles &amp; effects<textarea data-sc="${esc(s.id)}" data-k="props" maxlength="600" rows="2">${esc(s.props)}</textarea></label>
+      <label class="f">Notes<textarea data-sc="${esc(s.id)}" data-k="notes" maxlength="600" rows="2">${esc(s.notes)}</textarea></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="f" style="min-width:200px">Shoot day<select data-scmove="${esc(s.id)}">${dayOpts}</select></label>
+      <button class="btn sm" data-act="schUp" data-id="${esc(s.id)}" title="Earlier in the day" ${s.dayId ? '' : 'disabled'}>↑ Earlier</button>
+      <button class="btn sm" data-act="schDown" data-id="${esc(s.id)}" title="Later in the day" ${s.dayId ? '' : 'disabled'}>↓ Later</button>
+      <span style="flex:1"></span>
+      <button class="btn sm ghost" data-act="schSplit" data-id="${esc(s.id)}">Split in two</button>
+      <button class="btn sm danger" data-act="schDelScene" data-id="${esc(s.id)}">Delete scene</button>
+      <button class="btn sm" data-act="schOpen" data-id="${esc(s.id)}">Done</button>
+    </div></div>`;
+}
+
+function schBoardHTML(unsched, clashes) {
+  const byDay = {}; clashes.forEach(c => { (byDay[c.dayId] = byDay[c.dayId] || []).push(c); });
+  const strips = list => list.map(s => stripHTML(s) + (OPEN_SCENE === s.id ? editorHTML(s) : '')).join('');
+  const tray = unsched.length || DRAG ? `<div class="card sday tray" data-dropday=""><div class="dayhead"><b>Unscheduled</b><span class="sub">${unsched.length} scene${unsched.length === 1 ? '' : 's'}${unsched.length && P.shootDays.length ? ' · drag onto a day, or press <b>Fit unscheduled scenes</b>' : ''}</span></div>
+      <div class="strips">${strips(SCHED.scenesOf(P, '').sort(SCHED.sceneCmp))}</div></div>` : '';
+  const legend = `<div class="legend"><span><i class="sw int-day"></i>Interior day</span><span><i class="sw ext-day"></i>Exterior day</span><span><i class="sw int-night"></i>Interior night</span><span><i class="sw ext-night"></i>Exterior night</span><span>● How hard: simple to very heavy</span><span class="desk-only">Drag strips between days. Tap a strip to edit or move it.</span></div>`;
+  const days = P.shootDays.map((d, i) => {
+    const s = SCHED.stats(P, d); const load = Math.round(s.load * 100);
+    const cl = byDay[d.id] || [];
+    return `<div class="card sday ${d.locked ? 'locked' : ''} ${cl.length ? 'has-clash' : ''}" id="day-${esc(d.id)}" data-dropday="${esc(d.id)}">
+      <div class="dayhead">
+        <b>Day ${i + 1}</b>
+        <input type="date" data-sday="${esc(d.id)}" data-k="date" value="${esc(d.date)}" aria-label="Date of day ${i + 1}" ${d.locked ? 'disabled' : ''}>
+        <span class="sub">${esc(d.date ? SCHED.WEEKDAY[SCHED.weekday(d.date)] : 'No date')}${s.night ? ' · Night' : ''}</span>
+        <select data-sday="${esc(d.id)}" data-k="locationId" aria-label="Main location"><option value="">Location…</option>${P.locations.map(l => `<option value="${esc(l.id)}" ${d.locationId === l.id ? 'selected' : ''}>${esc(l.name || 'Location')}</option>`).join('')}</select>
+        <span class="grow"></span>
+        <span class="pill">${esc(SCHED.pagesText(s.eighths))} pp</span>
+        <span class="load ${load > 110 ? 'over' : ''}" title="${load}% of a normal day"><i style="width:${Math.min(100, load)}%"></i></span>
+        <button class="btn sm ${d.locked ? 'pri' : 'ghost'}" data-act="schLock" data-day="${esc(d.id)}" aria-pressed="${!!d.locked}">${d.locked ? '🔒 Locked' : 'Lock'}</button>
+        <details class="dayx"><summary class="btn sm ghost" aria-label="Day actions">⋯</summary><div class="dayx-menu">
+          <button class="btn sm" data-act="schDayUp" data-day="${esc(d.id)}" ${i === 0 ? 'disabled' : ''}>Swap with the day before</button>
+          <button class="btn sm" data-act="schDayDown" data-day="${esc(d.id)}" ${i === P.shootDays.length - 1 ? 'disabled' : ''}>Swap with the day after</button>
+          <button class="btn sm" data-act="schShift" data-day="${esc(d.id)}" data-n="1">Push this and later days back 1 day</button>
+          <button class="btn sm" data-act="schShift" data-day="${esc(d.id)}" data-n="-1">Bring this and later days forward 1 day</button>
+          <button class="btn sm" data-act="schInsert" data-day="${esc(d.id)}">Add a day after this one</button>
+          <button class="btn sm" data-act="schToCalls" data-day="${esc(d.id)}">Open its call sheet</button>
+          <button class="btn sm danger" data-act="schDelDay" data-day="${esc(d.id)}">Delete day</button></div></details>
+      </div>
+      ${cl.length ? `<div class="dayclash">${cl.map(c => `<div>⚠ ${esc(c.text)}</div>`).join('')}</div>` : ''}
+      <div class="strips">${strips(s.scenes) || '<p class="hint" style="margin:6px 0">No scenes. Drag one here.</p>'}</div></div>`;
+  }).join('');
+  return legend + tray + (days || `<div class="card empty"><h2>No shoot days yet</h2><p style="margin-bottom:14px">Press <b>Plan the shoot</b> to group your ${P.scenes.length} scenes into days.</p></div>`)
+    + (P.shootDays.length ? '<div class="row"><button class="btn sm" data-act="schInsert" data-day="">+ Add a shoot day at the end</button></div>' : '');
+}
+
+function schBreakdownHTML() {
+  const list = P.scenes.slice().sort(SCHED.sceneCmp);
+  const dayNo = new Map(P.shootDays.map((d, i) => [d.id, i + 1]));
+  const tot = list.reduce((a, s) => a + SCHED.eighths(s.pages), 0);
+  return `<div class="card"><div class="spread"><h2>Breakdown <span class="pill">${list.length} scenes · ${esc(SCHED.pagesText(tot))} pages</span></h2><button class="btn sm" data-act="schAddScene">+ Scene</button></div>
+    <p class="hint">In script order. Tap a row to edit everything about the scene.</p>
+    <div class="bdwrap"><div class="bd-row head"><span>Sc</span><span></span><span>Set</span><span>D/N</span><span>Pages</span><span>Cast</span><span>How hard</span><span>Day</span></div>
+    ${list.map(s => `<div class="bd-row ${OPEN_SCENE === s.id ? 'open' : ''}" data-act="schOpen" data-id="${esc(s.id)}" tabindex="0">
+      <b>${esc(s.no)}</b><span><i class="sw ${stripCls(s)}"></i></span><span>${esc(s.ie)} ${esc(s.set)}${s.locationId ? `<small class="sub"> · ${esc(locName(s.locationId))}</small>` : ''}${s.notes ? `<small class="warn">${esc(s.notes)}</small>` : ''}</span>
+      <span>${esc(s.dn)}</span><span>${esc(SCHED.pagesText(SCHED.eighths(s.pages)))}</span><span class="sub">${esc(sceneCastText(s))}</span><span>${esc(EFF[s.effort || 2])}</span>
+      <span>${s.dayId ? 'Day ' + dayNo.get(s.dayId) : '<span class="pill acc">Unscheduled</span>'}</span></div>${OPEN_SCENE === s.id ? editorHTML(s) : ''}`).join('')}</div></div>`;
+}
+
+function schCastHTML(clashes) {
+  const cast = P.contacts.filter(c => c.kind === 'cast');
+  const days = SCHED.castDays(P);
+  const clashBy = {}; clashes.filter(c => c.kind === 'actor').forEach(c => { clashBy[c.castId] = (clashBy[c.castId] || 0) + 1; });
+  if (!cast.length) return '<div class="card empty"><h2>No cast yet</h2><p>Read a script, or add cast in <b>Cast &amp; crew</b>.</p></div>';
+  return `<div class="card"><h2>Cast availability</h2>
+    <p class="hint">Add the dates each actor can't work. Any day that needs them on one of those dates turns red. Press <b>Re-plan</b> to move the shoot around them; locked days stay put. Or move the scenes yourself.</p>
+    ${cast.sort((a, b) => (days[b.id] || []).length - (days[a.id] || []).length).map(c => `<div class="av-row ${clashBy[c.id] ? 'bad' : ''}">
+      <div class="who"><b>${esc(castLabel(c))}</b><input data-coll="contacts" data-id="${esc(c.id)}" data-k="name" value="${esc(c.name)}" placeholder="Actor's name" maxlength="80"></div>
+      <div class="dlist">${(days[c.id] || []).map(n => `<span class="pill">Day ${n}</span>`).join(' ') || '<span class="hint">Not scheduled</span>'}</div>
+      <div class="unav">${(c.unavail || []).map(dt => `<span class="pill bad">${esc(SCHED.dayLabel(dt))}<button class="x" data-act="schUnDel" data-c="${esc(c.id)}" data-d="${esc(dt)}" aria-label="Remove ${esc(dt)}">✕</button></span>`).join(' ')}
+        <span class="row" style="gap:4px"><input type="date" id="un-${esc(c.id)}" aria-label="Date ${esc(castLabel(c))} can't work"><button class="btn sm" data-act="schUnAdd" data-c="${esc(c.id)}">Can't work</button></span></div>
+    </div>`).join('')}</div>`;
+}
+
+/* ---------- reading a script ---------- */
+let BD = null, BD_TIMER = null;
+function scriptModal() {
+  if (!canEdit()) return toast('Confirm your email first', true);
+  const b = ME.breakdowns || {}; const left = b.limit == null ? null : Math.max(0, b.limit - (b.used || 0));
+  modal(`<h2>Read a script</h2>
+    <p class="hint">Upload your screenplay (PDF or Word). The scheduler finds every scene, its length and cast, and the AI adds locations, extras, props and how hard each scene is. You check everything before it's added. Your script isn't kept.</p>
+    <label class="f">Title<input id="bdTitle" value="${esc(P.title)}" maxlength="120"></label>
+    <label class="f" style="margin-top:10px">Script file<input type="file" id="bdFile" accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
+    <details style="margin-top:8px"><summary class="sub">Or paste the script text</summary><textarea id="bdText" rows="6" style="width:100%;margin-top:6px" placeholder="INT. KITCHEN – NIGHT …"></textarea></details>
+    <p class="hint" style="margin-top:10px">${left == null ? 'Unlimited breakdowns on your account.' : `${left} of ${b.limit} breakdowns left this month.`} A feature takes 2 to 5 minutes.</p>
+    <p class="msg" id="bdMsg" role="status"></p>
+    <div class="actions"><button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" id="bdGo" data-act="schRead">Read the script</button></div>`);
+}
+async function readScript() {
+  const f = ($('#bdFile') || {}).files ? $('#bdFile').files[0] : null, text = ($('#bdText') || {}).value || '', title = ($('#bdTitle') || {}).value || P.title;
+  const msg = t => { const m = $('#bdMsg'); if (m) m.textContent = t; };
+  if (!f && text.trim().length < 200) return msg('Choose your script file, or paste the whole script.');
+  const body = { title };
+  if (f) {
+    if (!/\.(pdf|docx)$/i.test(f.name)) return msg('Upload a PDF or Word (.docx) file.');
+    if (f.size > 4 * 1024 * 1024) return msg('That file is over 4MB. Save it as a smaller PDF, or paste the text.');
+    body.fileName = f.name;
+    body.fileBase64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = rej; r.readAsDataURL(f); }).catch(() => '');
+    if (!body.fileBase64) return msg('That file could not be read.');
+  } else body.text = text;
+  $('#bdGo').disabled = true; msg('Uploading…');
+  const { ok, d } = await call('script-start', body);
+  if (!ok) { $('#bdGo').disabled = false; return msg(d.message || 'Could not start. Try again.'); }
+  if (ME.breakdowns) ME.breakdowns.used = (ME.breakdowns.used || 0) + 1;
+  msg('Reading the script…');
+  clearTimeout(BD_TIMER);
+  const poll = async (n) => {
+    const { ok: ok2, d: r } = await call('script-status', { jobId: d.jobId });
+    if (!$('#bdMsg')) return;                                          // modal closed
+    if (!ok2) return msg(r.message || 'Lost track of the script. Try again.');
+    if (r.status === 'error') { $('#bdGo').disabled = false; return msg(r.error || 'Could not read that script.'); }
+    if (r.status === 'done' && r.breakdown) { BD = r.breakdown; BD.scenes.forEach(s => { s.on = true; }); reviewModal(); return; }
+    msg(r.stage || 'Reading the script…');
+    if (n < 400) BD_TIMER = setTimeout(() => poll(n + 1), 3000); else msg('This is taking too long. Try again later.');
+  };
+  BD_TIMER = setTimeout(() => poll(0), 2500);
+}
+function reviewModal() {
+  const sc = BD.scenes; const tot = sc.filter(s => s.on).reduce((a, s) => a + s.eighths, 0);
+  const firstDate = P.sched.start || (P.shootDays.find(d => d.date) || {}).date || '';
+  modal(`<h2>Check the breakdown</h2>
+    <p class="hint">${sc.length} scenes, ${esc(SCHED.pagesText(tot))} pages${BD.estimated ? ' (page lengths estimated: the file had no page layout)' : ''}${BD.scanned ? ' · read from a scan' : ''}. Fix anything that's wrong now, or later on the board. Untick scenes you don't want.</p>
+    <div class="bdwrap review"><div class="rv-row head"><span></span><span>Sc</span><span>Int/Ext</span><span>D/N</span><span>Set</span><span>Location</span><span>Town</span><span>Pages</span><span>Cast</span><span>How hard</span></div>
+    ${sc.map((s, i) => `<div class="rv-row ${s.on ? '' : 'off'}">
+      <input type="checkbox" data-bd="${i}" data-k="on" ${s.on ? 'checked' : ''} aria-label="Include scene ${esc(s.no)}">
+      <input data-bd="${i}" data-k="no" value="${esc(s.no)}" maxlength="10">
+      <select data-bd="${i}" data-k="ie">${['INT', 'EXT', 'INT/EXT'].map(o => `<option ${s.ie === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+      <select data-bd="${i}" data-k="dn">${['DAY', 'NIGHT', 'DAWN', 'DUSK'].map(o => `<option ${s.dn === o ? 'selected' : ''}>${o}</option>`).join('')}</select>
+      <input data-bd="${i}" data-k="set" value="${esc(s.set)}" maxlength="80">
+      <input data-bd="${i}" data-k="loc" value="${esc(s.loc)}" maxlength="80">
+      <input data-bd="${i}" data-k="area" value="${esc(s.area)}" maxlength="60" placeholder="Town">
+      <input data-bd="${i}" data-k="pages" value="${esc(SCHED.pagesText(s.eighths))}" maxlength="12">
+      <input data-bd="${i}" data-k="cast" value="${esc(s.cast.join(', '))}" maxlength="400">
+      <select data-bd="${i}" data-k="effort">${[1, 2, 3, 4].map(v => `<option value="${v}" ${s.effort === v ? 'selected' : ''}>${EFF[v]}</option>`).join('')}</select>
+      ${(s.notes || []).length || (s.props || []).length || s.extras ? `<div class="rv-notes">${s.extras ? `<span>Extras: ${esc(s.extras)}</span>` : ''}${(s.props || []).length ? `<span>${esc(s.props.join(', '))}</span>` : ''}${(s.notes || []).map(n => `<span class="warn">⚠ ${esc(n)}</span>`).join('')}</div>` : ''}
+    </div>`).join('')}</div>
+    <div class="grid g2" style="margin-top:14px">
+      ${P.scenes.length ? `<label class="chk"><input type="checkbox" id="bdReplace" checked> Replace the ${P.scenes.length} scenes already here</label>` : '<span></span>'}
+      <label class="chk"><input type="checkbox" id="bdPlan" checked> Plan the shoot days now</label>
+      <label class="f">First shoot day<input type="date" id="bdStart" value="${esc(firstDate)}"></label>
+    </div>
+    <div class="actions"><button class="btn" data-act="closeModal">Cancel</button><button class="btn pri" data-act="schApply">Add to the schedule</button></div>`, true);
+}
+const titleCase = s => String(s || '').toLowerCase().replace(/(^|[\s\-'.(])([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/\b(Ii|Iii|Iv)\b/g, x => x.toUpperCase());
+async function applyBreakdown() {
+  const keep = BD.scenes.filter(s => s.on); if (!keep.length) return toast('Tick at least one scene', true);
+  const replace = $('#bdReplace') ? $('#bdReplace').checked : false, planNow = $('#bdPlan').checked, start = $('#bdStart').value;
+  await flushSave(); CHECKPOINT = 'Before reading the script';
+  change(() => {
+    if (replace) { P.scenes = []; }
+    const locBy = new Map(P.locations.map(l => [String(l.name || '').toLowerCase().trim(), l]));
+    const castBy = new Map(); P.contacts.filter(c => c.kind === 'cast').forEach(c => { [c.character, c.name].filter(Boolean).forEach(n => castBy.set(n.toLowerCase().trim(), c)); });
+    keep.forEach(s => {
+      let loc = null; const ln = String(s.loc || s.set || '').trim();
+      if (ln) { loc = locBy.get(ln.toLowerCase()); if (!loc && P.locations.length < 50) { loc = { id: uid('o'), name: ln.slice(0, 80), address: '', town: String(s.area || '').slice(0, 80), parking: '', contact: '', hospital: '' }; P.locations.push(loc); locBy.set(ln.toLowerCase(), loc); } else if (loc && !loc.town && s.area) loc.town = s.area.slice(0, 80); }
+      const ids = [];
+      String(Array.isArray(s.cast) ? s.cast.join(',') : s.cast).split(',').map(x => x.trim()).filter(x => x.length > 1).forEach(name => {
+        let c = castBy.get(name.toLowerCase());
+        if (!c && P.contacts.length < 300) { c = { id: uid('c'), kind: 'cast', name: '', character: titleCase(name).slice(0, 80), role: '', agent: '', dept: 'Cast', phone: '', email: '', unavail: [] }; P.contacts.push(c); castBy.set(name.toLowerCase(), c); }
+        if (c && !ids.includes(c.id)) ids.push(c.id);
+      });
+      const sc = { id: uid('sc'), no: String(s.no).slice(0, 10), ie: s.ie, dn: s.dn, set: String(s.set || '').slice(0, 80), desc: '', pages: typeof s.pages === 'string' ? s.pages : SCHED.pagesText(s.eighths),
+        cast: '', castIds: ids.slice(0, 40), locationId: loc ? loc.id : '', extras: s.extras || '', props: (s.props || []).join(', ').slice(0, 600), notes: (s.notes || []).join('; ').slice(0, 600),
+        effort: num(s.effort) || 2, sday: s.sday || '', page: s.page || 0, pos: 0, dayId: '' };
+      syncCastText(sc); P.scenes.push(sc);
+    });
+    if (start) P.sched.start = start;
+    if (planNow) SCHED.plan(P, { mode: 'all' });
+  });
+  closeModal(); BD = null; SVIEW = 'board';
+  toast(`${keep.length} scenes added${planNow ? ` · ${P.shootDays.length} shoot days planned` : ''}`);
+}
+
+/* ---------- versions ---------- */
+async function versionsModal() {
+  await flushSave();
+  const { ok, d } = await call('versions', { id: P.id });
+  if (!ok) return toast(d.message || 'Could not load versions', true);
+  modal(`<h2>Saved versions</h2><p class="hint">Kept automatically before each re-plan and script import (the last 5). Restoring replaces the whole production; you can undo it.</p>
+    ${(d.items || []).map(v => `<div class="spread" style="padding:8px 0;border-top:1px solid var(--line)"><span><b>${esc(v.label)}</b><br><span class="sub">${esc(new Date(+v.at).toLocaleString('en-ZA'))}</span></span><button class="btn sm" data-act="schRestore" data-at="${esc(v.at)}">Restore</button></div>`).join('') || '<p class="hint">No saved versions yet.</p>'}
+    <div class="actions"><button class="btn" data-act="closeModal">Close</button></div>`);
+}
+
+Object.assign(ACT, {
+  schView: el => { SVIEW = el.dataset.k; OPEN_SCENE = null; render(); },
+  schSettings: () => { SHOW_SET = !SHOW_SET; render(); },
+  schOpen: (el, e) => { if (e && e.target.closest('input,select,textarea,label,.sceneed')) return; OPEN_SCENE = OPEN_SCENE === el.dataset.id ? null : el.dataset.id; render(); },
+  schScript: scriptModal, schRead: readScript, schApply: applyBreakdown,
+  schPlan: async () => {
+    if (P.shootDays.length && !confirm(P.shootDays.some(d => d.locked) ? 'Re-plan every unlocked day? Locked days stay exactly as they are. You can undo this.' : 'Re-plan the whole shoot? Your current days are rearranged. You can undo this, and the current version is saved.')) return;
+    await flushSave(); CHECKPOINT = P.shootDays.length ? 'Before re-plan' : '';
+    const r = change(() => SCHED.plan(P, { mode: 'all' }));
+    toast(`${r.days} shoot days planned`);
+  },
+  schFit: () => { const r = change(() => SCHED.plan(P, { mode: 'unscheduled' })); toast(r.added ? `${r.added} day${r.added === 1 ? '' : 's'} added at the end` : 'Scenes fitted into existing days'); },
+  schUndo: () => { if (!UNDO.length) return; REDO.push(snap()); restore(UNDO.pop()); markDirty(); render(); toast('Undone'); },
+  schRedo: () => { if (!REDO.length) return; UNDO.push(snap()); restore(REDO.pop()); markDirty(); render(); toast('Redone'); },
+  schVersions: versionsModal,
+  schRestore: async el => {
+    const { ok, d } = await call('version', { id: P.id, at: el.dataset.at });
+    if (!ok) return toast(d.message || 'Could not load that version', true);
+    if (!confirm(`Restore "${d.label}"? The production goes back to how it was then. You can undo this.`)) return;
+    await flushSave(); CHECKPOINT = 'Before restoring a version';
+    change(() => { const keepId = P.id; P = normalize(Object.assign(d.production, { id: keepId })); });
+    closeModal(); toast('Version restored');
+  },
+  schGo: el => { SVIEW = 'board'; render(); const t = document.getElementById('day-' + el.dataset.day); if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'center' }); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 1600); } },
+  schLock: el => { const d = dayById(el.dataset.day); if (d) change(() => { d.locked = !d.locked; }, { toast: d.locked ? 'Day unlocked' : 'Day locked: re-planning won\'t touch it' }); },
+  schDayUp: el => { const r = change(() => SCHED.swapDay(P, el.dataset.day, -1)); if (r === 'locked') toast('Unlock both days first', true); },
+  schDayDown: el => { const r = change(() => SCHED.swapDay(P, el.dataset.day, 1)); if (r === 'locked') toast('Unlock both days first', true); },
+  schShift: el => { const n = num(el.dataset.n); const m = change(() => SCHED.shiftFrom(P, el.dataset.day, n)); toast(m ? `${m} day${m === 1 ? '' : 's'} moved ${n > 0 ? 'back' : 'forward'}` : 'Those days have no dates yet'); },
+  schInsert: el => { change(() => { const d = SCHED.insertDay(P, el.dataset.day || null); CUR_DAY = d.id; }); },
+  schDelDay: el => { const d = dayById(el.dataset.day); if (!d) return; if (d.token && !confirm('This day\'s call sheet link will stop working. Delete the day? Its scenes become unscheduled.')) return; if (!d.token && !confirm('Delete this day? Its scenes become unscheduled.')) return; change(() => SCHED.deleteDay(P, d.id)); },
+  schToCalls: el => { CUR_DAY = el.dataset.day; TAB = 'calls'; saveUI(); render(); window.scrollTo(0, 0); },
+  schUp: el => change(() => SCHED.stepScene(P, el.dataset.id, -1)),
+  schDown: el => change(() => SCHED.stepScene(P, el.dataset.id, 1)),
+  schSplit: el => {
+    const s = P.scenes.find(x => x.id === el.dataset.id); if (!s) return;
+    change(() => {
+      const e = SCHED.eighths(s.pages), a = Math.max(1, Math.ceil(e / 2));
+      const b = Object.assign(JSON.parse(JSON.stringify(s)), { id: uid('sc'), no: (s.no + 'B').slice(0, 10), pages: SCHED.pagesText(Math.max(1, e - a)) });
+      s.pages = SCHED.pagesText(a); if (!/[A-Z]$/.test(s.no)) s.no = (s.no + 'A').slice(0, 10);
+      P.scenes.push(b); SCHED.moveScene(P, b.id, s.dayId, (SCHED.scenesOf(P, s.dayId)[SCHED.scenesOf(P, s.dayId).indexOf(s) + 1] || {}).id);
+    }, { toast: 'Scene split in two' });
+  },
+  schDelScene: el => { if (!confirm('Delete this scene from the schedule?')) return; OPEN_SCENE = null; change(() => { P.scenes = P.scenes.filter(x => x.id !== el.dataset.id); SCHED.syncCast(P); }); },
+  schAddScene: () => { const last = P.scenes.slice().sort(SCHED.sceneCmp).pop(); const s = { id: uid('sc'), no: String((num(last && last.no) || P.scenes.length) + 1), ie: 'INT', dn: 'DAY', set: '', desc: '', pages: '1', cast: '', castIds: [], locationId: '', extras: '', props: '', notes: '', effort: 2, sday: '', pos: 0, page: 0, dayId: '' }; OPEN_SCENE = s.id; change(() => P.scenes.push(s)); },
+  schAddChar: el => {
+    const s = P.scenes.find(x => x.id === el.dataset.id); const inp = document.getElementById('newChar-' + el.dataset.id); const name = (inp && inp.value || '').trim();
+    if (!s || name.length < 2) return toast('Type the character\'s name', true);
+    change(() => { let c = P.contacts.find(x => x.kind === 'cast' && (x.character || '').toLowerCase() === name.toLowerCase()); if (!c) { c = { id: uid('c'), kind: 'cast', name: '', character: name.slice(0, 80), role: '', agent: '', dept: 'Cast', phone: '', email: '', unavail: [] }; P.contacts.push(c); } s.castIds = (s.castIds || []).concat(s.castIds.includes(c.id) ? [] : [c.id]); syncCastText(s); SCHED.syncCast(P); });
+  },
+  schUnAdd: el => {
+    const c = castOf(el.dataset.c), inp = document.getElementById('un-' + el.dataset.c), dt = inp && inp.value;
+    if (!c || !/^\d{4}-\d{2}-\d{2}$/.test(dt || '')) return toast('Pick a date', true);
+    change(() => { c.unavail = [...new Set((c.unavail || []).concat(dt))].sort(); });
+    const n = SCHED.conflicts(P).filter(x => x.castId === c.id).length;
+    if (n) toast(`${castLabel(c)} is booked that day. Re-plan, or move the scenes`, true);
+  },
+  schUnDel: el => { const c = castOf(el.dataset.c); if (c) change(() => { c.unavail = (c.unavail || []).filter(x => x !== el.dataset.d); }); },
+  schBudgetDays: () => change(() => { P.days.shoot = P.shootDays.length; }, { toast: 'Budget now counts ' + P.shootDays.length + ' shoot days' })
+});
+
+/* Field edits on the Schedule tab (one undo point per field you start typing in). */
+document.addEventListener('focusin', e => { if (e.target.closest('[data-sc],[data-sday],[data-sched]') ) PENDING = snap(); });
+function schField(e) {
+  const el = e.target, ds = el.dataset; if (!P || TAB !== 'schedule') return false;
+  const commit = () => { if (PENDING) { UNDO.push(PENDING); if (UNDO.length > 60) UNDO.shift(); REDO = []; PENDING = null; } };
+  if (ds.bd !== undefined && BD) {
+    const s = BD.scenes[+ds.bd]; if (!s) return true;
+    if (ds.k === 'on') { s.on = el.checked; el.closest('.rv-row').classList.toggle('off', !el.checked); }
+    else if (ds.k === 'pages') { s.pages = el.value; s.eighths = SCHED.eighths(el.value) || 1; }
+    else if (ds.k === 'effort') s.effort = num(el.value);
+    else if (ds.k === 'cast') s.cast = el.value.split(',').map(x => x.trim()).filter(Boolean);
+    else s[ds.k] = el.value;
+    return true;
+  }
+  if (ds.sc) {
+    const s = P.scenes.find(x => x.id === ds.sc); if (!s) return true; commit();
+    s[ds.k] = ds.num !== undefined ? num(el.value) : el.value;
+    if (ds.k === 'locationId' || ds.k === 'dn' || ds.k === 'ie') SCHED.syncCast(P);
+    markDirty(); if (e.type === 'change' && ds.rerender !== undefined) render(); return true;
+  }
+  if (ds.sccast) {
+    const s = P.scenes.find(x => x.id === ds.scid); if (!s) return true; pushUndo();
+    s.castIds = (s.castIds || []).filter(x => x !== ds.sccast).concat(el.checked ? [ds.sccast] : []); syncCastText(s); SCHED.syncCast(P);
+    markDirty(); render(); return true;
+  }
+  if (ds.scmove) {
+    const sc0 = P.scenes.find(x => x.id === ds.scmove), fd = sc0 && sc0.dayId ? dayById(sc0.dayId) : null, td = el.value ? dayById(el.value) : null;
+    if ((fd && fd.locked) || (td && td.locked)) { toast('That day is locked. Unlock it to change its scenes', true); render(); return true; }
+    pushUndo(); SCHED.moveScene(P, ds.scmove, el.value, null); markDirty(); render(); return true; }
+  if (ds.sday) {
+    const d = dayById(ds.sday); if (!d) return true; commit();
+    if (ds.k === 'date') SCHED.setDate(P, d.id, el.value, false); else d[ds.k] = el.value;
+    markDirty(); if (e.type === 'change') render(); return true;
+  }
+  if (ds.sched) { commit(); P.sched[ds.sched] = ds.sched === 'start' ? el.value : num(el.value); markDirty(); return true; }
+  if (ds.schedoff !== undefined) { pushUndo(); const i = +ds.schedoff; P.sched.off = el.checked ? [...new Set(P.sched.off.concat(i))].sort() : P.sched.off.filter(x => x !== i); markDirty(); render(); return true; }
+  return false;
+}
+document.addEventListener('input', e => { if (e.target.matches('select,input[type=checkbox],input[type=date]')) return; schField(e); }, true);
+document.addEventListener('change', e => { if (e.target.matches('select,input[type=checkbox],input[type=date]')) schField(e); }, true);
+
+/* Drag and drop between days (desktop). On phones: tap a strip, then "Shoot day" and the arrows. */
+document.addEventListener('dragstart', e => { const s = e.target.closest && e.target.closest('.strip[data-scene]'); if (!s) return; DRAG = s.dataset.scene; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', DRAG); } catch (x) { } s.classList.add('dragging'); document.body.classList.add('dragging-on'); });
+document.addEventListener('dragend', () => { DRAG = null; document.body.classList.remove('dragging-on'); $$('.drop-before,.drop-day,.dragging').forEach(x => x.classList.remove('drop-before', 'drop-day', 'dragging')); });
+document.addEventListener('dragover', e => {
+  if (!DRAG) return; const day = e.target.closest('[data-dropday]'); if (!day) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  $$('.drop-before,.drop-day').forEach(x => x.classList.remove('drop-before', 'drop-day'));
+  const over = e.target.closest('.strip[data-scene]');
+  if (over && over.dataset.scene !== DRAG) over.classList.add('drop-before'); else day.classList.add('drop-day');
+});
+document.addEventListener('drop', e => {
+  if (!DRAG) return; const day = e.target.closest('[data-dropday]'); if (!day) return;
+  e.preventDefault();
+  const over = e.target.closest('.strip[data-scene]'); const id = DRAG; DRAG = null;
+  const target = day.dataset.dropday;
+  const d = target ? dayById(target) : null;
+  if (d && d.locked) return toast('That day is locked. Unlock it to change its scenes', true);
+  const from = (P.scenes.find(x => x.id === id) || {}).dayId; const fromDay = from ? dayById(from) : null;
+  if (fromDay && fromDay.locked) return toast('That scene is on a locked day. Unlock it first', true);
+  change(() => SCHED.moveScene(P, id, target, over && over.dataset.scene !== id ? over.dataset.scene : null));
+});
+
 function moveSec(id, dir) {
   const s = P.sections.find(x => x.id === id); const same = P.sections.filter(x => x.group === s.group); const i = same.indexOf(s); const j = i + dir;
   if (j < 0 || j >= same.length) return; const a = P.sections.indexOf(s), b = P.sections.indexOf(same[j]); [P.sections[a], P.sections[b]] = [P.sections[b], P.sections[a]]; markDirty(); render();
@@ -1209,7 +1691,7 @@ document.addEventListener('click', e => {
   if (a.tagName === 'A' && a.getAttribute('href') === '#') e.preventDefault();
   const fn = ACT[a.dataset.act]; if (fn) { if (a.dataset.act !== 'bgClose') e.preventDefault(); fn(a, e); }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-act=schOpen]')) { e.preventDefault(); e.target.click(); } });
 $('#prodSel').addEventListener('change', async e => { await flushSave(); if (await openProduction(e.target.value)) render(); });
 $('#newProdBtn').addEventListener('click', newProdModal);
 

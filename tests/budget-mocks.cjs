@@ -47,7 +47,7 @@ function addUser(token, uid, { verified = true, role = 'viewer', unlimited = fal
 }
 
 /* Outside services. */
-let lastBackgroundCall = null, anthropicText = '[]';
+let lastBackgroundCall = null, anthropicText = '[]', anthropicFn = null, scheduleBg = null, lastScheduleCall = null;
 const realFetch = global.fetch;
 global.fetch = async (url, opts = {}) => {
   url = String(url);
@@ -57,7 +57,12 @@ global.fetch = async (url, opts = {}) => {
     return users[idToken] ? json(200, { users: [users[idToken]] }) : json(400, { error: { message: 'INVALID_ID_TOKEN' } });
   }
   if (url.includes('/.netlify/functions/budget-import-background')) { lastBackgroundCall = { url, opts }; return json(202, {}); }
-  if (url.startsWith('https://api.anthropic.com/')) return json(200, { content: [{ type: 'text', text: anthropicText }], stop_reason: 'end_turn' });
+  if (url.startsWith('https://api.anthropic.com/')) return json(200, { content: [{ type: 'text', text: anthropicFn ? anthropicFn(JSON.parse(opts.body || '{}')) : anthropicText }], stop_reason: 'end_turn' });
+  if (url.includes('/.netlify/functions/schedule-breakdown-background')) {
+    lastScheduleCall = { url, opts };
+    if (scheduleBg) setTimeout(() => scheduleBg.handler({ httpMethod: 'POST', body: opts.body, headers: opts.headers }).catch(e => console.error('bg', e)), 5);
+    return json(202, {});
+  }
   if (url.startsWith('https://geocoding-api.open-meteo.com/')) return json(200, { results: [{ name: 'Fourways', latitude: -26.0, longitude: 28.0, country_code: 'ZA' }] });
   if (url.startsWith('https://api.open-meteo.com/')) return json(200, { daily: { time: ['2026-10-06'], weathercode: [2], temperature_2m_max: [28.4], temperature_2m_min: [15.6], precipitation_probability_max: [40], sunrise: ['2026-10-06T05:44'], sunset: ['2026-10-06T18:21'] } });
   if (realFetch && /^https?:\/\/(127\.0\.0\.1|localhost)/.test(url)) return realFetch(url, opts);
@@ -67,6 +72,7 @@ global.fetch = async (url, opts = {}) => {
 const budget = require('../netlify/functions/flieks-budget.js');
 const background = require('../netlify/functions/budget-import-background.js');
 const board = require('../netlify/functions/flieks-board.js');
+scheduleBg = require('../netlify/functions/schedule-breakdown-background.js');
 async function boardApi(body, headers = {}) {
   const r = await board.handler({ httpMethod: 'POST', body: JSON.stringify(body), headers });
   return { status: r.statusCode, d: JSON.parse(r.body || '{}') };
@@ -77,6 +83,6 @@ async function api(body, headers = {}) {
 }
 module.exports = {
   db, get, put, ops, users, addUser, api, budget, background, board, boardApi, emails,
-  setAnthropic: t => { anthropicText = t; }, lastBackground: () => lastBackgroundCall,
+  setAnthropic: t => { anthropicText = t; }, setAnthropicFn: f => { anthropicFn = f; }, lastBackground: () => lastBackgroundCall, lastSchedule: () => lastScheduleCall, scheduleBg: () => scheduleBg,
   setFailCounters: v => { failCounters = v; }
 };

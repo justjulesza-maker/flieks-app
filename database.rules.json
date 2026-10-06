@@ -240,6 +240,7 @@
     "flieks_callsheets":     { ".read": false, ".write": false },
     "flieks_callsheet_acks": { ".read": false, ".write": false },
     "flieks_budget_jobs":    { ".read": false, ".write": false },
+    "flieks_budget_versions": { ".read": false, ".write": false },
     "flieks_board_posts":    { ".read": false, ".write": false },
     "flieks_board_apps":     { ".read": false, ".write": false },
     "flieks_board_my_apps":  { ".read": false, ".write": false },

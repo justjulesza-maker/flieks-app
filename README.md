@@ -46,7 +46,7 @@ No sign-in. The link they were given is the key.
 |---|---|
 | `4flieks.com/filmmaker` | The portal — upload, cast, pricing, earnings |
 | `4flieks.com/report/<key>` | A shareable release report for funders and festivals |
-| `4flieks.com/lab/budget` | Budget & call sheets (4flieks Lab): budget, top sheet, cast & crew, scenes, call sheets, actuals |
+| `4flieks.com/lab/budget` | Budget & call sheets (4flieks Lab): budget, top sheet, cast & crew, **schedule** (script breakdown, strip board, actor availability, re-plan, versions), scenes, call sheets, actuals |
 | `4flieks.com/lab/board` | Opportunities board (4flieks Lab): casting calls, crew calls, collaborators. Every post is approved by the team first; free to apply; no fees allowed |
 | `4flieks.com/lab#news` | What's happening in SA film and TV (4flieks Lab front page): headlines from The Callsheet, NFVF, Durban FilmMart and the KZN Film Commission, linking out. Funding and open calls also show under the opportunities board. Nothing about Showmax is ever shown |
 | `4flieks.com/call/<token>` | A published call sheet. No sign-in: the link is the key. Crew tap "Got it" |
@@ -146,6 +146,8 @@ pay it.** That keeps you out of a dispute between a filmmaker and their actors.
 | `flieks-board` | The opportunities board: posts, moderation, applications, application manager, hire → budget, reports. The only way in to board data |
 | `flieks-news` / `flieks-news-refresh` | Lab industry news. `flieks-news-refresh` reads the feeds every three hours (scheduled, netlify.toml); `flieks-news` serves the headlines, and lets the team hide a story, add one by hand or read the feeds now. Only headline, source, date and link are kept; the browser never contacts the news sites. Sources and the blocked-word list are in `netlify/lib/news-core.js` |
 | `budget-import-background` | Reads a supplier quote PDF into budget lines. Only `flieks-budget` can start it (hashed job secret) |
+| `schedule-breakdown-background` | Scheduler: reads a screenplay (PDF, Word, pasted text, or a scan via the AI) into scenes. Scene headings and page lengths are found in code (`netlify/lib/schedule-core.js`); the AI adds cast, locations, extras, props and how hard each scene is. Only `flieks-budget` can start it (hashed job secret). The script is not stored |
+| `/lab-schedule.js` | The scheduling engine (plan, re-plan around locked days and actors' dates, move scenes and days, clashes). Pure JS, used by the Schedule tab and `tests/schedule.test.mjs` |
 | `og` *(edge)* | Rewrites link previews per film |
 
 ---
@@ -199,7 +201,8 @@ has a `readNode()` helper that does this.
 | `flieks_callsheets`, `flieks_callsheet_acks` | Published call sheets and "Got it" confirmations | Server only; the public sheet is served by `flieks-budget` |
 | `flieks_board_posts`, `flieks_board_apps`, `flieks_board_my_apps`, `flieks_board_reports` | Board posts, applications (with the applicant's email, never shown to posters) and reports | Server only (via `flieks-board`) |
 | `flieks_news` | Lab industry headlines (`items`), stories the team hid (`hidden`), and how each feed did last time (`meta`) | Server only (via `flieks-news`) |
-| `flieks_budget_jobs` | Quote imports in progress, deleted once read | Server only |
+| `flieks_budget_jobs` | Quote imports and script breakdowns in progress, deleted once read | Server only |
+| `flieks_budget_versions` | The last 5 versions of a production, kept before each re-plan, script import or restore | Server only (via `flieks-budget`) |
 
 ---
 
@@ -220,6 +223,8 @@ SETUP_PASSWORD           guards one-off setup functions
 PAYOUT_MINIMUM           defaults to 250
 BUDGET_IMPORT_LIMIT      optional, quote imports per member per 30 days (default 5)
 BUDGET_IMPORT_MODEL      optional, default claude-haiku-4-5-20251001
+SCHEDULE_BREAKDOWN_LIMIT optional, script breakdowns per member per 30 days (default 5)
+SCHEDULE_MODEL           optional, default claude-haiku-4-5-20251001
 ```
 
 `BUNNY_TOKEN_KEY` is deliberately absent. Bunny's CDN token authentication

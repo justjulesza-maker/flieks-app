@@ -17,6 +17,11 @@
  *   weather       { place, date }     forecast for a shoot day (Open-Meteo, looked up here)
  *   import-start  { fileBase64, fileName }   read a supplier quote PDF (AI) → { jobId }
  *   import-status { jobId }
+ *   script-start  { fileBase64, fileName | text, title }   scheduler: break a screenplay down (AI) → { jobId }
+ *   script-status { jobId }                                → { status, stage, breakdown }
+ *   save          { …, checkpoint: "Re-plan" }             also keeps the version before this save (last 5)
+ *   versions      { id }              saved versions of a production → [{ at, label }]
+ *   version       { id, at }          one saved version, to restore
  *   sheet         { t }               PUBLIC: a published call sheet by its link
  *   ack           { t, name }         PUBLIC: "Got it" on a call sheet (rate limited)
  *
@@ -29,14 +34,19 @@
  *   flieks_callsheet_acks/<token>/<id>   { name, at }
  *   flieks_budget_jobs/<jobId>           AI quote import, polled by the owner, deleted once read
  *   flieks_lab_usage/<uid>/budget_imports/<jobId>   append-only usage ledger (audit H4)
+ *   flieks_lab_usage/<uid>/script_breakdowns/<jobId> same, for script breakdowns
+ *   flieks_budget_versions/<uid>/<id>/<at>  { label, at, production } the last 5 checkpoints
  */
 const crypto = require('crypto');
 const ops = require('../lib/ops-core');
 const core = require('../lib/budget-core');
+const sched = require('../lib/schedule-core');
 
 const IMPORT_LIMIT = parseInt(process.env.BUDGET_IMPORT_LIMIT || '5', 10);   // per 30 days; admins and Lab unlimited exempt
+const BREAKDOWN_LIMIT = parseInt(process.env.SCHEDULE_BREAKDOWN_LIMIT || '5', 10);   // script breakdowns per 30 days
+const MAX_TEXT = 600000;                                                       // pasted script, characters
 const MAX_BASE64 = 5.5 * 1024 * 1024;                                         // ~4MB PDF; Netlify caps requests at 6MB
-const MAX_STORED = 600 * 1024;                                                // one production, as JSON
+const MAX_STORED = 1200 * 1024;                                               // one production, as JSON (a feature's breakdown is big)
 const DAY = 864e5;
 
 const reply = (code, obj) => ({
@@ -45,6 +55,9 @@ const reply = (code, obj) => ({
   body: JSON.stringify(obj)
 });
 const importSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':budget-import').digest('hex');
+const breakdownSecret = () => crypto.createHash('sha256').update(String(process.env.FIREBASE_DB_SECRET) + ':schedule-breakdown').digest('hex');
+const validJob = v => typeof v === 'string' && /^j[a-f0-9]{20}$/.test(v);
+const validAt = v => typeof v === 'string' && /^\d{13}$/.test(v);
 const newId = (prefix, n) => prefix + crypto.randomBytes(n).toString('hex').slice(0, n);   // lowercase a-f0-9
 const newToken = () => crypto.randomBytes(16).toString('hex');                          // 32 chars, 128 bits
 const validId = v => typeof v === 'string' && core.ID.test(v);
@@ -110,11 +123,13 @@ exports.handler = async event => {
     if (b.action === 'list') {
       const idx = await ops.dbGet(index) || {};
       const ledger = await ops.dbGet(`flieks_lab_usage/${me.uid}/budget_imports`) || {};
+      const bLedger = await ops.dbGet(`flieks_lab_usage/${me.uid}/script_breakdowns`) || {};
       const since = Date.now() - 30 * DAY;
       const items = Object.entries(idx).filter(([k]) => validId(k)).map(([k, v]) => ({ id: k, title: v.title, type: v.type, updated_at: v.updated_at }))
         .sort((x, y) => (y.updated_at || 0) - (x.updated_at || 0));
       return reply(200, { items, verified: me.verified, role: me.role,
-        imports: { limit: me.unlimited ? null : IMPORT_LIMIT, used: Object.values(ledger).filter(t => t >= since).length } });
+        imports: { limit: me.unlimited ? null : IMPORT_LIMIT, used: Object.values(ledger).filter(t => t >= since).length },
+        breakdowns: { limit: me.unlimited ? null : BREAKDOWN_LIMIT, used: Object.values(bLedger).filter(t => t >= since).length } });
     }
 
     if (b.action === 'get') {
@@ -154,6 +169,16 @@ exports.handler = async event => {
       const clean = core.cleanProduction(b.production, prev);
       clean.created_at = Number(prev.created_at) || Date.now(); clean.updated_at = Date.now();
       if (JSON.stringify(clean).length > MAX_STORED) return reply(413, { message: 'That production is too big to save.' });
+      // A checkpoint keeps the version before a big change (re-plan, script import), so it can be restored.
+      const label = core.str(b.checkpoint, 60);
+      if (label) {
+        const vPath = `flieks_budget_versions/${me.uid}/${b.id}`;
+        const have = Object.keys(await ops.dbGet(vPath) || {}).filter(k => /^\d{13}$/.test(k)).sort();
+        const at = Math.max(Date.now(), have.length ? Number(have[have.length - 1]) + 1 : 0);    // never reuse a key
+        await ops.dbWrite(`${vPath}/${at}`, { label, at, production: core.cleanProduction(prev, prev) });
+        const all = have.concat(String(at));
+        for (const k of all.slice(0, Math.max(0, all.length - core.LIMITS.versions))) await ops.dbWrite(`${vPath}/${k}`, null);
+      }
       const w = await ops.dbWrite(`${base}/${b.id}`, clean);
       if (w.status >= 400) throw new Error('save failed ' + w.status);
       await ops.dbWrite(`${index}/${b.id}`, { title: clean.title, type: clean.type, updated_at: clean.updated_at });
@@ -172,6 +197,7 @@ exports.handler = async event => {
       for (const d of (prev.shootDays || [])) if (d && validToken(d.token)) await takeDown(d.token, me.uid);
       await ops.dbWrite(`${base}/${b.id}`, null);
       await ops.dbWrite(`${index}/${b.id}`, null);
+      await ops.dbWrite(`flieks_budget_versions/${me.uid}/${b.id}`, null);
       return reply(200, { ok: true });
     }
 
@@ -258,10 +284,74 @@ exports.handler = async event => {
       return reply(200, { jobId });
     }
 
+    if (b.action === 'versions') {
+      if (!validId(b.id)) return reply(400, { message: 'Bad id.' });
+      const all = await ops.dbGet(`flieks_budget_versions/${me.uid}/${b.id}`) || {};
+      return reply(200, { items: Object.entries(all).filter(([k]) => /^\d{13}$/.test(k))
+        .map(([k, v]) => ({ at: k, label: core.str(v && v.label, 60) })).sort((x, y) => y.at.localeCompare(x.at)) });
+    }
+    if (b.action === 'version') {
+      if (!validId(b.id) || !validAt(b.at)) return reply(400, { message: 'Bad id.' });
+      const v = await ops.dbGet(`flieks_budget_versions/${me.uid}/${b.id}/${b.at}`);
+      if (!v || !v.production) return reply(404, { message: 'That version is gone.' });
+      return reply(200, { production: core.cleanProduction(v.production, v.production), label: core.str(v.label, 60), at: b.at });
+    }
+
+    if (b.action === 'script-start') {
+      const stop = needWrite(); if (stop) return stop;
+      const fileName = core.str(b.fileName, 120), title = core.str(b.title, 120);
+      const hasText = typeof b.text === 'string' && b.text.trim().length > 0;
+      if (hasText) {
+        if (b.text.length > MAX_TEXT) return reply(413, { message: 'That is too much text. Paste one script at a time.' });
+        if (b.text.trim().length < 200) return reply(400, { message: 'Paste the whole script, not just a few lines.' });
+      } else {
+        if (typeof b.fileBase64 !== 'string' || !b.fileBase64) return reply(400, { message: 'Choose your script.' });
+        if (!/\.(pdf|docx)$/i.test(fileName)) return reply(400, { message: 'Upload the script as a PDF or Word (.docx) file.' });
+        if (b.fileBase64.length > MAX_BASE64) return reply(413, { message: 'That file is too big (about 4MB at most).' });
+        if (!/^[A-Za-z0-9+/=\s]+$/.test(b.fileBase64.slice(0, 4000))) return reply(400, { message: 'That file could not be read.' });
+      }
+      const jobId = newId('j', 20), nowTs = Date.now();
+      let allowed;
+      try {
+        allowed = await ops.withLock(`schedbd_${me.uid}`, async () => {
+          if (!me.unlimited) {
+            const used = await ops.dbGet(`flieks_lab_usage/${me.uid}/script_breakdowns`) || {};
+            if (Object.values(used).filter(t => t >= nowTs - 30 * DAY).length >= BREAKDOWN_LIMIT) return false;
+          }
+          await ops.dbWrite(`flieks_lab_usage/${me.uid}/script_breakdowns/${jobId}`, nowTs);
+          return true;
+        });
+      } catch (e) { if (e.busy) return reply(429, { message: 'Another script is starting. Try again in a moment.' }); throw e; }
+      if (!allowed) return reply(429, { message: `You've used your ${BREAKDOWN_LIMIT} script breakdowns for this month.` });
+
+      await ops.dbWrite(`flieks_budget_jobs/${jobId}`, { owner: me.uid, kind: 'breakdown', status: 'queued', at: nowTs });
+      const site = process.env.URL || 'https://4flieks.com';
+      const kick = await fetch(`${site}/.netlify/functions/schedule-breakdown-background`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-job-secret': breakdownSecret() },
+        body: JSON.stringify(hasText ? { jobId, owner: me.uid, title, text: b.text } : { jobId, owner: me.uid, title, fileName, fileBase64: b.fileBase64 })
+      }).catch(() => ({ ok: false, status: 0 }));
+      if (kick.status !== 202 && !kick.ok) {
+        await ops.dbWrite(`flieks_budget_jobs/${jobId}`, { owner: me.uid, kind: 'breakdown', status: 'error', error: 'Could not start. Try again.', at: nowTs });
+        return reply(502, { message: 'Could not start reading the script. Try again.' });
+      }
+      ops.logLabEvent('schedule_breakdown', me.uid, {});
+      return reply(200, { jobId });
+    }
+
+    if (b.action === 'script-status') {
+      if (!validJob(b.jobId)) return reply(400, { message: 'Bad job.' });
+      const job = await ops.dbGet(`flieks_budget_jobs/${b.jobId}`);
+      if (!job || job.owner !== me.uid || job.kind !== 'breakdown') return reply(404, { message: 'Not found.' });
+      if (job.status === 'done' || job.status === 'error') await ops.dbWrite(`flieks_budget_jobs/${b.jobId}`, null);   // read once, then gone
+      return reply(200, { status: job.status, stage: core.str(job.stage, 120),
+        error: job.status === 'error' ? core.str(job.error || 'Could not read that script.', 200) : null,
+        breakdown: job.status === 'done' ? sched.cleanBreakdown(job.result) : null });
+    }
+
     if (b.action === 'import-status') {
       if (typeof b.jobId !== 'string' || !/^j[a-f0-9]{20}$/.test(b.jobId)) return reply(400, { message: 'Bad job.' });
       const job = await ops.dbGet(`flieks_budget_jobs/${b.jobId}`);
-      if (!job || job.owner !== me.uid) return reply(404, { message: 'Not found.' });
+      if (!job || job.owner !== me.uid || job.kind === 'breakdown') return reply(404, { message: 'Not found.' });
       if (job.status === 'done' || job.status === 'error') await ops.dbWrite(`flieks_budget_jobs/${b.jobId}`, null);   // read once, then gone
       return reply(200, { status: job.status, error: job.status === 'error' ? (job.error || 'Could not read that quote.') : null,
         items: job.status === 'done' ? core.cleanImportItems(job.items) : null });

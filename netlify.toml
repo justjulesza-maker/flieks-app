@@ -28,6 +28,9 @@
 [functions."budget-import-background"]
   timeout = 900
 
+[functions."schedule-breakdown-background"]
+  timeout = 900
+
 [functions."line-coach"]
   timeout = 10
 
