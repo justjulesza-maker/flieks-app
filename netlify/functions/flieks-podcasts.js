@@ -106,7 +106,10 @@ exports.handler = async event => {
         .map(([id, c]) => P.publicChannel(id, c, eps)).filter(c => c.episodes)
         .sort((x, y) => (y.featured - x.featured) || (y.latest_at - x.latest_at));
       const slugOf = id => (channels[id] || {}).slug, titleOf = id => (channels[id] || {}).title;
-      const latest = eps.sort((x, y) => y.published_at - x.published_at).slice(0, 12)
+      // The newest 3 of each show (one busy show mustn't push the others off the page).
+      const perShow = {};
+      const latest = eps.sort((x, y) => y.published_at - x.published_at)
+        .filter(e => (perShow[e.channel_id] = (perShow[e.channel_id] || 0) + 1) <= 3).slice(0, 36)
         .map(e => ({ ...e, channel_slug: slugOf(e.channel_id), channel_title: titleOf(e.channel_id) }));
       return reply(200, { channels: list, latest }, true);
     }

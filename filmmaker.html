@@ -183,7 +183,7 @@ html:not([data-mode="light"]) .lab-go{color:#0A0A0A}
       <button class="btn btn-amber" onclick="doRegister()">APPLY TO JOIN</button>
     </div>
     <p style="text-align:center;margin-top:16px;font-size:14px;color:var(--muted)">
-      <a href='/' style='color:var(--amber)'>← Back to FLIEKS</a>
+      <a href='/' style='color:var(--amber)'>← Back to 4flieks</a>
     </p>
   </div>
 </div>
@@ -1230,7 +1230,7 @@ async function loadDashboard() {
   // Recent films
   const dfEl = document.getElementById('dashboard-films');
   if (myFilms.length === 0) {
-    dfEl.innerHTML = `<p style="color:var(--muted);font-size:14px">No films yet. Upload your first film above!</p>`;
+    dfEl.innerHTML = `<p style="color:var(--muted);font-size:14px">No films yet. Upload your first film below!</p>`;
   } else {
     dfEl.innerHTML = myFilms.slice(0, 3).map(filmRowHTML).join('');
   }

@@ -1502,6 +1502,20 @@ function podCardHTML(c) {
   </div>`;
 }
 
+/* The newest few episodes of each show, show by show, with a link to all of them,
+   so an older episode is always one tap away and one busy show can't crowd out the rest. */
+function podLatestHTML(c) {
+  return c.channels.map(ch => {
+    const eps = c.latest.filter(e => e.channel_id === ch.id);
+    if (!eps.length) return '';
+    return `<div style="padding:0 20px;margin-top:14px">
+      <div class="row-head" style="padding:0;margin-bottom:2px"><p style="font-size:13px;font-weight:700;color:var(--text)">${escHtml(ch.title)}</p>
+        ${ch.episodes > eps.length ? `<a href="/podcasts/${encodeURIComponent(ch.slug)}" onclick="openPodChannel('${idA(ch.slug)}');return false;">All ${ch.episodes} episodes</a>` : ''}</div>
+      ${eps.map(e => podEpRow(e, ch.slug)).join('')}
+    </div>`;
+  }).join('');
+}
+
 async function openPodcasts() {
   if (!podCatalog.channels.length) await loadPodCatalog();
   const c = podCatalog;
@@ -1513,8 +1527,7 @@ async function openPodcasts() {
     </div>
     ${c.channels.length ? `<p class="section-label" style="padding:0 20px;margin:14px 0 10px">CHANNELS</p>
       <div class="pod-grid">${c.channels.map(podCardHTML).join('')}</div>` : '<div class="empty"><p>The first podcasts are on their way.</p></div>'}
-    ${c.latest.length ? `<p class="section-label" style="padding:0 20px;margin:22px 0 4px">LATEST EPISODES</p>
-      <div style="padding:0 20px">${c.latest.map(e => podEpRow(e, e.channel_slug, e.channel_title)).join('')}</div>` : ''}`;
+    ${c.latest.length ? `<p class="section-label" style="padding:0 20px;margin:22px 0 4px">LATEST EPISODES</p>${podLatestHTML(c)}` : ''}`;
   nav('podcasts');
 }
 
@@ -1798,7 +1811,7 @@ async function shareList(slug) {
 
 function soonDate(f) {
   if (!f.release_date || !/^\d{4}-\d{2}-\d{2}$/.test(f.release_date)) return '';
-  return new Date(f.release_date + 'T12:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+  return new Date(f.release_date + 'T12:00:00').toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /* Trailer premieres: a big film's exclusive trailer, not sold on 4flieks. */
@@ -3392,7 +3405,7 @@ function fmtTime(secs) {
 }
 
 function shareFilm() {
-  if (navigator.share) { navigator.share({ title: 'FLIEKS', url: window.location.href }); }
+  if (navigator.share) { navigator.share({ title: '4flieks', url: window.location.href }); }
   else { navigator.clipboard.writeText(window.location.href); showSnack('Link copied!'); }
 }
 function rateFilm() {
@@ -4017,7 +4030,7 @@ async function register() {
     currentUser = cred.user;
     authResolved = true;
     updateAvatars();
-    showSnack('Account created! Welcome to FLIEKS.');
+    showSnack('Account created! Welcome to 4flieks.');
     navBack();
   } catch (e) {
     showSnack(e.code === 'auth/email-already-in-use' ? 'Email already in use' : 'Registration failed.');
