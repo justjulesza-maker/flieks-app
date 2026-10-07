@@ -720,13 +720,14 @@ input,textarea{font-family:var(--fb)}
       <div class="input-group"><label class="input-label">Full Name</label><input class="input" id="reg-name" type="text" placeholder="Your name" autocomplete="name"></div>
       <div class="input-group"><label class="input-label">Email</label><input class="input" id="reg-email" type="email" placeholder="you@email.com" autocomplete="email"></div>
       <div class="input-group"><label class="input-label">Password</label><input class="input" id="reg-pass" type="password" placeholder="Min 6 characters" autocomplete="new-password"></div>
+      <label for="reg-news" style="display:flex;gap:9px;align-items:flex-start;font-weight:400;text-transform:none;letter-spacing:0;font-size:13.5px;line-height:1.45;margin:0 0 14px;color:var(--text);cursor:pointer"><input type="checkbox" id="reg-news" style="width:auto;flex:none;margin-top:3px"><span>Send me new films and 4flieks news by email. I can stop any time.</span></label>
       <div class="info-box amber" style="margin-bottom:14px">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>Are you a filmmaker? Register here as a viewer — you can apply to become a filmmaker from your profile after signing up.</p>
       </div>
       <button class="btn btn-amber" onclick="register()">CREATE ACCOUNT</button>
     </div>
-    <p style="text-align:center;color:var(--dim);font-size:12px;margin-top:16px">By continuing you agree to our <a href="#" style="color:var(--amber)">Terms</a> and <a href="#" style="color:var(--amber)">Privacy Policy</a></p>
+    <p style="text-align:center;color:var(--dim);font-size:12px;margin-top:16px">By continuing you agree to our <a href="/terms" style="color:var(--amber)">Terms</a> and <a href="/privacy" style="color:var(--amber)">Privacy Policy</a></p>
   </div>
 </div>
 
@@ -1016,7 +1017,7 @@ async function filmIdFromSlug(slug){
         return s.val() || null; } catch { return null; }
 }
 
-const RESERVED = /^(index|admin|filmmaker|cast|attribution|about|terms|privacy|login|signup|account|assets|images|static|podcasts|studio|lab|talent)$|\.[a-z0-9]+$/i;
+const RESERVED = /^(index|admin|filmmaker|cast|attribution|about|terms|privacy|login|signup|account|assets|images|static|podcasts|studio|lab|talent|crm|email)$|\.[a-z0-9]+$/i;
 
 /* Reads /slug or ?f=slug plus ?a=castmember. Returns {filmId, ref}. */
 async function readLink(){
@@ -3952,6 +3953,7 @@ async function loadProfile() {
       </div>
     </div>
     <div id="my-gifts"></div>
+    <div id="email-ask"></div>
 
     <div class="info-box amber" style="margin-bottom:20px">
       <svg viewBox="0 0 24 24"><path d="M19 2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M3 10h18"/><path d="M3 14h18"/><path d="M3 18h18"/></svg>
@@ -3963,6 +3965,11 @@ async function loadProfile() {
         <span style="font-size:14px;color:var(--text)">Appearance</span>
         <span id="mode-word" style="font-size:13px;color:var(--amber)"></span>
       </div>
+
+      <a href="/email" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;text-decoration:none">
+        <span style="font-size:14px;color:var(--text)">Email preferences</span>
+        <span id="email-word" style="font-size:13px;color:var(--muted)"></span>
+      </a>
 
       <a href="/terms" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:14px;color:var(--text)">Terms, refunds &amp; privacy</span>
@@ -3982,6 +3989,55 @@ async function loadProfile() {
   renderMyGifts();
   revealFilmmakerLink();
   paintModeToggle();
+  emailAsk();
+}
+
+/* New-film emails: ask once in the profile if they've never chosen. Their answer
+   is recorded server-side with these exact words (POPIA). */
+async function emailPrefsCall(body) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('signed out');
+  const r = await fetch('/.netlify/functions/flieks-email-prefs', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await user.getIdToken(), ...body })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Could not save that.');
+  return d;
+}
+async function emailAsk() {
+  const box = document.getElementById('email-ask'), word = document.getElementById('email-word');
+  if (!box) return;
+  try {
+    const d = await emailPrefsCall({ action: 'mine' });
+    if (word) word.textContent = d.prefs.news ? 'New films: on' : 'New films: off';
+    if (d.prefs.news_chosen !== null) { box.innerHTML = ''; return; }
+    if (d.prefs.news_pending) {
+      box.innerHTML = `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+        <p style="font-size:13.5px;color:var(--muted);line-height:1.5">To start getting new films by email, press the button in the email we sent to <b style="color:var(--text)">${(currentUser.email || '').replace(/[&<>"']/g, '')}</b>.</p></div>`;
+      return;
+    }
+    box.innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--amber);border-radius:12px;padding:16px;margin-bottom:20px">
+        <p style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">Get new films by email?</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px">We'll tell you when new African films arrive. One email a week at most. Stop any time.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn btn-amber" onclick="emailAnswer(true, this)">YES PLEASE</button>
+          <button class="btn btn-outline" onclick="emailAnswer(false, this)">NO THANKS</button>
+        </div>
+      </div>`;
+  } catch (e) { if (word) word.textContent = ''; }
+}
+async function emailAnswer(yes, btn) {
+  btn.disabled = true;
+  try {
+    const d = await emailPrefsCall({ action: 'set', field: 'news', value: yes, source: 'profile' });
+    document.getElementById('email-ask').innerHTML = '';
+    const word = document.getElementById('email-word');
+    if (word) word.textContent = d.prefs.news ? 'New films: on' : 'New films: off';
+    showSnack(d.pending ? 'Almost done: press the button in the email we just sent you.'
+      : yes ? "You're on the list. We'll email you new films." : "Got it. We won't email you about new films.");
+  } catch (e) { btn.disabled = false; showSnack(e.message); }
 }
 
 /* The portal is only useful to approved filmmakers, so only show the shortcut
@@ -4050,6 +4106,9 @@ async function register() {
     await db.ref(`${DB_PREFIX}users/${cred.user.uid}`).set({
       name, email, role: 'viewer', created_at: Date.now()
     });
+    // Their answer to the email box, recorded server-side with the words they saw (POPIA).
+    fetch('/.netlify/functions/flieks-email-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signup', token: await cred.user.getIdToken(), news: !!(document.getElementById('reg-news') || {}).checked, source: 'signup:home' }) }).catch(() => {});
     currentUser = cred.user;
     authResolved = true;
     updateAvatars();

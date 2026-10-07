@@ -25,6 +25,9 @@
 [functions."backup-background"]
   timeout = 900
 
+[functions."crm-send-background"]
+  timeout = 900
+
 [functions."budget-import-background"]
   timeout = 900
 
@@ -55,3 +58,8 @@
 # Full database backup every night. 00:30 UTC is 02:30 in Johannesburg.
 [functions."flieks-backup-nightly"]
   schedule = "30 0 * * *"
+
+# CRM: Monday's "new on 4flieks this week" draft. 04:00 UTC is 06:00 in Johannesburg.
+# It only drafts; an admin sends it from /crm.
+[functions."flieks-crm-weekly"]
+  schedule = "0 4 * * 1"

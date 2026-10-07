@@ -147,6 +147,7 @@ function signedOut() {
     ${mode === 'join' ? `<label for="an">Your name</label><input id="an" type="text" maxlength="80" autocomplete="name">` : ''}
     <label for="ae">Email</label><input id="ae" type="email" autocomplete="email">
     <label for="ap">Password</label><input id="ap" type="password" autocomplete="${mode === 'join' ? 'new-password' : 'current-password'}">
+    ${mode === 'join' ? `<label for="anews" style="display:flex;gap:9px;align-items:flex-start;font-weight:400;text-transform:none;letter-spacing:0;font-size:13.5px;line-height:1.45;margin:12px 0 4px;cursor:pointer"><input type="checkbox" id="anews" style="width:auto;flex:none;margin-top:3px"><span>Send me new films and 4flieks news by email. I can stop any time.</span></label>` : ''}
     <p class="msg" id="amsg"></p>
     <div class="actions">
       <button id="ago" onclick="doAuth()">${mode === 'join' ? 'Create my account' : 'Sign in'}</button>
@@ -167,6 +168,8 @@ async function doAuth() {
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       await cred.user.updateProfile({ displayName: name });
       await db.ref(`flieks_users/${cred.user.uid}`).set({ name, email, role: 'viewer', created_at: Date.now() });
+      fetch('/.netlify/functions/flieks-email-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signup', token: await cred.user.getIdToken(), news: !!(document.getElementById('anews') || {}).checked, source: 'signup:talent' }) }).catch(() => {});
       draft = { name };
       joining = false;
       load();

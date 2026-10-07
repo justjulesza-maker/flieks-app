@@ -180,6 +180,7 @@ html:not([data-mode="light"]) .lab-go{color:#0A0A0A}
       <div class="input-group"><label class="input-label">Password</label><input class="input" id="reg-pass" type="password" placeholder="Min 6 characters"></div>
       <div class="input-group"><label class="input-label">City / Province</label><input class="input" id="reg-location" type="text" placeholder="e.g. Soweto, Gauteng"></div>
       <div class="input-group"><label class="input-label">Bio (tell us about yourself)</label><textarea class="input" id="reg-bio" placeholder="Short filmmaker bio…"></textarea></div>
+      <label for="reg-news" style="display:flex;gap:9px;align-items:flex-start;font-weight:400;text-transform:none;letter-spacing:0;font-size:13.5px;line-height:1.45;margin:0 0 14px;color:var(--text);cursor:pointer"><input type="checkbox" id="reg-news" style="width:auto;flex:none;margin-top:3px"><span>Also send me new films and 4flieks news for viewers. I can stop any time. (Filmmaker updates come with your account.)</span></label>
       <button class="btn btn-amber" onclick="doRegister()">APPLY TO JOIN</button>
     </div>
     <p style="text-align:center;margin-top:16px;font-size:14px;color:var(--muted)">
@@ -2440,7 +2441,7 @@ async function saveFilmSlug(filmId) {
   if (!slug) { msg.style.color = 'var(--red)'; msg.textContent = 'Give the film a link name.'; return; }
 
   const RESERVED = ['index','admin','filmmaker','cast','attribution','about','terms',
-                    'privacy','login','signup','account','assets','images','static'];
+                    'privacy','login','signup','account','assets','images','static','crm','email','pulse'];
   if (RESERVED.includes(slug)) {
     msg.style.color = 'var(--red)'; msg.textContent = 'That name is reserved. Try another.'; return;
   }
@@ -3052,6 +3053,8 @@ async function doRegister() {
       filmmaker_application_at: Date.now(),
       created_at: Date.now()
     });
+    fetch('/.netlify/functions/flieks-email-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signup', token: await cred.user.getIdToken(), news: !!(document.getElementById('reg-news') || {}).checked, source: 'signup:filmmaker' }) }).catch(() => {});
     // Notify admin
     await db.ref(`${DB_PREFIX}filmmaker_applications`).push({
       uid: cred.user.uid, name, email, location, bio, applied_at: Date.now(), status: 'pending'

@@ -39,6 +39,9 @@
       "$uid": {
         ".read": "$uid === auth.uid",
         ".write": "$uid === auth.uid || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'",
+        "email": {
+          ".validate": "newData.val() === data.val() || (newData.isString() && newData.val().toLowerCase() === auth.token.email.toLowerCase()) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'"
+        },
         "role": { ".validate": "newData.val() === data.val() || (!data.exists() && (newData.val() === 'viewer' || newData.val() === 'filmmaker_pending')) || root.child('flieks_users').child(auth.uid).child('role').val() === 'admin'" }
       }
     },

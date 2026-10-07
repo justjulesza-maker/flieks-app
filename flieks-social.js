@@ -92,7 +92,7 @@ async function init(opts) {
     else {
       const root = location.pathname.match(/^\/([^/?#]+)\/?$/);
       // ignore real files and known app routes
-      const RESERVED = /^(index|admin|filmmaker|cast|attribution|about|terms|privacy|login|signup|account|assets|images|static)$|\.[a-z0-9]+$/i;
+      const RESERVED = /^(index|admin|filmmaker|cast|attribution|about|terms|privacy|login|signup|account|assets|images|static|crm|email)$|\.[a-z0-9]+$/i;
       if (root && !RESERVED.test(root[1])) filmKey = decodeURIComponent(root[1]);
     }
   }

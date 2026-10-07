@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CRM — 4flieks</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var s=null;try{s=localStorage.getItem('flieks_mode')}catch(e){}
+document.documentElement.setAttribute('data-mode', s||'light');})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;--border:#262626;
+  --amber:#F5A623;--green:#4ADE80;--red:#E8462A;--blue:#5AA9E6;
+  --text:#F0EDE8;--muted:#8F8F8F;--dim:#5E5E5E;
+  --fb:'Archivo Black',sans-serif;--fn:'DM Sans',system-ui,sans-serif;--fm:'JetBrains Mono',monospace;
+}
+html[data-mode="light"]{
+  --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;--border:#E2DACB;
+  --amber:#B3660A;--green:#2E7D32;--red:#C13718;--blue:#1F6FA8;
+  --text:#1C1512;--muted:#6B6259;--dim:#8F877D;color-scheme:light;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--fn);padding:18px 16px 80px;max-width:1180px;margin:0 auto;font-size:14px}
+a{color:var(--amber)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.top h1{font-family:var(--fb);font-size:19px}
+.top h1 span{color:var(--amber)}
+.top nav{display:flex;gap:14px;font-size:12.5px}
+.top nav a{color:var(--muted);text-decoration:none}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:18px;overflow-x:auto}
+.tab{font:600 13px var(--fn);padding:10px 14px;border:0;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab.on{color:var(--text);border-bottom-color:var(--amber)}
+h2{font-family:var(--fm);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:400;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.cell{background:var(--card);padding:14px}
+.cell .v{font-family:var(--fb);font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+.cell .k{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.cell .d{font-size:11.5px;color:var(--dim);margin-top:4px;line-height:1.35}
+.cols{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:880px){.cols{grid-template-columns:1fr 1fr}}
+.card{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:14px 16px;margin-bottom:14px}
+.card p{line-height:1.5}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13px}
+.kv:first-of-type{border-top:0}
+.kv b{font-family:var(--fm);font-variant-numeric:tabular-nums}
+.btn{font:600 12.5px var(--fn);padding:8px 13px;border-radius:8px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn.amber{background:var(--amber);border-color:var(--amber);color:#111}
+.btn.red{color:var(--red)}
+.btn.sm{padding:5px 9px;font-size:11.5px}
+.row-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;font:700 10px var(--fm);letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:99px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.pill.subscribed,.pill.sent{color:var(--green);border-color:color-mix(in srgb,var(--green) 45%,transparent)}
+.pill.customer,.pill.queued,.pill.sending{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 45%,transparent)}
+.pill.unsubscribed,.pill.failed{color:var(--red);border-color:color-mix(in srgb,var(--red) 45%,transparent)}
+.pill.draft,.pill.asked{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,transparent)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font:400 9.5px var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:0 10px 8px 0;white-space:nowrap}
+td{padding:10px 10px 10px 0;border-top:1px solid var(--border);vertical-align:top}
+td small{display:block;color:var(--muted);font-size:12px;margin-top:2px;word-break:break-all}
+td.num,th.num{text-align:right;font-family:var(--fm);font-variant-numeric:tabular-nums}
+tr.click{cursor:pointer}
+tr.click:hover td{background:color-mix(in srgb,var(--amber) 5%,transparent)}
+.tablewrap{overflow-x:auto}
+@media (max-width:640px){.hide-sm{display:none}}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+input,select,textarea{font:inherit;font-size:16px;padding:9px 11px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100%}
+.filters input{flex:1;min-width:180px}
+.filters select{width:auto}
+label.f{display:block;font:400 10px var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 5px}
+label.f small{text-transform:none;letter-spacing:0;font-family:var(--fn);font-size:12px;margin-left:4px;color:var(--dim)}
+textarea{min-height:150px;resize:vertical;line-height:1.5}
+.ed{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:980px){.ed{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.preview{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#F2EADA;position:sticky;top:12px}
+.preview iframe{width:100%;height:78vh;border:0;display:block;background:#F2EADA}
+.preview .bar{font:400 11px var(--fm);color:#54483F;padding:8px 12px;background:#E9DFCB;border-bottom:1px solid #DCCFB9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.films{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
+.films label{display:flex;gap:10px;align-items:center;padding:8px 10px;border-top:1px solid var(--border);cursor:pointer;font-size:13px}
+.films label:first-child{border-top:0}
+.films input{width:auto}
+.films img{width:28px;height:50px;object-fit:cover;border-radius:4px;background:var(--border)}
+.films em{font-style:normal;color:var(--muted);font-size:12px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:6px}
+.warn{border:1px solid var(--amber);background:color-mix(in srgb,var(--amber) 8%,transparent);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px}
+.ok{color:var(--green)} .bad{color:var(--red)}
+.panel{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;justify-content:flex-end;z-index:20}
+.panel>div{background:var(--bg);width:min(560px,100%);height:100%;overflow-y:auto;padding:20px 18px 60px;border-left:1px solid var(--border)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:30;padding:16px}
+.modal>div{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:440px;width:100%}
+.modal h3{font-size:18px;margin-bottom:8px}
+.modal p{font-size:14px;line-height:1.5;color:var(--muted);margin-bottom:6px}
+.swrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border)}
+.swrow:first-of-type{border-top:0}
+.hist{font-size:12.5px;padding:8px 0;border-top:1px solid var(--border);line-height:1.45}
+.hist:first-of-type{border-top:0}
+.hist span{color:var(--muted)}
+.gate{padding:60px 20px;text-align:center;color:var(--muted)}
+.muted{color:var(--muted)}
+.snack{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:11px 16px;border-radius:10px;font-size:13.5px;z-index:40;max-width:calc(100% - 32px)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>4<span>flieks</span> CRM</h1>
+  <nav><a href="/admin">Admin</a><a href="/pulse">Control centre</a><a href="/privacy" target="_blank" rel="noopener">Privacy notice</a></nav>
+</div>
+<div class="tabs" id="tabs" style="display:none">
+  <button class="tab" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="people">People</button>
+  <button class="tab" data-tab="campaigns">Emails</button>
+</div>
+<div id="view"><div class="gate">Checking your account…</div></div>
+<div id="layer"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+});
+const auth = firebase.auth();
+const BASE = 'https://flieks-app-default-rtdb.firebaseio.com';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = id => document.getElementById(id);
+const rand = n => 'R' + Number(n || 0).toFixed(0);
+const day = t => t ? new Date(t).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const when = t => t ? new Date(t).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+
+/* Mirrors netlify/lib/crm.js. */
+const KIND_NAMES = { newsletter: 'Viewer newsletter', weekly: 'Weekly new films', filmmaker: 'Filmmaker update', consent: 'One-time question' };
+const AUD_FOR = { newsletter: ['viewers', 'consented'], weekly: ['viewers', 'consented'], filmmaker: ['filmmakers', 'applicants'], consent: ['consent'] };
+const AUD_NAMES = { viewers: 'Viewers who said yes, or bought a film', consented: 'Only viewers who said yes', filmmakers: 'Filmmakers releasing on 4flieks', applicants: 'Filmmaker applicants (pending)', consent: 'Everyone never asked' };
+const FIELD_NAMES = { news: 'New films and 4flieks news', filmmaker_news: 'Filmmaker news', alerts: 'Film alerts (saved films, follows)' };
+const SOURCE_NAMES = { 'signup:home': 'sign-up form', 'signup:lab': 'Lab sign-up', 'signup:talent': 'talent sign-up', 'signup:filmmaker': 'filmmaker sign-up',
+  profile: 'their profile', 'consent-email': 'the question email', 'prefs-page': 'email preferences page', 'unsubscribe-link': 'unsubscribe link',
+  'one-click': 'one-click unsubscribe in their mail app', admin: 'an admin, on request' };
+const NEWS_NAMES = { subscribed: 'Said yes', customer: 'Customer', unsubscribed: 'Unsubscribed', asked: 'Asked, no answer', 'not asked': 'Not asked' };
+
+let PEOPLE = null, FILMS = null, OVERVIEW = null, ED = null, pollTimer = null;
+
+async function api(action, extra = {}) {
+  const r = await fetch('/.netlify/functions/flieks-crm', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await auth.currentUser.getIdToken(), action, ...extra })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(d.message || `Error ${r.status}`); e.data = d; throw e; }
+  return d;
+}
+function snack(t) {
+  const s = document.createElement('div'); s.className = 'snack'; s.setAttribute('role', 'status'); s.textContent = t;
+  document.body.appendChild(s); setTimeout(() => s.remove(), 3800);
+}
+const pill = (cls, text) => `<span class="pill ${esc(cls)}">${esc(text)}</span>`;
+
+/* ---------- routing ---------- */
+function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
+window.addEventListener('hashchange', () => route());
+function route() {
+  clearInterval(pollTimer);
+  const h = location.hash.slice(1) || 'overview';
+  const tab = h.startsWith('c=') || h === 'campaigns' ? 'campaigns' : h === 'people' ? 'people' : 'overview';
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+  if (h.startsWith('c=')) return openCampaign(h.slice(2));
+  if (h === 'people') return showPeople();
+  if (h === 'campaigns') return showCampaigns();
+  return showOverview();
+}
+$('tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); if (t) go('#' + t.dataset.tab); });
+
+/* ---------- overview ---------- */
+async function showOverview() {
+  const v = $('view');
+  v.innerHTML = '<p class="muted">Loading…</p>';
+  let d;
+  try { d = OVERVIEW = await api('overview'); } catch (e) { v.innerHTML = `<p class="bad">${esc(e.message)}</p>`; return; }
+  const c = d.counts;
+  const consentSent = d.campaigns.some(x => x.kind === 'consent' && x.status !== 'draft');
+  const draft = d.weekly && d.campaigns.find(x => x.id === d.weekly.campaign);
+  v.innerHTML = `
+    ${!d.sender ? '<div class="warn">Email sending is not set up: RESEND_API_KEY is missing in Netlify.</div>' : ''}
+    ${c.not_asked && !consentSent ? `<div class="warn"><b>${c.not_asked} ${c.not_asked === 1 ? 'person has' : 'people have'} never been asked</b> if they want new-film emails, so they can't get viewer newsletters.
+      POPIA lets us ask each of them once. <button class="btn amber sm" data-act="new-consent" style="margin-left:6px">Set up the question email</button></div>` : ''}
+    <div class="grid">
+      <div class="cell"><div class="v">${c.accounts}</div><div class="k">Accounts</div><div class="d">${c.viewers} viewers</div></div>
+      <div class="cell"><div class="v">${c.filmmakers}</div><div class="k">Filmmakers</div><div class="d">${c.applicants} applying</div></div>
+      <div class="cell"><div class="v">${c.buyers}</div><div class="k">Have bought</div></div>
+      <div class="cell"><div class="v ok">${c.subscribed}</div><div class="k">Said yes</div><div class="d">to new-film emails</div></div>
+      <div class="cell"><div class="v">${c.customer}</div><div class="k">Customers</div><div class="d">bought, never said no</div></div>
+      <div class="cell"><div class="v">${c.not_asked + c.asked}</div><div class="k">Not opted in</div><div class="d">${c.asked} asked, no answer</div></div>
+      <div class="cell"><div class="v bad">${c.unsubscribed}</div><div class="k">Unsubscribed</div></div>
+    </div>
+    <div class="cols">
+      <div>
+        <section class="card">
+          <h2>Who each email can go to right now</h2>
+          ${Object.entries(d.audiences).map(([k, a]) => `<div class="kv"><span>${esc(AUD_NAMES[k] || a.label)}</span><b>${a.count}</b></div>`).join('')}
+          <p class="note">Worked out again at the moment you press Send, so anyone who unsubscribes in between is left out.</p>
+        </section>
+        <section class="card">
+          <h2>This week's new films email</h2>
+          ${draft ? `<p>${draft.status === 'draft' ? 'Drafted and waiting for you' : 'Sent'}: <b>${esc(draft.subject)}</b></p>
+              <div class="row-acts" style="margin-top:10px"><button class="btn amber" data-act="open" data-id="${esc(draft.id)}">${draft.status === 'draft' ? 'Review and send' : 'Open'}</button></div>`
+            : `<p class="muted">Every Monday at 06:00 a draft is made from films that went live in the last 7 days. Nothing yet for the week of ${esc(d.week)}.</p>
+              <div class="row-acts" style="margin-top:10px"><button class="btn" data-act="weekly">Draft it now</button></div>`}
+        </section>
+      </div>
+      <div>
+        <section class="card">
+          <h2>Recent emails</h2>
+          ${d.campaigns.length ? d.campaigns.map(x => `<div class="kv" style="cursor:pointer" data-act="open" data-id="${esc(x.id)}"><span>${esc(x.subject || '(no subject)')}<br><small class="muted">${esc(KIND_NAMES[x.kind] || x.kind)} · ${x.sent_at ? 'sent ' + day(x.sent_at) : 'made ' + day(x.created_at)}</small></span>${pill(x.status, x.status)}</div>`).join('')
+            : '<p class="muted">None yet.</p>'}
+          <div class="row-acts" style="margin-top:12px"><button class="btn" data-act="new" data-kind="newsletter">New viewer email</button><button class="btn" data-act="new" data-kind="filmmaker">New filmmaker email</button></div>
+        </section>
+        <section class="card">
+          <h2>Recent email choices</h2>
+          ${d.changes.length ? d.changes.map(x => `<div class="hist">${esc(x.email || x.ekey)} <span>·</span> ${esc(FIELD_NAMES[x.field] || x.field)}
+            <b class="${x.to ? 'ok' : 'bad'}">${x.to ? 'on' : 'off'}</b><br><span>${esc(SOURCE_NAMES[x.source] || x.source)} · ${when(x.at)}${x.note ? ' · ' + esc(x.note) : ''}</span></div>`).join('')
+            : '<p class="muted">Nobody has changed their email settings yet.</p>'}
+        </section>
+      </div>
+    </div>`;
+}
+
+/* ---------- people ---------- */
+const SEGMENTS = {
+  all: ['Everyone', () => true],
+  viewers: ['Viewers', p => p.role === 'viewer' || !p.role],
+  filmmakers: ['Filmmakers', p => p.role === 'filmmaker'],
+  applicants: ['Filmmaker applicants', p => p.role === 'filmmaker_pending'],
+  buyers: ['Have bought', p => p.buyer],
+  subscribed: ['Said yes', p => p.news === 'subscribed'],
+  customer: ['Customers (bought, not asked)', p => p.news === 'customer'],
+  unsubscribed: ['Unsubscribed', p => p.news === 'unsubscribed'],
+  notin: ['Not opted in', p => p.news === 'not asked' || p.news === 'asked'],
+  lab: ['Joined through the Lab', p => p.joined_via === 'lab']
+};
+let peopleQ = '', peopleSeg = 'all';
+async function showPeople() {
+  const v = $('view');
+  if (!PEOPLE) {
+    v.innerHTML = '<p class="muted">Loading people…</p>';
+    try { PEOPLE = (await api('people')).people; } catch (e) { v.innerHTML = `<p class="bad">${esc(e.message)}</p>`; return; }
+  }
+  v.innerHTML = `
+    <div class="filters">
+      <input id="pq" type="search" placeholder="Search name or email" value="${esc(peopleQ)}" aria-label="Search people">
+      <select id="pseg" aria-label="Segment">${Object.entries(SEGMENTS).map(([k, [n]]) => `<option value="${k}"${k === peopleSeg ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+      <button class="btn" data-act="reload-people">Refresh</button>
+    </div>
+    <p class="note" id="pcount" style="margin:-4px 0 10px"></p>
+    <div class="card tablewrap" style="padding:6px 14px"><table><thead><tr>
+      <th>Person</th><th class="hide-sm">Role</th><th class="num">Bought</th><th class="num">Spent</th><th>New-film emails</th><th class="hide-sm">Joined</th></tr></thead>
+      <tbody id="prows"></tbody></table></div>`;
+  $('pq').addEventListener('input', e => { peopleQ = e.target.value; drawPeople(); });
+  $('pseg').addEventListener('change', e => { peopleSeg = e.target.value; drawPeople(); });
+  drawPeople();
+}
+function drawPeople() {
+  const q = peopleQ.trim().toLowerCase();
+  const list = PEOPLE.filter(SEGMENTS[peopleSeg][1]).filter(p => !q || (p.name + ' ' + p.email).toLowerCase().includes(q))
+    .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  $('pcount').textContent = `${list.length} of ${PEOPLE.length}`;
+  $('prows').innerHTML = list.slice(0, 500).map(p => `<tr class="click" data-act="person" data-uid="${esc(p.uid)}" tabindex="0">
+    <td><b>${esc(p.name || '—')}</b><small>${esc(p.email || 'no email')}</small></td>
+    <td class="hide-sm">${esc(p.role === 'filmmaker_pending' ? 'applicant' : p.role)}</td>
+    <td class="num">${p.bought || ''}</td><td class="num">${p.spend ? rand(p.spend) : ''}</td>
+    <td>${pill(p.news, NEWS_NAMES[p.news] || p.news)}</td><td class="hide-sm">${day(p.created_at)}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">Nobody matches.</td></tr>';
+}
+
+async function openPerson(uid) {
+  const L = $('layer');
+  L.innerHTML = `<div class="panel" data-act="close-panel"><div role="dialog" aria-label="Person"><p class="muted">Loading…</p></div></div>`;
+  let d;
+  try { d = await api('person', { uid }); } catch (e) { L.querySelector('.panel>div').innerHTML = `<p class="bad">${esc(e.message)}</p>`; return; }
+  const p = d.person, pr = d.prefs || {};
+  const isMaker = p.role === 'filmmaker' || p.role === 'filmmaker_pending';
+  const on = { news: p.news_ok, alerts: p.alerts, filmmaker_news: p.filmmaker_news };
+  L.querySelector('.panel>div').innerHTML = `
+    <div class="row-acts" style="justify-content:space-between;margin-bottom:14px"><h2 style="margin:0">Person</h2><button class="btn sm" data-act="close">Close</button></div>
+    <h3 style="font-size:20px">${esc(p.name || '—')}</h3>
+    <p class="muted" style="margin:2px 0 14px;word-break:break-all">${esc(p.email)} · ${esc(p.role)} · joined ${day(p.created_at)}${p.joined_via ? ' via ' + esc(p.joined_via) : ''}</p>
+    <section class="card">
+      <h2>Email</h2>
+      <div class="swrow"><span>New films and news<br><small class="muted">${esc(NEWS_NAMES[p.news])}${p.basis === 'customer' ? ': may email as a customer until they say no' : ''}${p.asked_at ? ' · asked ' + day(p.asked_at) : ''}</small></span><b class="${on.news ? 'ok' : 'bad'}">${on.news ? 'Gets it' : 'Doesn\'t'}</b></div>
+      <div class="swrow"><span>Film alerts</span><b class="${on.alerts ? 'ok' : 'bad'}">${on.alerts ? 'On' : 'Off'}</b></div>
+      ${isMaker ? `<div class="swrow"><span>Filmmaker news</span><b class="${on.filmmaker_news ? 'ok' : 'bad'}">${on.filmmaker_news ? 'On' : 'Off'}</b></div>` : ''}
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px;color:var(--amber)">They asked us to change this</summary>
+        <label class="f" for="sp-field">Which email</label>
+        <select id="sp-field"><option value="news">New films and news</option><option value="alerts">Film alerts</option>${isMaker ? '<option value="filmmaker_news">Filmmaker news</option>' : ''}</select>
+        <label class="f" for="sp-val">Set to</label>
+        <select id="sp-val"><option value="false">Off (they asked to stop)</option><option value="true">On (they asked to get it)</option></select>
+        <label class="f" for="sp-note">How they asked <small>kept as proof</small></label>
+        <input id="sp-note" placeholder="e.g. Emailed support@ on 7 Oct" maxlength="300">
+        <button class="btn amber" style="margin-top:10px" data-act="set-pref" data-uid="${esc(p.uid)}">Save</button>
+        <p class="note">Only switch something on if they asked for it themselves. The change and your note are logged.</p>
+      </details>
+    </section>
+    <section class="card">
+      <h2>Purchases</h2>
+      ${d.purchases.length ? d.purchases.map(x => `<div class="kv"><span>${esc(x.title)}<br><small class="muted">${esc(x.type || '')}${x.source === 'gift' ? ' · gift' : ''} · ${day(x.at)}</small></span><b>${x.amount ? rand(x.amount) : '—'}</b></div>`).join('') : '<p class="muted">Nothing yet.</p>'}
+    </section>
+    <section class="card">
+      <h2>Email choice history</h2>
+      ${d.history.length ? d.history.map(h => `<div class="hist">${esc(FIELD_NAMES[h.field] || h.field)}: ${h.from === null ? 'not set' : h.from ? 'on' : 'off'} → <b class="${h.to ? 'ok' : 'bad'}">${h.to ? 'on' : 'off'}</b>
+        <br><span>${when(h.at)} · ${esc(SOURCE_NAMES[h.source] || h.source)}${h.words ? ` · shown: “${esc(h.words)}”` : ''}${h.note ? ' · ' + esc(h.note) : ''}</span></div>`).join('') : '<p class="muted">No choices recorded.</p>'}
+    </section>
+    <section class="card">
+      <h2>Their information (POPIA)</h2>
+      <p class="note" style="margin:0 0 10px">When someone asks what we hold about them, download it here and send it to the email address on their account, not another one.</p>
+      <button class="btn" data-act="export" data-uid="${esc(p.uid)}" data-name="${esc(p.name || p.uid)}">Download everything we hold</button>
+    </section>`;
+}
+
+/* ---------- campaigns ---------- */
+async function showCampaigns() {
+  const v = $('view');
+  v.innerHTML = '<p class="muted">Loading…</p>';
+  let list;
+  try { list = (await api('campaigns')).campaigns; } catch (e) { v.innerHTML = `<p class="bad">${esc(e.message)}</p>`; return; }
+  v.innerHTML = `
+    <div class="row-acts" style="margin-bottom:14px">
+      <button class="btn amber" data-act="new" data-kind="newsletter">New viewer email</button>
+      <button class="btn" data-act="new" data-kind="filmmaker">New filmmaker email</button>
+      <button class="btn" data-act="weekly">Draft this week's new films</button>
+    </div>
+    <div class="card tablewrap" style="padding:6px 14px"><table><thead><tr><th>Email</th><th>Type</th><th>To</th><th>Status</th><th class="num">Sent</th><th>Date</th></tr></thead><tbody>
+    ${list.map(x => `<tr class="click" data-act="open" data-id="${esc(x.id)}" tabindex="0"><td><b>${esc(x.subject || '(no subject)')}</b></td><td>${esc(KIND_NAMES[x.kind] || x.kind)}</td>
+      <td>${esc(AUD_NAMES[x.audience] || x.audience)}</td><td>${pill(x.status, x.status)}</td>
+      <td class="num">${x.progress ? `${x.progress.sent}${x.progress.failed ? ` <span class="bad">(${x.progress.failed} failed)</span>` : ''}` : ''}</td>
+      <td>${day(x.sent_at || x.created_at)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No emails yet.</td></tr>'}
+    </tbody></table></div>`;
+}
+
+const BLANK = {
+  newsletter: { kicker: '4flieks news', heading: '', intro: '', signoff: 'The 4flieks team', audience: 'viewers' },
+  filmmaker: { kicker: 'For filmmakers', heading: '', intro: '', signoff: 'Julian and the 4flieks team', audience: 'filmmakers' },
+  consent: { subject: 'Can we email you about new films?', audience: 'consent' }
+};
+async function newCampaign(kind) {
+  try {
+    const d = await api('save', { kind, subject: kind === 'consent' ? BLANK.consent.subject : 'Untitled email', ...BLANK[kind] });
+    go('#c=' + d.id);
+  } catch (e) { snack(e.message); }
+}
+
+async function openCampaign(id) {
+  const v = $('view');
+  v.innerHTML = '<p class="muted">Loading…</p>';
+  try {
+    const [c, f] = await Promise.all([api('campaign', { id }), FILMS ? { films: FILMS } : api('films')]);
+    FILMS = f.films; ED = c.campaign;
+  } catch (e) { v.innerHTML = `<p class="bad">${esc(e.message)}</p>`; return; }
+  const c = ED, draft = c.status === 'draft', consent = c.kind === 'consent';
+  const dis = draft ? '' : ' disabled';
+  const filmsIn = new Set(c.films || []);
+  v.innerHTML = `
+    <div class="row-acts" style="justify-content:space-between;margin-bottom:14px">
+      <div><a href="#campaigns" style="font-size:12.5px;text-decoration:none">← All emails</a>
+        <h2 style="margin:8px 0 0">${esc(KIND_NAMES[c.kind])} ${pill(c.status, c.status)}</h2></div>
+      <div class="row-acts">
+        ${draft ? `<button class="btn" data-act="save">Save draft</button><button class="btn" data-act="test">Send me a test</button><button class="btn amber" data-act="send">Send…</button>`
+          : `${resumable(c) ? '<button class="btn amber" data-act="resume">Resume sending</button>' : ''}<button class="btn" data-act="duplicate">Duplicate</button>`}
+      </div>
+    </div>
+    ${!draft ? `<div class="warn" id="progress"></div>` : ''}
+    ${consent ? `<div class="warn">This asks people who never chose whether they want new-film emails. POPIA allows asking each person <b>once</b>, and the email may only ask: no films, no offers.
+      The words are fixed for that reason. It only goes to people never asked, and marks them as asked.</div>` : ''}
+    <div class="ed">
+      <div>
+        <label class="f" for="e-aud">Send to</label>
+        <select id="e-aud"${dis}>${AUD_FOR[c.kind].map(a => `<option value="${a}"${a === c.audience ? ' selected' : ''}>${esc(AUD_NAMES[a])}</option>`).join('')}</select>
+        <p class="note" id="e-count"></p>
+        <label class="f" for="e-subject">Subject line</label>
+        <input id="e-subject" maxlength="150" value="${esc(c.subject)}"${dis}>
+        <label class="f" for="e-pre">Preview text <small>the grey line after the subject in most inboxes</small></label>
+        <input id="e-pre" maxlength="150" value="${esc(c.preheader)}"${dis}>
+        ${consent ? '' : `
+        <label class="f" for="e-kicker">Small heading</label>
+        <input id="e-kicker" maxlength="40" value="${esc(c.kicker)}"${dis}>
+        <label class="f" for="e-heading">Headline</label>
+        <input id="e-heading" maxlength="120" value="${esc(c.heading)}"${dis}>
+        <label class="f" for="e-intro">Message <small>blank line = new paragraph; https:// links become clickable</small></label>
+        <textarea id="e-intro" maxlength="4000"${dis}>${esc(c.intro)}</textarea>
+        <label class="f">Films <small>up to 8, shown as cards with poster and price</small></label>
+        <div class="films" id="e-films">${FILMS.map(f => `<label><input type="checkbox" value="${esc(f.id)}"${filmsIn.has(f.id) ? ' checked' : ''}${dis}>
+          ${f.poster ? `<img src="${esc(f.poster)}" alt="" loading="lazy">` : '<img alt="">'}<span>${esc(f.title)} <em>${f.status === 'soon' ? 'coming soon' : day(f.published_at)}</em></span></label>`).join('') || '<p class="muted" style="padding:10px">No live films.</p>'}</div>
+        <label class="f" for="e-cta">Button <small>optional</small></label>
+        <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:8px">
+          <input id="e-cta" maxlength="40" placeholder="Label" value="${esc(c.cta_label)}"${dis}>
+          <input id="e-ctaurl" maxlength="500" placeholder="https://4flieks.com/…" value="${esc(c.cta_url)}"${dis}></div>
+        <label class="f" for="e-sign">Signed</label>
+        <input id="e-sign" maxlength="80" value="${esc(c.signoff)}"${dis}>`}
+        <p class="note" style="margin-top:14px">Every email says who it's from, why the person is getting it, and has an unsubscribe link and a one-click unsubscribe for mail apps. You don't need to add them.</p>
+      </div>
+      <div class="preview"><div class="bar" id="pv-subj"></div><iframe id="pv" title="Email preview" sandbox=""></iframe></div>
+    </div>`;
+  if (draft) {
+    v.querySelectorAll('input,textarea,select').forEach(el => el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', () => schedulePreview()));
+    $('e-aud').addEventListener('change', () => countAudience());
+    countAudience();
+  } else {
+    showProgress(c);
+    if (['queued', 'sending'].includes(c.status)) pollTimer = setInterval(async () => {
+      try { const d = await api('campaign', { id: c.id }); ED = d.campaign; showProgress(ED); if (!['queued', 'sending'].includes(ED.status)) clearInterval(pollTimer); } catch {}
+    }, 4000);
+  }
+  preview();
+}
+/* Failed, or no progress for 16 minutes (a background run lasts at most 15). */
+const resumable = c => c.status === 'failed' || (['queued', 'sending'].includes(c.status) && Date.now() - (((c.progress || {}).at) || c.queued_at || 0) > 16 * 60e3);
+function showProgress(c) {
+  const p = c.progress || {}, el = $('progress');
+  if (!el) return;
+  el.innerHTML = c.status === 'sent' ? `Sent ${when(c.sent_at)} to <b>${p.sent || 0}</b> ${p.sent === 1 ? 'person' : 'people'}${p.failed ? `. <span class="bad">${p.failed} failed: ${esc(c.error || '')}</span>` : '.'}`
+    : c.status === 'failed' ? `<span class="bad">Sending stopped: ${esc(c.error || 'unknown error')}.</span> ${p.sent ? `${p.sent} got it. ` : ''}Resume sends to everyone else.`
+    : resumable(c) ? `<span class="bad">Sending looks stuck at ${p.sent || 0} of ${p.total || '?'}.</span> Resume carries on without sending anyone a second copy.`
+    : `Sending… <b>${p.sent || 0}</b> of ${p.total || '?'}${p.failed ? `, <span class="bad">${p.failed} failed</span>` : ''}. You can leave this page.`;
+}
+function fields() {
+  const val = id => ($(id) ? $(id).value : '');
+  return {
+    id: ED.id, kind: ED.kind, audience: val('e-aud'), subject: val('e-subject'), preheader: val('e-pre'), kicker: val('e-kicker'), heading: val('e-heading'),
+    intro: val('e-intro'), cta_label: val('e-cta'), cta_url: val('e-ctaurl'), signoff: val('e-sign'),
+    films: [...document.querySelectorAll('#e-films input:checked')].map(i => i.value)
+  };
+}
+let pvTimer = null, pvSeq = 0;
+function schedulePreview() { clearTimeout(pvTimer); pvTimer = setTimeout(preview, 500); }
+async function preview() {
+  const seq = ++pvSeq;
+  const f = ED.status === 'draft' ? fields() : ED;
+  try {
+    const d = await api('preview', { ...f, subject: f.subject || '(no subject)' });
+    if (seq !== pvSeq) return;
+    $('pv').srcdoc = d.html;
+    $('pv-subj').textContent = 'Subject: ' + d.subject + (d.missing ? `  ·  ${d.missing} film(s) not live any more` : '');
+  } catch (e) { if (seq === pvSeq) $('pv-subj').textContent = e.message; }
+}
+let lastCount = null;
+async function countAudience() {
+  const el = $('e-count'); el.textContent = 'Counting…';
+  try {
+    const d = await api('audience', { name: $('e-aud').value });
+    lastCount = d.count;
+    const parts = [];
+    if (d.why.news) parts.push(`${d.why.news} said yes`);
+    if (d.why.customer) parts.push(`${d.why.customer} customers`);
+    el.textContent = `${d.count} ${d.count === 1 ? 'person' : 'people'} right now${parts.length ? ' (' + parts.join(', ') + ')' : ''}.`;
+  } catch (e) { el.textContent = e.message; }
+}
+async function save(quiet) {
+  const d = await api('save', fields());
+  if (!quiet) snack('Saved.');
+  return d;
+}
+function confirmSend(again) {
+  const n = lastCount;
+  $('layer').innerHTML = `<div class="modal"><div role="dialog" aria-modal="true" aria-labelledby="mh">
+    <h3 id="mh">Send this email now?</h3>
+    <p>It goes to <b style="color:var(--text)">${n == null ? 'everyone in' : n} ${n === 1 ? 'person' : 'people'}</b>: ${esc(AUD_NAMES[$('e-aud').value])}.</p>
+    <p>Subject: “${esc($('e-subject').value)}”</p>
+    ${again ? `<p class="bad">${esc(again)}</p>` : ''}
+    <p>This can't be undone.</p>
+    <div class="row-acts" style="margin-top:14px"><button class="btn amber" data-act="send-now" data-again="${again ? 1 : ''}">Send now</button><button class="btn" data-act="close">Cancel</button></div>
+  </div></div>`;
+}
+
+/* ---------- clicks ---------- */
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === 'close-panel' && e.target !== el) return;   // clicks inside the panel
+  if (act === 'close' || act === 'close-panel') { $('layer').innerHTML = ''; return; }
+  if (act === 'open') return go('#c=' + el.dataset.id);
+  if (act === 'person') return openPerson(el.dataset.uid);
+  if (act === 'new') return newCampaign(el.dataset.kind);
+  if (act === 'new-consent') return newCampaign('consent');
+  if (act === 'reload-people') { PEOPLE = null; return showPeople(); }
+  el.disabled = true;
+  try {
+    if (act === 'weekly') {
+      const d = await api('weekly');
+      if (d.made) go('#c=' + d.id);
+      else if (d.campaign) go('#c=' + d.campaign);
+      else snack(d.reason === 'no new films this week' ? 'No films went live in the last 7 days.' : d.reason);
+    }
+    if (act === 'save') await save();
+    if (act === 'test') { await save(true); const d = await api('test', { id: ED.id }); snack(`Test sent to ${d.to}.`); }
+    if (act === 'send') { await save(true); await countAudience(); confirmSend(); }
+    if (act === 'send-now') {
+      try {
+        const d = await api('send', { id: ED.id, expect: lastCount, again: !!el.dataset.again });
+        $('layer').innerHTML = ''; snack(`Sending to ${d.count} people.`); OVERVIEW = null; openCampaign(ED.id);
+      } catch (err) {
+        if (err.data && err.data.again) return confirmSend(err.message);
+        if (err.data && typeof err.data.count === 'number') { lastCount = err.data.count; return confirmSend(err.message); }
+        throw err;
+      }
+    }
+    if (act === 'resume') { await api('resume', { id: ED.id }); snack('Sending again. Nobody gets it twice.'); openCampaign(ED.id); }
+    if (act === 'duplicate') {
+      const { id, status, progress, sent_at, queued_at, started_at, created_at, error, week, ...rest } = ED;
+      const d = await api('save', { ...rest, subject: rest.kind === 'consent' ? rest.subject : 'Copy of ' + rest.subject });
+      go('#c=' + d.id);
+    }
+    if (act === 'set-pref') {
+      await api('set-pref', { uid: el.dataset.uid, field: $('sp-field').value, value: $('sp-val').value === 'true', note: $('sp-note').value });
+      snack('Saved and logged.'); PEOPLE = null; openPerson(el.dataset.uid);
+    }
+    if (act === 'export') {
+      const d = await api('export', { uid: el.dataset.uid });
+      const blob = new Blob([JSON.stringify(d.data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `4flieks-data-${String(el.dataset.name).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+  } catch (err) { snack(err.message); }
+  finally { el.disabled = false; }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') $('layer').innerHTML = '';
+  if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click();
+});
+
+auth.onAuthStateChanged(async user => {
+  const v = $('view');
+  if (!user) { v.innerHTML = `<div class="gate"><p style="margin-bottom:14px">Sign in on 4flieks first, then come back.</p><a href="/">Go to 4flieks</a></div>`; return; }
+  try {
+    const token = await user.getIdToken(true);
+    const me = await fetch(`${BASE}/flieks_users/${user.uid}.json?auth=${token}`).then(r => r.json());
+    if (!me || me.role !== 'admin') { v.innerHTML = `<div class="gate">This is an admin screen.</div>`; return; }
+  } catch { v.innerHTML = `<div class="gate">Could not check your account.</div>`; return; }
+  $('tabs').style.display = 'flex';
+  route();
+});
+</script>
+</body>
+</html>

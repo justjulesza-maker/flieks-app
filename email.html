@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email preferences — 4flieks</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/brand/svg/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/png/favicon-32.png" sizes="32x32">
+<script>
+(function(){var s=null;try{s=localStorage.getItem('flieks_mode')}catch(e){}
+document.documentElement.setAttribute('data-mode', s||'light');})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0A0A;--surface:#141414;--card:#1A1A1A;--border:#2A2A2A;
+  --amber:#F5A623;--green:#4ADE80;--red:#E8462A;--text:#F0EDE8;--muted:#999;--dim:#666;
+  --fb:'Archivo Black',sans-serif;--fn:'DM Sans',system-ui,sans-serif;--fm:'JetBrains Mono',monospace;
+}
+html[data-mode="light"]{
+  --bg:#F5F1E8;--surface:#FFFFFF;--card:#FBF8F1;--border:#E2DACB;
+  --amber:#B3660A;--green:#2E7D32;--red:#C13718;--text:#1C1512;--muted:#6B6259;--dim:#8F877D;color-scheme:light;
+}
+html[data-mode="dark"]{color-scheme:dark}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--fn);max-width:520px;margin:0 auto;padding:26px 16px 60px;min-height:100dvh;font-size:15px}
+.brand{font-family:var(--fb);font-size:16px;margin-bottom:28px;display:block;color:var(--text);text-decoration:none}
+.brand span{color:var(--amber)}
+.eyebrow{font-family:var(--fm);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+h1{font-family:var(--fb);font-size:26px;line-height:1.15;margin-bottom:8px}
+.lead{color:var(--muted);font-size:14.5px;line-height:1.5;margin-bottom:22px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
+.banner{border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid var(--amber);background:color-mix(in srgb,var(--amber) 9%,transparent)}
+.banner h2{font-size:17px;margin-bottom:6px}
+.banner p{font-size:14px;line-height:1.5;color:var(--text)}
+.row{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border)}
+.row:first-child{border-top:0;padding-top:2px}
+.row b{display:block;font-size:15px;margin-bottom:3px}
+.row small{display:block;font-size:13px;color:var(--muted);line-height:1.45}
+.sw{position:relative;flex-shrink:0;width:50px;height:30px;border-radius:99px;border:0;cursor:pointer;background:var(--border);transition:background .15s}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw[aria-checked="true"]{background:var(--green)}
+.sw[aria-checked="true"]::after{left:23px}
+.sw:disabled{opacity:.5;cursor:wait}
+.btn{display:block;width:100%;border:0;border-radius:10px;padding:14px;font:700 15px var(--fn);cursor:pointer;background:var(--amber);color:#111;margin-top:10px}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn:disabled{opacity:.55;cursor:wait}
+.fine{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:16px}
+.fine a,.lead a{color:var(--amber)}
+.msg{font-size:13.5px;margin-top:10px;min-height:1em}
+.msg.err{color:var(--red)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+</style>
+</head>
+<body>
+<a class="brand" href="/">4<span>flieks</span></a>
+<div id="app"><p class="lead">Loading your email settings…</p></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCQlHW08a2J3HJRKZr83HhkGS_-wJKbegA",
+  authDomain: "flieks-app.firebaseapp.com",
+  databaseURL: "https://flieks-app-default-rtdb.firebaseio.com",
+  projectId: "flieks-app",
+  storageBucket: "flieks-app.firebasestorage.app",
+  messagingSenderId: "392470139152",
+  appId: "1:392470139152:web:586fa5b8cf3a43acaf9595"
+});
+const auth = firebase.auth();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const Q = new URLSearchParams(location.search);
+const LINK = Q.get('k') && Q.get('t') ? { k: Q.get('k'), t: Q.get('t') } : null;
+const NAMES = { news: 'new films and 4flieks news', alerts: 'film alerts', filmmaker_news: 'filmmaker news' };
+let STATE = null, banner = '';
+
+async function call(body) {
+  const who = LINK ? { ...LINK } : { token: await auth.currentUser.getIdToken() };
+  const r = await fetch('/.netlify/functions/flieks-email-prefs', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...who, ...body })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || 'Something went wrong.');
+  return d;
+}
+
+function render() {
+  const p = STATE.prefs;
+  const newsWhy = p.news_basis === 'customer'
+    ? 'Because you\'ve bought on 4flieks, we may tell you about new films until you say no.'
+    : 'New African independent films as they arrive, and big 4flieks news. At most one email a week.';
+  const sw = (field, on, label, small) => `
+    <div class="row"><div><b id="l-${field}">${label}</b><small>${small}</small></div>
+      <button class="sw" role="switch" aria-checked="${on}" aria-labelledby="l-${field}" onclick="flip('${field}', ${!on}, this)"></button></div>`;
+  document.getElementById('app').innerHTML = `
+    <p class="eyebrow">Email preferences</p>
+    <h1>What we email you</h1>
+    <p class="lead">${STATE.email ? `For <b>${esc(STATE.email)}</b>. ` : ''}Switch off anything you don't want. It takes effect straight away.</p>
+    ${banner}
+    <div class="card">
+      ${sw('news', p.news, 'New films and 4flieks news', newsWhy + (p.news_pending && !p.news ? ' <b>Waiting for you to confirm by email.</b>' : ''))}
+      ${sw('alerts', p.alerts, 'Films you saved and filmmakers you follow', 'When a film you saved goes live, or a filmmaker you follow releases one.')}
+      ${STATE.filmmaker ? sw('filmmaker_news', p.filmmaker_news, 'Filmmaker news', 'What\'s new for filmmakers releasing on 4flieks: features, tips and opportunities.') : ''}
+    </div>
+    <button class="btn ghost" id="alloff" onclick="allOff(this)">Unsubscribe from all of these</button>
+    <p class="msg" id="msg" role="status"></p>
+    <p class="fine">Receipts, password resets, payout notices and replies to your questions still come: they're about your account, not marketing.
+      Read how we look after your information in our <a href="/privacy">privacy notice</a>, or email <a href="mailto:privacy@4flieks.com">privacy@4flieks.com</a>.</p>`;
+}
+
+const say = (t, err) => { const m = document.getElementById('msg'); if (m) { m.className = 'msg' + (err ? ' err' : ''); m.textContent = t; } };
+
+async function flip(field, value, el) {
+  el.disabled = true;
+  try {
+    STATE = await call({ action: 'set', field, value, source: 'prefs-page' });
+    banner = ''; render();
+    if (STATE.pending) return say(`Almost done: we've emailed ${STATE.email} a link. Press the button in it to confirm.`);
+    say(value ? `You'll get ${NAMES[field]} again.` : `Done. No more ${NAMES[field]}.`);
+  } catch (e) { el.disabled = false; say(e.message, true); }
+}
+
+async function allOff(el) {
+  el.disabled = true;
+  try { STATE = await call({ action: 'all-off', source: 'prefs-page' }); banner = ''; render(); say('Done. You won\'t get any of these emails.'); }
+  catch (e) { el.disabled = false; say(e.message, true); }
+}
+
+/* The question email's answers are buttons here, not the links themselves, so a mail
+   scanner opening links can't answer for someone. */
+async function sayNo(el) {
+  el.disabled = true;
+  try {
+    STATE = await call({ action: 'set', field: 'news', value: false, source: 'consent-email' });
+    banner = `<div class="banner"><h2>No problem</h2><p>We won't email you about new films, and we won't ask again.</p></div>`;
+    render();
+  } catch (e) { el.disabled = false; say(e.message, true); }
+}
+async function sayYes(el) {
+  el.disabled = true;
+  try {
+    STATE = await call({ action: 'set', field: 'news', value: true, source: Q.get('via') === 'confirm' ? 'confirm-email' : 'consent-email' });
+    banner = `<div class="banner"><h2>Thank you. You're on the list.</h2><p>We'll email you when new films arrive. You can change your mind here any time.</p></div>`;
+    render();
+  } catch (e) { el.disabled = false; say(e.message, true); }
+}
+
+async function start() {
+  if (!LINK && !auth.currentUser) {
+    document.getElementById('app').innerHTML = `
+      <p class="eyebrow">Email preferences</p><h1>Sign in to choose</h1>
+      <p class="lead">Sign in on 4flieks and come back here, or use the "Email preferences" link at the bottom of any email from us.</p>
+      <a class="btn" href="/" style="text-align:center;text-decoration:none">Go to 4flieks</a>`;
+    return;
+  }
+  try {
+    STATE = await call({ action: LINK ? 'get' : 'mine' });
+    const unsub = Q.get('unsub');
+    if (LINK && unsub && NAMES[unsub]) {
+      // The link in the email says "Unsubscribe": do it now, and offer to undo.
+      STATE = await call({ action: 'set', field: unsub, value: false, source: 'unsubscribe-link' });
+      banner = `<div class="banner"><h2>You're unsubscribed</h2><p>You won't get ${NAMES[unsub]} from us any more. Changed your mind? Switch it back on below.</p></div>`;
+    } else if (LINK && Q.get('no') === '1' && STATE.prefs.news_chosen === null) {
+      banner = `<div class="banner"><h2>No new-film emails?</h2><p>Press the button and we won't email you about new films, or ask again.</p>
+        <button class="btn ghost" onclick="sayNo(this)">No thanks, don't ask again</button></div>`;
+    } else if (LINK && Q.get('yes') === '1' && Q.get('via') === 'confirm' && STATE.prefs.news_chosen !== true) {
+      banner = `<div class="banner"><h2>Confirm your emails</h2><p>Press the button to start getting new films from 4flieks. One email a week at most. Stop any time.</p>
+        <button class="btn" onclick="sayYes(this)">Yes, send me new films</button></div>`;
+    } else if (LINK && Q.get('yes') === '1' && STATE.prefs.news_chosen !== true) {
+      banner = `<div class="banner"><h2>Get new films by email?</h2><p>One email a week at most when new African films arrive on 4flieks. Stop any time.</p>
+        <button class="btn" onclick="sayYes(this)">Yes, keep me posted</button></div>`;
+    } else if (LINK && Q.get('yes') === '1') {
+      banner = `<div class="banner"><h2>You're already on the list</h2><p>We'll email you when new films arrive.</p></div>`;
+    }
+    render();
+    // Done with the action in the link: a reload shouldn't repeat it.
+    if (LINK && Q.has('unsub')) history.replaceState(null, '', `/email?k=${encodeURIComponent(LINK.k)}&t=${encodeURIComponent(LINK.t)}`);
+  } catch (e) {
+    document.getElementById('app').innerHTML = `<p class="eyebrow">Email preferences</p><h1>That didn't work</h1><p class="lead">${esc(e.message)}</p>`;
+  }
+}
+
+if (LINK) start();
+else auth.onAuthStateChanged(() => start());
+</script>
+</body>
+</html>

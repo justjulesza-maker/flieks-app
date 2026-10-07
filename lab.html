@@ -1279,10 +1279,11 @@ function authForm() {
     <label for="je">Email</label><input id="je" type="email" autocomplete="email">
     <label for="jp">Password</label><input id="jp" type="password" autocomplete="${j ? 'new-password' : 'current-password'}"
       onkeydown="if(event.key==='Enter')doJoin()">
+    ${j ? `<label for="jnews" style="display:flex;gap:9px;align-items:flex-start;font-weight:400;text-transform:none;letter-spacing:0;font-size:13.5px;line-height:1.45;margin:12px 0 4px;cursor:pointer"><input type="checkbox" id="jnews" style="width:auto;flex:none;margin-top:3px"><span>Send me new films and 4flieks news by email. I can stop any time.</span></label>` : ''}
     <p class="msg" id="jmsg"></p>
     <div class="actions" style="margin-top:8px"><button id="jgo" onclick="doJoin()">${j ? 'Create my free account' : 'Sign in'}</button>
       ${j ? '' : `<button class="ghost" onclick="resetPw()">Forgot password</button>`}</div>
-    ${j ? `<p class="tiny" style="margin-top:10px">We'll email you a link to confirm your address. By joining you agree to the <a href="/terms" style="color:var(--ink-2)">terms</a>.</p>` : ''}`;
+    ${j ? `<p class="tiny" style="margin-top:10px">We'll email you a link to confirm your address. By joining you agree to the <a href="/terms" style="color:var(--ink-2)">terms</a> and <a href="/privacy" style="color:var(--ink-2)">privacy notice</a>.</p>` : ''}`;
 }
 const jsay = (t, err) => { const m = document.getElementById('jmsg'); if (m) { m.className = 'msg' + (err ? ' err' : ''); m.textContent = t; } };
 
@@ -1302,6 +1303,8 @@ async function doJoin() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, role: 'viewer', created_at: Date.now(), joined_via: 'lab' })
       });
+      fetch('/.netlify/functions/flieks-email-prefs', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signup', token: token, news: !!(document.getElementById('jnews') || {}).checked, source: 'signup:lab' }) }).catch(() => {});
       await sendVerify(cred.user);
       joining = false;
       startHome(cred.user);

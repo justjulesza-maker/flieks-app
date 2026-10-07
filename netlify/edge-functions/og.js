@@ -22,7 +22,7 @@ const DB = 'https://flieks-app-default-rtdb.firebaseio.com';
 
 const RESERVED = new Set([
   'index', 'admin', 'filmmaker', 'cast', 'attribution', 'about', 'terms',
-  'privacy', 'login', 'signup', 'account', 'assets', 'images', 'static', 'brand', 'podcasts', 'studio', 'lab', 'talent'
+  'privacy', 'login', 'signup', 'account', 'assets', 'images', 'static', 'brand', 'podcasts', 'studio', 'lab', 'talent', 'crm', 'email'
 ]);
 
 const esc = s => String(s || '')

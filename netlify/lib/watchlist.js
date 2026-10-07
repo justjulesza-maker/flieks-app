@@ -124,11 +124,36 @@ function updateEmail(film, u) {
   };
 }
 
+/* Each film alert carries a link to stop film alerts (crm 'alerts'), and anyone
+   who switched them off is left out. Required lazily: crm requires this file. */
+async function withUnsubscribe(msgs) {
+  const crm = require('./crm');
+  const prefs = (await ops.dbGet('flieks_crm/prefs').catch(() => null)) || {};
+  const out = [];
+  for (const m of msgs) {
+    if (!validEmail(m.to || '')) continue;
+    const k = emailKey(m.to);
+    if (prefs[k] && prefs[k].alerts === false) continue;
+    const stop = crm.prefsUrl(k, '&unsub=alerts');
+    const line = `Stop film alerts: ${stop}`;
+    out.push({
+      ...m,
+      text: m.text ? `${m.text}\n\n${line}` : m.text,
+      html: m.html ? m.html.replace(/<\/div><\/body><\/html>\s*$/, `  <p style="font-size:12px;color:#8A7D72;margin:10px 0 0"><a href="${escHtml(stop)}" style="color:#8A7D72">Stop film alerts</a> · <a href="${escHtml(crm.prefsUrl(k))}" style="color:#8A7D72">Email preferences</a></p>\n</div></body></html>`) : m.html,
+      headers: { 'List-Unsubscribe': `<${crm.oneClickUrl(k, 'alerts')}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click', ...(m.headers || {}) }
+    });
+  }
+  if (out.length) await crm.rememberAddresses(out.map(m => ({ ekey: emailKey(m.to), email: m.to }))).catch(() => {});
+  return out;
+}
+
 /* Resend's batch endpoint: up to 100 emails per call. */
 async function sendBatch(msgs, fetchImpl = fetch) {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, reason: 'RESEND_API_KEY is not set' };
   const from = process.env.OPS_EMAIL_FROM || process.env.SUPPORT_FROM || '4flieks <support@4flieks.com>';
+  msgs = await withUnsubscribe(msgs);
+  if (!msgs.length) return { ok: true };
   const r = await fetchImpl('https://api.resend.com/emails/batch', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
@@ -228,4 +253,4 @@ async function startNotify(filmId, extra = {}, fetchImpl = fetch) {
   return ok;
 }
 
-module.exports = { startNotify, okFilm, validEmail, emailKey, saveable, whenText, liveNowEmail, premiereEmail, updateEmail, sendBatch, waiting, counts, notifyWatchers, MAX_ITEMS, shell, filmUrl, posterOf };
+module.exports = { startNotify, okFilm, validEmail, emailKey, saveable, whenText, liveNowEmail, premiereEmail, updateEmail, sendBatch, withUnsubscribe, waiting, counts, notifyWatchers, MAX_ITEMS, shell, filmUrl, posterOf };

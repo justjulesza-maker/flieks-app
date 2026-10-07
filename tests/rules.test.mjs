@@ -64,6 +64,20 @@ for (const node of ['flieks_budgets/v/p1', 'flieks_budget_index/v/p1', 'flieks_c
 }
 await check('budget: the browser cannot touch its own usage ledger', assertFails(remove(ref(as('v'), 'flieks_lab_usage/v/budget_imports'))));
 
+// CRM: the address the CRM mails is the one they signed in with, not one they typed into their profile
+const asEmail = (uid, email) => env.authenticatedContext(uid, { email }).database();
+await check('crm: a viewer cannot put someone else\'s email on their profile', assertFails(update(ref(asEmail('v', 'v@test.dev'), 'flieks_users/v'), { email: 'victim@example.com' })));
+await check('crm: sign-up can save their own email (any case)', assertSucceeds(update(ref(asEmail('v', 'v@test.dev'), 'flieks_users/v'), { email: 'V@Test.dev' })));
+await check('crm: other profile fields still save', assertSucceeds(update(ref(asEmail('v', 'v@test.dev'), 'flieks_users/v'), { name: 'Vee' })));
+
+// CRM: email choices are proof of consent, so only the server writes them; nobody reads the list from a browser
+for (const who of ['v', 'adm']) {
+  for (const node of ['flieks_crm/prefs/e_000000000000000000000000', 'flieks_crm/log/e_000000000000000000000000/x', 'flieks_crm/campaigns/c1', 'flieks_crm/sends/c1/e_000000000000000000000000']) {
+    await check(`crm: ${who} in a browser cannot write ${node.split('/')[1]}`, assertFails(set(ref(as(who), node), { news: true })));
+    await check(`crm: ${who} in a browser cannot read ${node.split('/')[1]}`, assertFails(get(ref(as(who), node))));
+  }
+}
+
 await env.cleanup();
 console.log(failed ? `\n${failed} FAILED` : '\nALL PASSED');
 process.exit(failed ? 1 : 0);
