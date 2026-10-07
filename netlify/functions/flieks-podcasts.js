@@ -15,6 +15,10 @@
  *   episode-media { episodeId, kind: 'video'|'audio', url }   after an upload: audio kept, video sent to Bunny
  *   link-bunny { episodeId, bunnyId }  use a video already in the Bunny library
  *   media-status { episodeId }
+ *   rss-preview { url }               what a podcast RSS feed holds, before connecting it
+ *   rss-connect { channelId, url, auto }  import every episode and keep following the feed
+ *   rss-sync { channelId }            read the connected feed now
+ *   rss-set { channelId, auto?, disconnect? }
  * Admin:
  *   set-channel { id, status?, featured? }
  *   delete-channel { id }
@@ -23,6 +27,7 @@ const https = require('https');
 const crypto = require('crypto');
 const ops = require('../lib/ops-core');
 const P = require('../lib/podcasts');
+const RSS = require('../lib/podcast-rss');
 
 const LIB = () => (process.env.BUNNY_LIBRARY_ID || '').trim();
 const BKEY = () => (process.env.BUNNY_API_KEY || '').trim();
@@ -235,6 +240,37 @@ exports.handler = async event => {
       return reply(200, { ok: true, added, skipped });
     }
 
+    /* ---------------- RSS feeds ---------------- */
+    if (a === 'rss-preview') {
+      try { return reply(200, { feed: await RSS.preview(b.url) }); }
+      catch (e) { return reply(400, { message: e.message }); }
+    }
+
+    if (a === 'rss-connect' || a === 'rss-sync' || a === 'rss-set') {
+      const ch = P.okId(b.channelId) && await ops.dbGet(`flieks_pod_channels/${b.channelId}`);
+      if (!canEdit(me, ch)) return reply(404, { message: 'Channel not found.' });
+      if (a === 'rss-set') {
+        if (!ch.rss) return reply(400, { message: 'This channel isn\'t connected to a feed.' });
+        if (b.disconnect === true) {
+          // The episodes already imported stay; nothing new comes in.
+          await ops.dbWrite(`flieks_pod_channels/${b.channelId}/rss`, null);
+          return reply(200, { ok: true });
+        }
+        if (typeof b.auto === 'boolean') await ops.dbWrite(`flieks_pod_channels/${b.channelId}/rss/auto`, b.auto);
+        return reply(200, { ok: true });
+      }
+      if (a === 'rss-sync' && !(ch.rss && ch.rss.url)) return reply(400, { message: 'This channel isn\'t connected to a feed.' });
+      try {
+        const r = await ops.withLock(`pod_rss_${b.channelId}`, () => RSS.syncChannel(ops, b.channelId,
+          a === 'rss-connect' ? { url: b.url, auto: b.auto !== false, by: me.role === 'admin' ? 'admin' : 'owner', defaultHost: me.name || null } : { by: me.role === 'admin' ? 'admin' : 'owner' }), { ttl: 40e3, wait: 3e3 });
+        return reply(200, { ok: true, ...r });
+      } catch (e) {
+        if (e.busy) return reply(409, { message: 'This feed is already being read. Give it a few seconds.' });
+        if (/^db /.test(e.message)) throw e;
+        return reply(400, { message: e.message });
+      }
+    }
+
     // Everything below acts on one episode the caller may edit.
     if (['delete-episode', 'episode-media', 'link-bunny', 'media-status'].includes(a)) {
       const eid = b.id || b.episodeId;
@@ -246,6 +282,8 @@ exports.handler = async event => {
         const priv = await ops.dbGet(`flieks_private/pod_${eid}`) || {};
         // Delete from Bunny only a video this episode's own upload created.
         if (priv.bunny_id && priv.bunny_owned === true && LIB()) await bunny(`/videos/${priv.bunny_id}`, 'DELETE').catch(() => {});
+        // An episode that came from the feed stays gone: the next read of the feed skips it.
+        if (ep.source === 'rss' && RSS.REF.test(ep.ref || '')) await ops.dbWrite(`flieks_pod_rss_skip/${ep.channel_id}/${ep.ref}`, true);
         await ops.dbWrite(`flieks_pod_episodes/${eid}`, null);
         await ops.dbWrite(`flieks_private/pod_${eid}`, null);
         return reply(200, { ok: true });
@@ -312,6 +350,7 @@ exports.handler = async event => {
       if (a === 'delete-channel') {
         const all = await ops.dbGet('flieks_pod_episodes') || {};
         for (const [eid, e] of Object.entries(all)) if (e && e.channel_id === b.id) { await ops.dbWrite(`flieks_pod_episodes/${eid}`, null); await ops.dbWrite(`flieks_private/pod_${eid}`, null); }
+        await ops.dbWrite(`flieks_pod_rss_skip/${b.id}`, null);
         await ops.dbWrite(`flieks_pod_slugs/${ch.slug}`, null);
         await ops.dbWrite(`flieks_pod_channels/${b.id}`, null);
         return reply(200, { ok: true });

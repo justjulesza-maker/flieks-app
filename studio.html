@@ -86,7 +86,7 @@ const auth = firebase.auth();
 const API = '/.netlify/functions/flieks-podcasts';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-const SOURCE = { youtube: 'YouTube', vimeo: 'Vimeo', spotify: 'Spotify', soundcloud: 'SoundCloud', apple: 'Apple Podcasts', bunny: 'Bunny video', upload: 'Uploaded' };
+const SOURCE = { youtube: 'YouTube', vimeo: 'Vimeo', spotify: 'Spotify', soundcloud: 'SoundCloud', apple: 'Apple Podcasts', bunny: 'Bunny video', upload: 'Uploaded', rss: 'From the RSS feed' };
 
 let state = { role: null, channels: [], bunny: false, open: null, openEp: null };
 
@@ -104,7 +104,7 @@ async function api(action, extra = {}) {
 function renderSignIn(msg) {
   $('app').innerHTML = `
     <h1>Podcast Studio</h1>
-    <p class="muted">Add your podcast to 4flieks: link episodes from YouTube, Vimeo, Spotify, SoundCloud or Apple Podcasts, or upload video and audio. Sign in with your filmmaker account.</p>
+    <p class="muted">Add your podcast to 4flieks: connect its RSS feed, link episodes from YouTube, Vimeo, Spotify, SoundCloud or Apple Podcasts, or upload video and audio. Sign in with your filmmaker account.</p>
     <label>Email</label><input type="email" id="si-email" autocomplete="email">
     <label>Password</label><input type="password" id="si-pass" autocomplete="current-password">
     <div class="actions"><button onclick="signIn()">Sign in</button><a class="btn ghost" href="/filmmaker.html?tab=register">Apply to be a filmmaker</a></div>
@@ -210,11 +210,13 @@ function renderChannel() {
     <h2>Add episodes</h2>
     <div class="card">
       <div class="tabs">
-        <button class="on" data-t="links" onclick="addTab('links')">From links</button>
+        <button class="${c.rss ? '' : 'on'}" data-t="links" onclick="addTab('links')">From links</button>
+        <button class="${c.rss ? 'on' : ''}" data-t="rss" onclick="addTab('rss')">${c.rss ? 'RSS feed · connected' : 'From an RSS feed'}</button>
         <button data-t="upload" onclick="addTab('upload')">Upload video or audio</button>
         ${admin && state.bunny ? `<button data-t="bunny" onclick="addTab('bunny')">Bunny video</button>` : ''}
       </div>
-      <div id="add-links">
+      <div id="add-rss" style="${c.rss ? '' : 'display:none'}">${rssPanel(c)}</div>
+      <div id="add-links" style="${c.rss ? 'display:none' : ''}">
         <p class="tiny">Paste one link per line: YouTube, Vimeo, Spotify, SoundCloud or Apple Podcasts. We fetch each title and picture, and number them in order. Paste the oldest first.</p>
         <textarea id="bulk-links" rows="6" placeholder="https://www.youtube.com/watch?v=…&#10;https://youtu.be/…"></textarea>
         <div class="actions"><button onclick="bulkAdd(this)">Add episodes</button></div>
@@ -241,7 +243,7 @@ function renderChannel() {
 
 function epRow(e) {
   const open = state.openEp === e.id;
-  const media = e.source === 'upload' || e.source === 'bunny'
+  const media = e.source === 'rss' ? 'from the RSS feed' : e.source === 'upload' || e.source === 'bunny'
     ? (e.media.bunny ? (e.media.bunny_ready ? 'streaming ready' : 'preparing on Bunny') : e.media.audio ? 'audio ready' : e.media.video ? 'uploaded' : 'no file yet') : SOURCE[e.source];
   return `<div class="ep">
     <div class="ep-head" onclick="state.openEp = state.openEp === '${e.id}' ? null : '${e.id}'; renderChannel(); document.getElementById('ep-${e.id}')?.scrollIntoView({ block: 'center' })">
@@ -275,9 +277,87 @@ function epRow(e) {
 }
 
 function addTab(t) {
-  ['links', 'upload', 'bunny'].forEach(k => { const el = $('add-' + k); if (el) el.style.display = k === t ? '' : 'none'; });
+  ['links', 'rss', 'upload', 'bunny'].forEach(k => { const el = $('add-' + k); if (el) el.style.display = k === t ? '' : 'none'; });
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   $('add-msg').textContent = '';
+}
+
+/* ---------- RSS feed ---------- */
+const when = t => t ? new Date(t).toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'never';
+function rssPanel(c) {
+  const r = c.rss;
+  if (r) {
+    const fromFeed = c.episodes.filter(e => e.source === 'rss').length;
+    return `
+      <p style="font-weight:700">${esc(r.title || 'Podcast feed')}</p>
+      <p class="tiny" style="word-break:break-all">${esc(r.url)}</p>
+      <p class="tiny" style="margin-top:6px">${fromFeed} episode${fromFeed === 1 ? '' : 's'} from the feed · last read ${esc(when(r.last_at))}${r.last_error ? '' : ' · OK'}</p>
+      ${r.last_error ? `<p class="msg bad">Last read failed: ${esc(r.last_error)}</p>` : ''}
+      <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font:14px var(--fn);color:var(--ink)">
+        <input type="checkbox" ${r.auto !== false ? 'checked' : ''} onchange="rssSet({ auto: this.checked })"> Bring in new episodes automatically (checked every 3 hours)</label>
+      <div class="actions">
+        <button onclick="rssSync(this)">Check the feed now</button>
+        <button class="small danger" data-armed="" onclick="rssDisconnect(this)">Disconnect feed</button>
+      </div>
+      <p class="tiny" style="margin-top:8px">Episodes play straight from the show's own host, so their listener stats still count. Edit any episode below and your changes stay. Delete one and it won't come back from the feed.</p>`;
+  }
+  return `
+    <p class="tiny">Paste the show's RSS feed address. We import every episode with its title, show notes, picture, length and date, and play it in the 4flieks audio player.</p>
+    <label>Feed address</label><input type="url" id="rss-url" placeholder="https://media.rss.com/yourshow/feed.xml" onkeydown="if(event.key==='Enter')rssPreview(document.querySelector('#add-rss .actions button'))">
+    <div class="actions"><button onclick="rssPreview(this)">Look at the feed</button></div>
+    <div id="rss-preview"></div>
+    <p class="tiny" style="margin-top:8px">Only connect a feed you own or have the owner's permission to put on 4flieks.</p>`;
+}
+
+async function rssPreview(btn) {
+  const url = $('rss-url').value.trim(), box = $('rss-preview'), m = $('add-msg');
+  m.className = 'msg'; m.textContent = '';
+  if (!url) { m.className = 'msg bad'; m.textContent = 'Paste the feed address.'; return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Reading the feed…'; }
+  try {
+    const { feed: f } = await api('rss-preview', { url });
+    box.innerHTML = `<div class="card" style="margin-top:12px;display:flex;gap:14px;align-items:flex-start">
+        ${coverHTML({ title: f.title, cover_url: f.image })}
+        <div style="flex:1;min-width:0">
+          <p style="font-weight:700">${esc(f.title || 'Untitled feed')}</p>
+          <p class="tiny">${esc(f.author || '')}${f.author ? ' · ' : ''}${f.total} episode${f.total === 1 ? '' : 's'} in the feed${f.importing < f.total ? ` (the newest ${f.importing} come in)` : ''} · ${f.kinds.map(k => k === 'audio' ? 'audio' : 'video').join(' and ')}</p>
+          ${f.newest.map(e => `<p class="tiny" style="margin-top:4px">• ${esc(e.title)}${e.duration_mins ? ` · ${e.duration_mins} min` : ''}${e.published_at ? ` · ${new Date(e.published_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>`).join('')}
+        </div></div>
+      <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font:14px var(--fn);color:var(--ink)">
+        <input type="checkbox" id="rss-auto" checked> Bring in new episodes automatically (checked every 3 hours)</label>
+      <div class="actions"><button onclick="rssConnect(this)">Import ${f.importing} episode${f.importing === 1 ? '' : 's'}</button></div>`;
+    box.dataset.url = f.url;
+  } catch (e) { box.innerHTML = ''; m.className = 'msg bad'; m.textContent = e.message; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Look at the feed'; }
+}
+
+async function rssConnect(btn) {
+  const m = $('add-msg');
+  btn.disabled = true; btn.textContent = 'Importing… keep this page open';
+  try {
+    const d = await api('rss-connect', { channelId: state.open, url: $('rss-preview').dataset.url || $('rss-url').value.trim(), auto: $('rss-auto').checked });
+    snack(`${d.added} episode${d.added === 1 ? '' : 's'} imported from ${d.feed_title || 'the feed'}.`);
+    await load();
+  } catch (e) { m.className = 'msg bad'; m.textContent = e.message; btn.disabled = false; btn.textContent = 'Try again'; }
+}
+
+async function rssSync(btn) {
+  btn.disabled = true; btn.textContent = 'Reading the feed…';
+  try {
+    const d = await api('rss-sync', { channelId: state.open });
+    snack(d.added ? `${d.added} new episode${d.added === 1 ? '' : 's'} added.` : 'Up to date. No new episodes.');
+  } catch (e) { snack(e.message); }
+  await load();
+}
+
+async function rssSet(patch) {
+  try { await api('rss-set', { channelId: state.open, ...patch }); snack(patch.auto === false ? 'New episodes won\'t come in automatically.' : 'Saved.'); await load(); }
+  catch (e) { snack(e.message); }
+}
+
+async function rssDisconnect(btn) {
+  if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Tap again: episodes stay, no new ones'; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Disconnect feed'; }, 6000); return; }
+  await rssSet({ disconnect: true });
 }
 
 async function setChannel(patch) {
