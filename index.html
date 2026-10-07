@@ -1153,7 +1153,12 @@ let podChannel = null;       // { channel, episodes } open in view-pod
 let podPlaying = null;       // episode id in the player
 let podHls = null;
 let allLists = [];         // published lists: { id, slug, title, description, films: [ids], on_home }
-const findFilm = id => allFilms.find(f => f.id === id) || soonFilms.find(f => f.id === id);
+const findFilm = id => allFilms.find(f => f.id === id) || soonFilms.find(f => f.id === id) || ownedOffSale.find(f => f.id === id);
+/* Films this viewer bought that are no longer on sale (withdrawn, taken down, or back in
+   review after the filmmaker replaced the file). The catalogue only loads live and
+   coming-soon films, so these are fetched one by one. Owners keep them: see the
+   distribution agreement, 8.4. */
+let ownedOffSale = [];
 let playing = null;        // { id, trailer, lastSaved } — what the player has loaded
 let navHistory = ['home'];
 
@@ -1936,7 +1941,8 @@ function renderFilmDetail() {
         ${f.script_public ? `<a href="/script/${idA(f.slug || f.id)}" class="btn btn-outline"
           style="margin-top:8px;display:block;text-decoration:none;text-align:center">READ THE SCRIPT</a>` : ''}
 
-        ${!f.free ? `
+        ${f.off_sale ? `<p style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5">This film is no longer on sale on 4flieks. ${purchased.type === 'own' ? 'You bought it, so it stays in your library.' : 'Your rental plays until it runs out.'}</p>` : ''}
+        ${!f.free && !f.off_sale ? `
         <div class="buy-card" onclick="openGift('${idA(f.id)}')" style="margin-top:12px;display:flex;
              align-items:center;gap:12px;text-align:left;padding:14px">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--amber);fill:none;stroke-width:1.6;flex-shrink:0"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
@@ -1946,7 +1952,7 @@ function renderFilmDetail() {
           </div>
         </div>` : ''}
 
-        ${purchased.type === 'rent' ? `
+        ${purchased.type === 'rent' && !f.off_sale ? `
         <div class="buy-card" onclick="startCheckout('${idA(f.id)}','own')" style="margin-top:10px;display:flex;
              align-items:center;gap:12px;text-align:left;padding:14px">
           <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.6;flex-shrink:0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -3032,8 +3038,10 @@ async function processPayment(amount, total, extra) {
    PLAYER
    ============================================================ */
 async function playFilm(filmId) {
-  const f = allFilms.find(x => x.id === filmId) || currentFilm;
-  if (!f) return;
+  // Only ever this film's own details: falling back to whatever page was open
+  // played one film under another's title and saved progress against the wrong one.
+  const f = findFilm(filmId) || (currentFilm && currentFilm.id === filmId ? currentFilm : null);
+  if (!f) { showSnack('Could not find that film. Pull down to refresh and try again.'); return; }
   const purchase = userPurchases[filmId];
   if (!purchase && !f.free) {
     showSnack('Please purchase this film first');
@@ -3081,7 +3089,7 @@ async function playFilm(filmId) {
 }
 
 function playFilmFree(filmId) {
-  const f = allFilms.find(x => x.id === filmId) || currentFilm;
+  const f = findFilm(filmId) || (currentFilm && currentFilm.id === filmId ? currentFilm : null);
   if (!f) return;
   launchPlayer(f, false);
 }
@@ -3667,6 +3675,20 @@ async function loadUserPurchases() {
     const p = await db.ref(`${DB_PREFIX}users/${currentUser.uid}/progress`).once('value');
     userProgress = p.val() || {};
   } catch(e) { userProgress = {}; }
+  await loadOwnedOffSale();
+}
+
+/* Purchases that still give access: owned, or a rental not yet over. */
+const hasAccess = p => !!p && (p.type === 'own' || (p.type === 'rent' && (!p.expires_at || p.expires_at > Date.now())));
+
+async function loadOwnedOffSale() {
+  const ids = Object.entries(userPurchases)
+    .filter(([id, p]) => !id.startsWith('pod_') && hasAccess(p) && !allFilms.some(f => f.id === id) && !soonFilms.some(f => f.id === id))
+    .map(([id]) => id);
+  const got = await Promise.all(ids.map(id => db.ref(`${DB_PREFIX}films/${id}`).once('value')
+    .then(s => s.val() ? cleanFilm({ id, ...s.val() }) : null).catch(() => null)));
+  // A film that turns out to be live (the catalogue hadn't loaded yet) is not off sale.
+  ownedOffSale = got.filter(f => f && f.status !== 'live' && f.status !== 'soon').map(f => ({ ...f, off_sale: true }));
 }
 
 async function loadLibrary() {
@@ -3701,7 +3723,7 @@ async function loadLibrary() {
       return;
     }
     document.getElementById(container).innerHTML = items.map(([filmId, purchase]) => {
-      const f = allFilms.find(x => x.id === filmId) || { id: filmId, title: filmId.toUpperCase(), filmmaker: '', poster_bg: '#1A1A1A', duration_mins: '—' };
+      const f = findFilm(filmId) || { id: filmId, title: filmId.toUpperCase(), filmmaker: '', poster_bg: '#1A1A1A', duration_mins: '—' };
       const pr = progressOf(filmId);
       const progressHTML = pr ? `
           <div class="lib-prog"><div style="width:${Math.min(100, Math.round(pr.pos / pr.dur * 100))}%"></div></div>
@@ -3711,6 +3733,7 @@ async function loadLibrary() {
         <div class="info">
           <p style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">${escHtml(f.title)}</p>
           <p style="font-size:12px;color:var(--muted)">${escHtml(f.filmmaker)} · ${escHtml(f.duration_mins)} min</p>
+          ${f.off_sale ? `<p style="font-size:10px;color:var(--muted);margin-top:2px">No longer on sale · ${purchase.type === 'own' ? 'yours to keep' : 'your rental still plays'}</p>` : ''}
           ${purchase.type === 'rent'
               ? (purchase.expires_at
                   ? `<p style="font-size:10px;color:var(--dim);margin-top:3px">${

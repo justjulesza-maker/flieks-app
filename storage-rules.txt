@@ -33,14 +33,18 @@ service firebase.storage {
     function isVideo()      { return request.resource.contentType.matches('video/.*'); }
 
     // Films, trailers, posters, link-preview images
+    // A video, once uploaded, can't be overwritten or deleted from the site: people who
+    // bought the film keep watching it from this file even after it comes off sale
+    // (distribution agreement 8.4). Replacing a film uploads a new file under a new
+    // name. Only the 4flieks team can remove a video, from the Firebase console.
     match /flieks_films/{filmId}/{file} {
       allow get:    if ownsIt();
       allow list:   if false;
       allow create: if isNew() && stampedByMe()
                     && ((isVideo() && request.resource.size < 2 * 1024 * 1024 * 1024)
                      || (isImage() && underMB(10)));
-      allow update: if ownsIt() && stampedByMe();
-      allow delete: if ownsIt();
+      allow update: if ownsIt() && stampedByMe() && !resource.contentType.matches('video/.*');
+      allow delete: if ownsIt() && !resource.contentType.matches('video/.*');
     }
 
     // Podcast episodes (video or audio) and channel covers, uploaded in the

@@ -196,6 +196,13 @@ exports.handler = async event => {
 
     /* ---- remove a failed or unwanted Bunny copy ---- */
     if (action === 'reset') {
+      // People who bought the film keep it, even after it comes off sale (agreement 8.4).
+      // So once it has sold, only 4flieks can clear its streaming copy, and never when
+      // that copy is the only one left (no original upload to fall back on).
+      const totals = await dbGet(`flieks_stats/${filmId}/totals`) || {};
+      const sold = Number(totals.sales) > 0;
+      if (sold && !isAdmin) return reply(403, { message: 'People have bought this film, so its streaming copy can only be changed by the 4flieks team. Email support@4flieks.com.' });
+      if (sold && !priv.video_url) return reply(409, { message: 'This streaming copy is the only copy buyers can watch (there is no original upload). Upload the film again before clearing it.' });
       // Only delete a video from Bunny if this film's own upload created it.
       // A linked video may belong to another film; unlinking must never delete it.
       const ours = priv.bunny_owned === true || (isAdmin && !priv.bunny_linked_manually);
