@@ -184,6 +184,8 @@ let cardIndex = 0, cardShowLine = false, cardShowHook = false;
 let quizIndex = 0;
 let expandedId = null;
 let fullScriptText = null;
+let currentFilmSlug = null; // the slug an uploaded script was loaded from
+let fullScriptMissing = false; // looked, and there's no full script to show
 let fullScriptLoading = false;
 let highlightMyLines = true;
 
@@ -410,6 +412,8 @@ function resetPractice() {
 
 // ── Load script data from Firebase ──
 async function loadFirebaseScript(filmSlug, charSlug) {
+  currentFilmSlug = filmSlug;
+  fullScriptText = null; fullScriptLoading = false; fullScriptMissing = false;
   const app = document.getElementById("app");
   app.innerHTML = `<div class="loader"><h2>Loading script...</h2></div>`;
   try {
@@ -449,6 +453,8 @@ function renderPicker() {
 }
 
 async function loadScript(file) {
+  currentFilmSlug = null;
+  fullScriptText = null; fullScriptLoading = false; fullScriptMissing = false;
   const app = document.getElementById("app");
   app.innerHTML = `<div class="loader"><h2>Loading script...</h2></div>`;
   try {
@@ -466,17 +472,22 @@ async function loadScript(file) {
 // For dynamic scripts: loads from Firebase script_coach/films/{filmSlug}/fullScript
 async function loadFullScript() {
   if (fullScriptText) return; // already loaded
-  if (fullScriptLoading) return;
+  if (fullScriptLoading || fullScriptMissing) return;
   fullScriptLoading = true;
 
-  try {
-    const filmSlug = scriptData.filmTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // Uploaded scripts: use the exact slug the character was loaded from.
+  // Built-in scripts: fall back to the slug made from the title.
+  const filmSlug = currentFilmSlug ||
+    scriptData.filmTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // A missing file is answered with the homepage by the site's catch-all
+  // redirect, so never accept HTML as a script.
+  const looksLikeHtml = t => /^\s*<(!doctype|html|head|body)\b/i.test(t || "");
 
-    // Try Firebase first (works for both dynamic and static if uploaded)
+  try {
     const fbRes = await fetch(`${FIREBASE_DB}/script_coach/films/${filmSlug}/fullScript.json`);
     if (fbRes.ok) {
       const fbData = await fbRes.json();
-      if (fbData) {
+      if (typeof fbData === "string" && fbData.trim() && !looksLikeHtml(fbData)) {
         fullScriptText = fbData;
         fullScriptLoading = false;
         renderMain();
@@ -484,21 +495,29 @@ async function loadFullScript() {
       }
     }
 
-    // Fallback: try static text file
-    const txtRes = await fetch(`scripts/${filmSlug}--full-script.txt`);
-    if (txtRes.ok) {
-      fullScriptText = await txtRes.text();
-      fullScriptLoading = false;
-      renderMain();
-      return;
+    // Static text files only exist for the built-in scripts.
+    if (!currentFilmSlug) {
+      const txtRes = await fetch(`scripts/${filmSlug}--full-script.txt`);
+      const type = txtRes.headers.get("content-type") || "";
+      if (txtRes.ok && !type.includes("text/html")) {
+        const txt = await txtRes.text();
+        if (txt.trim() && !looksLikeHtml(txt)) {
+          fullScriptText = txt;
+          fullScriptLoading = false;
+          renderMain();
+          return;
+        }
+      }
     }
 
     fullScriptText = null;
+    fullScriptMissing = true;
     fullScriptLoading = false;
     renderMain();
   } catch (e) {
     console.warn("Could not load full script:", e.message);
     fullScriptText = null;
+    fullScriptMissing = true;
     fullScriptLoading = false;
     renderMain();
   }
@@ -590,7 +609,7 @@ function backToPicker() {
   stopRun();
   scriptData = null; mode = "today"; sceneFilter = "All";
   expandedId = null; cardIndex = 0; quizIndex = 0;
-  fullScriptText = null; fullScriptLoading = false;
+  fullScriptText = null; fullScriptLoading = false; fullScriptMissing = false; currentFilmSlug = null;
   document.title = "Script Coach — 4Flieks";
   renderPicker();
 }
@@ -831,6 +850,10 @@ function rateIni(score) { const ls = filtered(); recordResult(ls[iniIndex] || ls
 function renderScript(el) {
   if (fullScriptLoading) {
     el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">Loading full script…</p>';
+    return;
+  }
+  if (!fullScriptText && fullScriptMissing) {
+    el.innerHTML = '<p style="color:var(--text-mid);font-size:13px;font-style:italic">The full script isn\'t available for this upload. Your lines, scenes and drills still work.</p>';
     return;
   }
   if (!fullScriptText) {
