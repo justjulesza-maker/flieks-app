@@ -156,7 +156,19 @@ exports.handler = async event => {
     if (!token) return reply(401, { message: 'Please sign in.' });
 
     const user = await verifyToken(token);
-    const uid = user.localId;
+    let uid = user.localId;
+
+    /* An admin uploading a film on a filmmaker's behalf checks THAT
+       filmmaker's agreement, not their own. Status only: an admin can never
+       accept the agreement for someone else. */
+    const forUid = String(JSON.parse(event.body || '{}').forUid || '');
+    if (forUid && (action === 'status' || !action)) {
+      if (/[.#$\[\]\/]/.test(forUid)) return reply(400, { message: 'Bad filmmaker id.' });
+      const me = await get(`flieks_users/${uid}`);
+      if (!me || me.role !== 'admin') return reply(403, { message: 'Admin only.' });
+      uid = forUid;
+    }
+
     const existing = await get(`flieks_agreements/${uid}`);
 
     /* ---- where do I stand ---- */

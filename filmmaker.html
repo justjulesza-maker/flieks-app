@@ -267,6 +267,18 @@ html:not([data-mode="light"]) .lab-go{color:#0A0A0A}
     <img class="logo-dark" src="/brand/png/logo.png" srcset="/brand/png/logo-2x.png 2x" alt="4flieks" style="height:40px;width:auto;display:block"><img class="logo-light" src="/brand/png/logo-reversed.png" srcset="/brand/png/logo-reversed-2x.png 2x" alt="" style="height:40px;width:auto;display:block">
     <div style="width:40px"></div>
   </div>
+  <!-- Admin only: upload a film into a filmmaker's account without their password. -->
+  <div id="on-behalf" style="padding:14px 20px 0;display:none">
+    <div class="input-group" style="border:1px dashed var(--amber);border-radius:11px;padding:12px">
+      <label class="input-label">Uploading for</label>
+      <select class="input" id="on-behalf-uid" onchange="checkAgreement()">
+        <option value="">Myself</option>
+      </select>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">
+        Admin only. The film goes into this filmmaker's account and earnings go to them.
+        They must have accepted the distribution agreement themselves first.</p>
+    </div>
+  </div>
   <div id="agree-gate" style="padding:14px 20px;display:none"></div>
 
   <div id="upload-body" style="padding:14px 20px">
@@ -1025,6 +1037,7 @@ storage.setMaxUploadRetryTime(60 * 60 * 1000);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // escapes quotes too, so it is safe inside attributes
 
 let currentUser = null;
+let currentRole = null;    // 'filmmaker' or 'admin'
 let myFilms = [];
 let earningsByFilm = {};   // film id -> earned, from the server statement
 let currentFilmId = null;  // the film open in the film page / edit form
@@ -1058,6 +1071,7 @@ auth.onAuthStateChanged(async user => {
     }
 
     currentUser = user;
+    currentRole = role;
     document.getElementById('view-auth').classList.remove('active');
     document.getElementById('view-dashboard').classList.add('active');
     document.getElementById('bnav').style.display = 'flex';
@@ -1065,6 +1079,7 @@ auth.onAuthStateChanged(async user => {
     openLinkedFilm();
   } else {
     currentUser = null;
+    currentRole = null;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-auth').classList.add('active');
     document.getElementById('bnav').style.display = 'none';
@@ -2693,10 +2708,55 @@ async function agreeCall(action, extra) {
   }
 }
 
+/* ---------- Upload on behalf (admin only) ---------- */
+let onBehalfLoaded = false;
+async function loadOnBehalfPicker() {
+  const box = document.getElementById('on-behalf');
+  if (!box) return;
+  if (currentRole !== 'admin') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (onBehalfLoaded) return;
+  const users = await readNode(`${DB_PREFIX}users`);   // admins can read the user list
+  const makers = Object.entries(users)
+    .filter(([uid, u]) => u && u.role === 'filmmaker' && uid !== currentUser.uid)
+    .sort((a, b) => String(a[1].name || a[1].email).localeCompare(String(b[1].name || b[1].email)));
+  const sel = document.getElementById('on-behalf-uid');
+  sel.innerHTML = '<option value="">Myself</option>' + makers.map(([uid, u]) =>
+    `<option value="${esc(uid)}" data-name="${esc(u.name || '')}" data-email="${esc(u.email || '')}">${esc(u.name || '(no name)')} · ${esc(u.email || '')}</option>`).join('');
+  onBehalfLoaded = true;
+}
+
+/* Who the film being uploaded belongs to. Only an admin can pick someone else. */
+function uploadTarget() {
+  const sel = document.getElementById('on-behalf-uid');
+  if (currentRole === 'admin' && sel && sel.value) {
+    const o = sel.selectedOptions[0];
+    return { uid: sel.value, name: o.dataset.name || '', email: o.dataset.email || '', onBehalf: true };
+  }
+  return { uid: currentUser.uid, name: currentUser.displayName || '', email: currentUser.email, onBehalf: false };
+}
+
 async function checkAgreement() {
   const gate = document.getElementById('agree-gate');
   const form = document.getElementById('upload-body');
   if (!gate || !form) return true;
+
+  await loadOnBehalfPicker();
+  const target = uploadTarget();
+  if (target.onBehalf) {
+    const { ok, d } = await agreeCall('status', { forUid: target.uid });
+    if (ok && d.current) { gate.style.display = 'none'; form.style.display = 'block'; return true; }
+    form.style.display = 'none';
+    gate.style.display = 'block';
+    gate.innerHTML = `
+      <p class="section-label" style="margin-bottom:6px">NOT YET</p>
+      <h2 style="font-family:var(--fb);font-size:21px;line-height:1.2;margin-bottom:10px">
+        ${esc(target.name || target.email)} ${d && d.accepted ? 'is on an old version of the agreement' : 'hasn\'t accepted the agreement'}</h2>
+      <p style="font-size:13.5px;color:var(--muted);line-height:1.6">
+        You can't accept it for them. Ask them to sign in at 4flieks.com/filmmaker once,
+        accept it, and sign out. Then come back here and upload the film for them.</p>`;
+    return false;
+  }
 
   const { ok, d } = await agreeCall('status');
   agreementState = ok ? d : null;
@@ -2796,6 +2856,7 @@ async function submitFilm() {
   // Last line of defence — the gate hides the form, but never rely on that alone.
   const ready = await checkAgreement();
   if (!ready) { showSnack('Please accept the distribution agreement first.'); return; }
+  const target = uploadTarget();   // you, or (admin) the filmmaker you're uploading for
 
   const title = document.getElementById('up-title').value.trim().toUpperCase();
   const synopsis = document.getElementById('up-synopsis').value.trim();
@@ -2853,7 +2914,10 @@ async function submitFilm() {
     btn.textContent = 'SAVING…';
 
     // Prices above the ceiling wait for the team; the film goes up within it.
-    const capped = isFree ? { rent: 0, own: 0, over: false } : withinCap(priceRent, priceOwn);
+    // An admin uploading on someone's behalf sets the agreed price directly.
+    const capped = isFree ? { rent: 0, own: 0, over: false }
+      : target.onBehalf ? { rent: priceRent, own: priceOwn, over: false }
+      : withinCap(priceRent, priceOwn);
     // Save to database
     await db.ref(`${DB_PREFIX}films/${filmId}`).set({
       title,
@@ -2866,9 +2930,10 @@ async function submitFilm() {
       price_own: capped.own,
       free: isFree,
       updated_at: Date.now(),
-      filmmaker: currentUser.displayName || '',
-      filmmaker_uid: currentUser.uid,
-      filmmaker_email: currentUser.email,
+      filmmaker: target.name,
+      filmmaker_uid: target.uid,
+      filmmaker_email: target.email,
+      uploaded_by: target.onBehalf ? currentUser.uid : null,   // audit trail: which admin uploaded it
       trailer_url: trailerUrl,
       poster_url: posterUrl,
       poster_bg: '#1A1A1A',
@@ -2890,15 +2955,17 @@ async function submitFilm() {
     await db.ref(`${DB_PREFIX}admin_queue`).push({
       film_id: filmId,
       title,
-      filmmaker: currentUser.displayName,
-      filmmaker_uid: currentUser.uid,
+      filmmaker: target.name,
+      filmmaker_uid: target.uid,
+      ...(target.onBehalf ? { uploaded_by: currentUser.uid, uploaded_by_email: currentUser.email } : {}),
       submitted_at: Date.now(),
       status: 'pending_review',
       ...(trailerOnly ? { note: 'Trailer only: approve as coming soon' } : {})
     });
 
     window.removeEventListener('beforeunload', warnBeforeLeaving);
-    showSnack(trailerOnly ? 'Trailer submitted! Once we approve it, your film shows as coming soon. Upload the film from your portal when it\'s ready.'
+    if (target.onBehalf) showSnack(`Submitted into ${target.name || target.email}'s account. It's in the review queue.`);
+    else showSnack(trailerOnly ? 'Trailer submitted! Once we approve it, your film shows as coming soon. Upload the film from your portal when it\'s ready.'
                           : 'Film submitted! You\'ll hear from us in 1–2 days.');
     btn.textContent = 'SUBMITTED ✓';
     // Reset form
