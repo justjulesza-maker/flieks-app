@@ -84,7 +84,8 @@ auth.onAuthStateChanged(async u => {
   if (!u) { $('#gate').style.display=''; $('#app').style.display='none'; return; }
   const token = await u.getIdToken(true);
   const me = await fetch(`${DB}/flieks_users/${u.uid}.json?auth=${token}`).then(r=>r.json()).catch(()=>null);
-  if (!me || me.role !== 'admin') { $('#err').textContent='Not an admin account.'; auth.signOut(); return; }
+  // No signOut: the session is shared across tabs, so it would also log out a filmmaker in another tab.
+  if (!me || me.role !== 'admin') { $('#gate').style.display=''; $('#app').style.display='none'; $('#err').textContent='Signed in as ' + u.email + ', which is not an admin account.'; return; }
   $('#gate').style.display='none'; $('#app').style.display='';
   await load(token);
 });

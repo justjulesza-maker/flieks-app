@@ -261,9 +261,17 @@ const FIREBASE_CONFIG = {
 const DB = "flieks_";
 // Who may use this page is decided by the admin role in the database, the same
 // check every server function and database rule makes. Grant it from Users → Access.
+/* Role read over REST with a forced token refresh, not the SDK: the SDK's
+   socket can still be unauthenticated just after sign-in, and a failed read
+   used to count as "not admin" and sign you out. */
 async function isAdminUser(user) {
-  try { return (await db.ref(DB + 'users/' + user.uid + '/role').once('value')).val() === 'admin'; }
-  catch { return false; }
+  try {
+    const token = await user.getIdToken(true);
+    const role = await fetch(
+      `https://flieks-app-default-rtdb.firebaseio.com/${DB}users/${user.uid}/role.json?auth=${token}`
+    ).then(r => r.ok ? r.json() : null);
+    return role === 'admin';
+  } catch { return false; }
 }
 
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -289,8 +297,14 @@ auth.onAuthStateChanged(async user => {
     if (location.hash === '#everything') nav('everything');
     if (location.hash === '#backups') nav('backups');
   } else if (user) {
-    auth.signOut();
-    snack('Access denied. Admin only.');
+    // Do NOT sign out here. Firebase shares one session across every 4flieks
+    // tab, so signing out a non-admin in this tab also kicks out a filmmaker
+    // signed in on /filmmaker in another tab. Just show the gate.
+    currentAdmin = null;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-auth').classList.add('active');
+    document.getElementById('bnav').style.display = 'none';
+    snack('Signed in as ' + user.email + ', which is not an admin account.');
   } else {
     currentAdmin = null;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
