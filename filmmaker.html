@@ -128,6 +128,56 @@ html:not([data-mode="light"]) .lab-go{color:#0A0A0A}
 .mode-opt:has(input:checked){border-color:var(--amber);background:rgba(245,166,35,.06)}
 .mode-sub{font-size:12px;color:var(--muted)}
 .bio-count{font-family:var(--fn);font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.45}
+
+/* ===================== DESKTOP =====================
+   Phones are untouched: everything below applies from 1024px up.
+   The portal is a desk tool, so every screen gets the 1180px frame the
+   viewer site uses. Forms (upload, edit, payouts) keep a readable column
+   inside it; sign-in stays a 480px card. */
+@media (min-width:1024px){
+  body:has(.view.active:not(#view-auth)){max-width:1180px}
+  .topbar{padding:14px 40px}
+
+  /* nav: a floating bar, as on the viewer site */
+  .bnav{bottom:16px;border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .bnav-btn:hover svg{stroke:var(--amber)}
+  .view{padding-bottom:110px}
+  #snackbar{bottom:100px}
+
+  /* dashboard: numbers across the top, work on the left, the Lab on the right */
+  #view-dashboard > div:not(.topbar){padding:30px 40px 0 !important}
+  #view-dashboard #maker-greeting .bbn{font-size:44px !important;line-height:1.02}
+  #stats-grid{grid-template-columns:repeat(4,1fr) !important;gap:14px !important;margin-bottom:16px !important}
+  #stats-grid .stat-card{padding:18px}
+  #stats-grid .stat-card[onclick]:hover{border-color:var(--amber)}
+  #view-dashboard .info-box.green{margin-bottom:24px !important}
+  .dash-cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:auto 1fr;gap:0 28px;align-items:start}
+  .dash-a{grid-column:1;grid-row:1}
+  .dash-b{grid-column:1;grid-row:2;align-self:start}
+  .dash-side{grid-column:2;grid-row:1 / span 2;position:sticky;top:90px}
+  .dash-b .divider{display:none}
+  #dashboard-films{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #dashboard-films > p{grid-column:1 / -1}
+  #dashboard-films .film-row{margin-bottom:0}
+  .dash-b .btn{max-width:320px}
+  .lab-tool:hover,.film-row:hover{border-color:var(--amber)}
+
+  /* my films: a grid of rows */
+  #my-films-list{padding:30px 40px !important;display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;align-items:start}
+  #my-films-list > div:only-child{grid-column:1 / -1}
+  #my-films-list .film-row{margin-bottom:0}
+
+  /* forms: a readable column inside the frame */
+  #on-behalf,#agree-gate,#upload-body,#payouts-content,
+  #view-edit-film > div:not(.topbar){max-width:760px;margin-left:auto;margin-right:auto;padding-left:40px !important;padding-right:40px !important}
+  #upload-body,#payouts-content,#view-edit-film > div:not(.topbar){padding-top:30px !important}
+  #upload-body .btn,#view-edit-film .btn-amber,#payouts-content > .btn{max-width:420px}
+  .upload-zone:hover{border-color:var(--amber)}
+
+  /* a film's page: wider, its four numbers in one row */
+  #film-detail-fm{max-width:920px;margin:0 auto;padding:30px 40px !important}
+  #film-detail-fm > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:repeat(4,1fr) !important}
+}
 </style>
 </head>
 <body>
@@ -215,8 +265,10 @@ html:not([data-mode="light"]) .lab-go{color:#0A0A0A}
       <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       <p>You earn <strong style="color:var(--green)">70%</strong> of every rental and purchase. Platform takes 30% for hosting, payment processing, and distribution.</p>
     </div>
+    <div class="dash-cols"><div class="dash-a">
     <div id="msg-card"></div>
     <div id="my-page-card"></div>
+    </div><div class="dash-side">
     <div class="lab-card">
       <p class="section-label" style="margin-bottom:2px;color:var(--amber)">4FLIEKS LAB · FREE</p>
       <h3>Make your next film here</h3>
@@ -237,10 +289,12 @@ html:not([data-mode="light"]) .lab-go{color:#0A0A0A}
       <p style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px">Add your podcast →</p>
       <p style="font-size:13px;color:var(--muted);line-height:1.5">Link episodes from YouTube, Spotify and more, or upload video and audio. Free for viewers with an account; charge for a masterclass if you want to.</p>
     </a>
+    </div><div class="dash-b">
     <div class="divider" style="margin:0 0 16px"></div>
     <p class="section-label">RECENT FILMS</p>
     <div id="dashboard-films"></div>
     <button class="btn btn-amber" onclick="nav('upload')" style="margin-top:12px">+ UPLOAD NEW FILM</button>
+    </div></div>
   </div>
 </div>
 
@@ -1281,13 +1335,22 @@ async function loadMyFilms() {
   el.innerHTML = myFilms.map(filmRowHTML).join('');
 }
 
+/* The film's own poster on its row, not a blank tile with the title squeezed in.
+   Only a Firebase Storage link with no characters that could break the style. */
+function miniPoster(f) {
+  const bg = /^#[0-9A-Fa-f]{3,8}$/.test(f.poster_bg || '') ? f.poster_bg : '#1A1A1A';
+  const u = String(f.poster_url || '');
+  const ok = /^https:\/\/firebasestorage\.googleapis\.com\/[^\s"'<>()\\]+$/.test(u);
+  return `background:${bg}` + (ok ? `;background-image:url('${u}');background-size:cover;background-position:center` : '');
+}
+
 function filmRowHTML(f) {
   const views = f.view_count >= 1000 ? (f.view_count/1000).toFixed(1)+'k' : (f.view_count || 0);
   const statusTag = { live: 'tag-green', review: 'tag-amber', draft: 'tag-gray', rejected: 'tag-red', soon: 'tag-amber' }[f.status] || 'tag-gray';
   const statusLabel = { live: 'LIVE', review: 'REVIEW', draft: 'DRAFT', rejected: 'REJECTED', soon: 'COMING SOON' }[f.status] || f.status;
   const earned = (earningsByFilm[f.id] || 0).toFixed(2);
   return `<div class="film-row" onclick="openFilmDetail('${f.id}')">
-    <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'}"><span>${esc(f.title)}</span></div>
+    <div class="mini-poster" style="${miniPoster(f)}">${f.poster_url ? '' : `<span>${esc(f.title)}</span>`}</div>
     <div style="flex:1">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <p style="font-size:14px;font-weight:600;color:var(--text)">${esc(f.title)}</p>
@@ -1511,7 +1574,7 @@ function openFilmDetail(filmId) {
   const statusText = f.status === 'soon' ? 'COMING SOON' : f.status?.toUpperCase();
   document.getElementById('film-detail-fm').innerHTML = `
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px">
-      <div class="mini-poster" style="background:${f.poster_bg||'#1A1A1A'};width:60px;height:76px;border-radius:10px"><span>${esc(f.title)}</span></div>
+      <div class="mini-poster" style="${miniPoster(f)};width:60px;height:76px;border-radius:10px">${f.poster_url ? '' : `<span>${esc(f.title)}</span>`}</div>
       <div>
         <p class="bbn" style="font-family:var(--fb);font-size:24px;color:var(--text)">${esc(f.title)}</p>
         <p style="font-size:12px;color:var(--muted)">${esc([`${f.duration_mins} min`, f.language, (f.genre||[]).join(', ')].filter(Boolean).join(' · '))}</p>
