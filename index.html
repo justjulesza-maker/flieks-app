@@ -385,6 +385,78 @@ input,textarea{font-family:var(--fb)}
 .info-box.amber{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25)}
 .info-box.amber svg{stroke:var(--amber)}
 .info-box p{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* ===================== DESKTOP: HOME AND BROWSE =====================
+   Phones are untouched: everything below only applies from 1024px up.
+   Discover and Browse widen to a 1280px page; every other view (film
+   page, checkout, library, profile) keeps the phone column for now. */
+.hero-syn{display:none}
+@media (min-width:1024px){
+  body:has(:is(#view-home,#view-search).active){max-width:1280px}
+
+  /* side gutters */
+  body:has(:is(#view-home,#view-search).active) .topbar{padding:14px 40px}
+  body:has(:is(#view-home,#view-search).active) :is(.hrow,.cats,.film-grid,.row-head){padding-left:40px;padding-right:40px}
+  body:has(:is(#view-home,#view-search).active) .hrow{scroll-padding:0 40px;gap:14px}
+  body:has(#view-search.active) #view-search > div[style*="padding:16px 20px"],
+  body:has(#view-search.active) #view-search > div[style*="padding:0 20px"]{padding-left:40px !important;padding-right:40px !important}
+
+  /* filmmaker banner: a slim strip, not the first 300px of the page */
+  #view-home .fm-banner{margin:14px 40px 0;padding:10px 44px 10px 18px;flex-wrap:nowrap}
+  #view-home .fm-banner p{flex:0 1 auto;font-size:13px}
+  #view-home .fm-banner p[style*="flex-basis"]{flex-basis:auto !important;margin-top:0 !important;padding-left:14px;border-left:1px solid var(--border);color:var(--muted)}
+  #view-home .fm-banner a.fm-cta{font-size:13px;padding:8px 14px}
+
+  /* hero: blurred backdrop, the whole poster on the right, title and synopsis on the left */
+  #view-home .hero-card{margin:18px 40px 8px;border-radius:20px}
+  #view-home .hero-poster{height:min(480px,40vw);padding:48px 48px 44px;overflow:hidden;background-size:cover !important;background-position:center !important}
+  #view-home .hero-poster[style*="background-image"]:not(.poster-loading)::before{
+    content:'';position:absolute;inset:-60px;pointer-events:none;
+    background-image:inherit;background-size:cover;background-position:center;
+    filter:blur(42px) brightness(.5) saturate(1.1)}
+  #view-home .hero-poster[style*="background-image"]::after{
+    content:'';position:absolute;top:36px;bottom:36px;right:56px;aspect-ratio:9/16;z-index:1;
+    background-image:inherit;background-size:cover;background-position:center;
+    border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.55);pointer-events:none}
+  #view-home .hero-poster .poster-scrim{background:linear-gradient(to right,rgba(0,0,0,.65) 0%,rgba(0,0,0,.25) 55%,rgba(0,0,0,0) 75%)}
+  #view-home .hero-poster > div[style*="z-index:1"]:last-of-type{max-width:min(620px,calc(100% - 340px))}
+  #view-home .hero-poster .poster-title{font-size:clamp(40px,4.4vw,60px) !important;line-height:.98 !important}
+  #view-home .hero-poster .poster-byline{font-size:12px !important;margin-top:10px !important}
+  #view-home .hero-syn{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+    margin-top:16px;font-family:var(--fn);font-size:15px;line-height:1.6;color:rgba(255,255,255,.85);
+    letter-spacing:0;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+  #view-home .hero-meta{padding:14px 24px}
+  #view-home .hero-meta .tag{font-size:11px;padding:3px 10px}
+  #view-home .hero-meta .price-row span{font-size:15px !important}
+  #view-home .hero-card:hover{opacity:.96}
+
+  /* genre chips: all on one line, nothing cut off */
+  body:has(:is(#view-home,#view-search).active) .cats{flex-wrap:wrap;overflow:visible}
+  body:has(:is(#view-home,#view-search).active) .cat{font-size:13px;padding:7px 16px}
+  body:has(:is(#view-home,#view-search).active) .cat:hover{border-color:var(--amber);color:var(--text)}
+
+  /* rows: six or seven posters across instead of three */
+  body:has(:is(#view-home,#view-search).active) .row-head{margin:28px 0 12px}
+  body:has(:is(#view-home,#view-search).active) .section-label{font-size:11px}
+  body:has(:is(#view-home,#view-search).active) .hrow .film-card{flex-basis:168px}
+  body:has(:is(#view-home,#view-search).active) .hrow .film-thumb{height:252px}
+  body:has(:is(#view-home,#view-search).active) .film-thumb .f-title{font-size:18px}
+  body:has(:is(#view-home,#view-search).active) .film-card .fmaker{font-size:11px}
+  body:has(:is(#view-home,#view-search).active) .film-card .fprice{font-size:13px}
+  body:has(:is(#view-home,#view-search).active) .film-card:hover .film-thumb{border-color:var(--amber)}
+  body:has(:is(#view-home,#view-search).active) .film-thumb{transition:border-color .2s}
+  body:has(:is(#view-home,#view-search).active) .pod-card{flex-basis:200px}
+
+  /* small catalogue and Browse: a proper grid */
+  body:has(:is(#view-home,#view-search).active) .film-grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px 14px}
+  body:has(:is(#view-home,#view-search).active) .film-grid .film-thumb{height:auto;aspect-ratio:2/3}
+  body:has(:is(#view-home,#view-search).active) .film-grid .empty{grid-column:1 / -1 !important}
+
+  /* bottom nav: a floating bar, not a phone tab bar pinned to the edge */
+  .bnav{bottom:16px;border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .view{padding-bottom:110px}
+  #snackbar{bottom:100px}
+}
 </style>
 </head>
 <body>
@@ -1843,6 +1915,7 @@ function heroHTML(f) {
       <div style="position:relative;z-index:1">
         <p class="bbn poster-title" style="font-size:32px;line-height:1">${escHtml(f.title)}</p>
         <p class="poster-byline" style="font-size:10px;color:var(--amber);margin-top:3px;letter-spacing:1px">${escHtml([f.filmmaker, f.filmmaker_location].filter(Boolean).join(' · ').toUpperCase())}</p>
+        ${f.synopsis ? `<p class="hero-syn">${escHtml(f.synopsis)}</p>` : ''}
       </div>
     </div>
     <div class="hero-meta">
